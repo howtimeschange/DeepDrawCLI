@@ -146,7 +146,7 @@ export const apiRegistry: ApiDefinition[] = [
     title: "获取产品指定类型资源",
     group: "product",
     version: "v2",
-    transport: "java-sdk",
+    transport: "http",
     method: "GET",
     path: "/rest/v2",
     riskLevel: "read",
@@ -166,7 +166,7 @@ export const apiRegistry: ApiDefinition[] = [
       queryParam("detailPageSite", false, "查询指定平台的详情页图"),
       queryParam("excludeDetailPageModules", false, "过滤指定详情页模块，多个用逗号分隔"),
     ],
-    notes: "Uses Java SDK bridge. The reference allows lookup by productId or by merchantId and productCode; if both are supplied, productId takes precedence.",
+    notes: "Uses Listingify-compatible signed HTTP GET. The reference allows lookup by productId or by merchantId and productCode; if both are supplied, productId takes precedence.",
   },
   {
     apiName: "dp.product.search",

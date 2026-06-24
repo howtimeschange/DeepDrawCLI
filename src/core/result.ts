@@ -44,7 +44,7 @@ export function normalizeDeepdrawPayload(
   const response = asRecord(root.response);
   const body = response.body ?? root.body ?? payload;
   const businessCode = numberOrNull(response.code ?? root.code);
-  const businessState = stringOrNull(response.response ?? response.state ?? root.state ?? root.responseState);
+  const businessState = stringOrNull(response.response ?? response.state ?? root.response ?? root.state ?? root.responseState);
   const status = numberOrNull(root.status) ?? httpStatus;
   const requestId = requestIdOrNull(response.requestId) ?? requestIdOrNull(root.requestId);
   const ok = (status === null || status === 200) &&

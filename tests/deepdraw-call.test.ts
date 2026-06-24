@@ -233,9 +233,9 @@ test("deepdraw call --execute runs low-risk HTTP API with injected fetch", async
   assert.deepEqual(payload.data, [{ name: "红色" }]);
 });
 
-test("deepdraw call --execute routes java-sdk APIs through Java runner without fetching", async () => {
-  let fetched = false;
-  let javaInput: unknown;
+test("deepdraw call --execute routes product resource through HTTP without Java", async () => {
+  let requestedUrl = "";
+  let spawned = false;
   const result = await runCli([
     "call",
     "dp.product.resource",
@@ -255,6 +255,56 @@ test("deepdraw call --execute routes java-sdk APIs through Java runner without f
       DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*",
     },
     stdin: "",
+    fetchImpl: async (url) => {
+      requestedUrl = String(url);
+      return new Response(JSON.stringify({
+        code: 10200,
+        response: "success",
+        body: { resource: "form" },
+      }), { status: 200 });
+    },
+    javaSpawnImpl: async () => {
+      spawned = true;
+      return { exitCode: 0, stderr: "", stdout: "{}" };
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stderr, "");
+  assert.equal(spawned, false);
+  assert.match(requestedUrl, /type=dp\.product\.resource/);
+  assert.match(requestedUrl, /productCode=208226102001/);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.businessState, "success");
+  assert.deepEqual(payload.data, { resource: "form" });
+});
+
+test("deepdraw call --execute --yes routes product create through Java runner without fetching", async () => {
+  let fetched = false;
+  let javaInput: unknown;
+  const result = await runCli([
+    "call",
+    "dp.product.create",
+    "--execute",
+    "--yes",
+    "--param",
+    "merchantId=1162",
+    "--param",
+    "tradeId=12390",
+    "--json",
+    JSON.stringify({ code: "208226102001", title: "测试商品", retailPrice: "100" }),
+  ], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+      DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*",
+    },
+    stdin: "",
     fetchImpl: async () => {
       fetched = true;
       return new Response("{}", { status: 200 });
@@ -262,22 +312,15 @@ test("deepdraw call --execute routes java-sdk APIs through Java runner without f
     javaSpawnImpl: async (command, args, input) => {
       if (command === "javac") {
         assert.equal(input, "");
-        assert.equal(args[0], "-cp");
-        assert.equal(args[1], "/tmp/fake-sdk/*");
-        assert.equal(args[2], "-d");
-        assert.match(args[3] ?? "", /\.deepdraw-sdk\/classes/);
         return { exitCode: 0, stderr: "", stdout: "" };
       }
       assert.equal(command, "java");
-      assert.equal(args[0], "-cp");
-      assert.match(args[1] ?? "", /\.deepdraw-sdk\/classes/);
-      assert.match(args[1] ?? "", /\/tmp\/fake-sdk\/\*/);
-      assert.equal(args[2], "DeepdrawProductResourceCli");
+      assert.equal(args[2], "DeepdrawProductCreateCli");
       javaInput = JSON.parse(input) as unknown;
       return {
         exitCode: 0,
         stderr: "",
-        stdout: 'sdk log\n{"status":200,"response":{"code":10200,"response":"success","body":{"resource":"form"}}}\n',
+        stdout: '{"status":200,"response":{"code":10200,"response":"success","body":{"id":"created-id"}}}',
       };
     },
   });
@@ -292,15 +335,15 @@ test("deepdraw call --execute routes java-sdk APIs through Java runner without f
       dopKey: "dop-key",
       host: "http://open.deepdraw.cn",
       merchantId: "1162",
+      tradeId: "12390",
     },
+    product: { code: "208226102001", title: "测试商品", retailPrice: "100" },
     query: {
-      productCode: "208226102001",
-      resource: "form",
+      merchantId: "1162",
+      tradeId: "12390",
     },
   });
-  const payload = JSON.parse(result.stdout);
-  assert.equal(payload.ok, true);
-  assert.deepEqual(payload.data, { resource: "form" });
+  assert.equal(JSON.parse(result.stdout).ok, true);
 });
 
 test("deepdraw call --execute returns approval plan for approval-required APIs without fetching", async () => {

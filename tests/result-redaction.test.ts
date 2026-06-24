@@ -63,7 +63,7 @@ test("normalizeDeepdrawPayload extracts root-style failed state", () => {
   const result = normalizeDeepdrawPayload("dp.colors.get", "电商巴拉巴拉", 200, {
     status: 200,
     code: 10200,
-    state: "failed",
+    response: "failed",
     requestId: 123,
     body: { message: "failed" },
   });
@@ -73,6 +73,22 @@ test("normalizeDeepdrawPayload extracts root-style failed state", () => {
   assert.equal(result.businessCode, 10200);
   assert.equal(result.businessState, "failed");
   assert.deepEqual(result.data, { message: "failed" });
+});
+
+test("normalizeDeepdrawPayload extracts root-style success state", () => {
+  const result = normalizeDeepdrawPayload("dp.product.resource", "电商巴拉巴拉", 200, {
+    code: 10200,
+    reason: "访问成功！",
+    requestId: -1,
+    response: "success",
+    body: { productId: 6404619, code: "208326105214" },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.requestId, "-1");
+  assert.equal(result.businessCode, 10200);
+  assert.equal(result.businessState, "success");
+  assert.deepEqual(result.data, { productId: 6404619, code: "208326105214" });
 });
 
 test("createCliError returns stable error kind and message", () => {

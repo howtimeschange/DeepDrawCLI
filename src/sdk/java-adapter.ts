@@ -21,7 +21,6 @@ export interface CallJavaSdkInput {
 const sdkClasses: Record<string, string> = {
   "dp.product.create": "DeepdrawProductCreateCli",
   "dp.product.update": "DeepdrawProductUpdateCli",
-  "dp.product.resource": "DeepdrawProductResourceCli",
 };
 
 function sdkConfig(input: {
@@ -134,7 +133,6 @@ async function compileJavaSources(
   const sources = [
     join(cwd, "java", "DeepdrawProductCreateCli.java"),
     join(cwd, "java", "DeepdrawProductUpdateCli.java"),
-    join(cwd, "java", "DeepdrawProductResourceCli.java"),
   ].filter((source) => existsSync(source));
   if (sources.length === 0) {
     return;

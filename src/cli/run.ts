@@ -7,6 +7,7 @@ import { createExecutionPlan, enforceApproval } from "../core/approval.js";
 import { callDeepdrawApi, type DeepdrawFetch } from "../core/deepdraw-client.js";
 import { configPathForPlatform, resolveDeepdrawConfig, type ConfigPlatform, type DeepdrawConfig, type StoredConfigFile } from "../core/config.js";
 import { type CredentialStore, FileCredentialStore } from "../core/credentials.js";
+import { extractDeepdrawProductContent } from "../core/product-content.js";
 import { redactSensitive } from "../core/redact.js";
 import type { ApiDefinition } from "../core/types.js";
 import { callJavaSdkApi, type JavaSdkSpawn } from "../sdk/java-adapter.js";
@@ -66,6 +67,7 @@ function helpText() {
     "",
     "Commands:",
     "  call <api-name>    Call any registered DeepDraw API",
+    "  product content    Extract product summary, SKU, and asset URLs",
     "  auth               Manage DeepDraw tenant credentials",
     "  config             Inspect local DeepDraw configuration",
   ].join("\n") + "\n";
@@ -219,6 +221,104 @@ function parseSemanticArgs(argv: string[]): {
   return { dryRun, yes, plan, input, params };
 }
 
+function parseProductContentArgs(argv: string[]): {
+  dryRun: boolean;
+  execute: boolean;
+  summary: boolean;
+  assets: boolean;
+  query: Record<string, unknown>;
+} {
+  const query: Record<string, unknown> = {};
+  let dryRun = false;
+  let execute = false;
+  let summary = false;
+  let assets = false;
+
+  for (let index = 2; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const next = () => {
+      const value = argv[index + 1];
+      if (!value) {
+        throw new Error(`${arg} requires a value`);
+      }
+      index += 1;
+      return value;
+    };
+
+    if (arg === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
+    if (arg === "--execute") {
+      execute = true;
+      continue;
+    }
+    if (arg === "--summary") {
+      summary = true;
+      continue;
+    }
+    if (arg === "--assets") {
+      assets = true;
+      continue;
+    }
+    if (arg === "--product-code") {
+      query.productCode = next();
+      continue;
+    }
+    if (arg === "--product-id") {
+      query.productId = next();
+      continue;
+    }
+    if (arg === "--resource") {
+      query.resource = next();
+      continue;
+    }
+    if (arg === "--skc") {
+      query.skc = next();
+      continue;
+    }
+    if (arg === "--material") {
+      query.material = next();
+      continue;
+    }
+    if (arg === "--video") {
+      query.video = next();
+      continue;
+    }
+    if (arg === "--detail-page-site") {
+      query.detailPageSite = next();
+      continue;
+    }
+    if (arg === "--exclude-detail-page-modules") {
+      query.excludeDetailPageModules = next();
+      continue;
+    }
+    if (arg === "--param") {
+      const pair = argv[index + 1];
+      if (!pair || !pair.includes("=")) {
+        throw new Error("--param requires key=value");
+      }
+      const separator = pair.indexOf("=");
+      query[pair.slice(0, separator)] = pair.slice(separator + 1);
+      index += 1;
+      continue;
+    }
+    throw new Error(`Unknown product content option: ${arg}`);
+  }
+
+  if (dryRun && execute) {
+    throw new Error("Cannot combine --dry-run and --execute");
+  }
+  if (!hasNonEmptyValue(query.productCode) && !hasNonEmptyValue(query.productId)) {
+    throw new Error("product content requires --product-code or --product-id");
+  }
+  if (!summary && !assets) {
+    summary = true;
+  }
+
+  return { dryRun, execute, summary, assets, query };
+}
+
 function redactSemanticCommandArgv(argv: string[]): string[] {
   const redactedArgv: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
@@ -357,6 +457,96 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
       stdout: JSON.stringify({ ok: true, api: api.apiName, dryRun: true, callSyntax: api.callSyntax }) + "\n",
       stderr: "",
     };
+  }
+
+  if (argv[0] === "product" && argv[1] === "content") {
+    let contentArgs: ReturnType<typeof parseProductContentArgs>;
+    try {
+      contentArgs = parseProductContentArgs(argv);
+    } catch (error) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: `${errorMessage(error)}\n`,
+      };
+    }
+
+    if (!contentArgs.execute) {
+      return {
+        exitCode: 0,
+        stdout: jsonLine({
+          ok: true,
+          api: "dp.product.resource",
+          command: "deepdraw product content",
+          dryRun: true,
+          query: contentArgs.query,
+          output: {
+            summary: contentArgs.summary,
+            assets: contentArgs.assets,
+          },
+        }),
+        stderr: "",
+      };
+    }
+
+    try {
+      const credentialStore = options.credentialStore ?? new FileCredentialStore(defaultCredentialPath(options));
+      const config = await resolveDeepdrawConfig({
+        env: options.env,
+        cwd,
+        platform: options.platform,
+        homeDir: options.homeDir,
+        configPath: options.configPath,
+        credentialStore,
+      });
+      const result = await callDeepdrawApi({
+        config,
+        apiName: "dp.product.resource",
+        query: contentArgs.query,
+        fetchImpl: options.fetchImpl,
+      });
+      if (!result.ok) {
+        return {
+          exitCode: 1,
+          stdout: jsonLine({
+            ok: false,
+            api: result.api,
+            command: "deepdraw product content",
+            tenant: result.tenant,
+            requestId: result.requestId,
+            httpStatus: result.httpStatus,
+            businessCode: result.businessCode,
+            businessState: result.businessState,
+            data: result.data,
+          }),
+          stderr: "",
+        };
+      }
+
+      const content = extractDeepdrawProductContent(result.data);
+      return {
+        exitCode: 0,
+        stdout: jsonLine({
+          ok: true,
+          api: result.api,
+          command: "deepdraw product content",
+          tenant: result.tenant,
+          requestId: result.requestId,
+          httpStatus: result.httpStatus,
+          businessCode: result.businessCode,
+          businessState: result.businessState,
+          ...(contentArgs.summary ? { summary: content.summary, skus: content.skus } : {}),
+          ...(contentArgs.assets ? { assets: content.assets } : {}),
+        }),
+        stderr: "",
+      };
+    } catch (error) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: `${errorMessage(error)}\n`,
+      };
+    }
   }
 
   const semanticApi = findSemanticApi(argv);

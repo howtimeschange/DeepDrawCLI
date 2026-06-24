@@ -12,11 +12,10 @@ npm link
 
 ## Java SDK Runtime
 
-大多数 `dp.*` 接口会直接使用 TypeScript 发起 HTTP 签名请求。下面这些商品接口会通过 DeepDraw Java SDK bridge 执行，因为它们的 payload 依赖 SDK entity mapping，直接复刻成 TypeScript 容易出现序列化偏差：
+大多数 `dp.*` 接口会直接使用 TypeScript 发起 HTTP 签名请求；`dp.product.resource` 也沿用 Listingify 已验证的 HTTP 直签方式，适合 AI agent 稳定拉取商品资料。下面这些商品写入接口会通过 DeepDraw Java SDK bridge 执行，因为它们的 payload 依赖 SDK entity mapping，直接复刻成 TypeScript 容易出现序列化偏差：
 
 - `dp.product.create`
 - `dp.product.update`
-- `dp.product.resource`
 
 使用前需要安装一个同时提供 `java` 和 `javac` 的 JDK。内部发行版已经把 DeepDraw SDK jar 和 Java SDK 运行依赖 jar 放在 `vendor/deepdraw-sdk`，正常公司内部使用时无需 Maven 下载：
 
@@ -67,6 +66,20 @@ deepdraw auth login --stdin-json < credentials.json
 deepdraw call dp.colors.get
 ```
 
+AI agent 如果只想拿 Listingify 常用的“整体资料 + 商品图片 + 详情页 URL + SKU 摘要”，优先使用语义化命令：
+
+```bash
+deepdraw product content --product-code 208326105214 --summary --assets --dry-run
+deepdraw product content --product-code 208326105214 --summary --assets --execute
+```
+
+该命令底层调用 `dp.product.resource` 的 HTTP 签名链路，不输出完整原始大 JSON，而是抽取：
+
+- `summary`：款号、DeepDraw productId、标题、品牌、类目、颜色数、尺码数、SKU 数、图片数、详情页资源数。
+- `skus`：颜色、尺码、商家编码、条形码、SKU 编码、价格、数量。
+- `assets.pictures`：商品图片 URL，含 `place`、`pictureType`、`skc`、颜色、尺寸、水印标记。
+- `assets.detailPages` / `assets.detailModules`：详情页图片版 URL、截图切片 URL、模块 URL。
+
 有写入、付费或慎用风险的接口，建议先生成执行计划：
 
 ```bash
@@ -78,6 +91,17 @@ deepdraw call dp.product.search --execute --plan --param merchantId=MERCHANT_ID
 ```bash
 deepdraw call dp.product.search --execute --yes --param merchantId=MERCHANT_ID
 ```
+
+## 调用频率与退避
+
+深绘会对部分接口做频控。实测商品资料拉取在连续矩阵调用后返回过 `10494` / `访问频率过高，请稍后重试`，并且冷却 120 秒后仍可能未恢复。
+
+建议把真实调用放进串行队列：
+
+- 常规读取接口至少间隔 3-5 秒。
+- 批量拉取 `dp.product.resource` 时从 5 秒间隔起步，不要并发请求同一租户。
+- 遇到 `10494` 后停止当前批次，冷却 3-5 分钟，再用单次请求探测。
+- 恢复后使用指数退避，例如 5 秒、10 秒、20 秒；再次触发 `10494` 就重新冷却。
 
 ## 验证
 

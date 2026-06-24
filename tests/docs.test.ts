@@ -22,8 +22,11 @@ test("AGENTS.md documents Chinese agent calling workflows", () => {
   assert.match(text, /授权流程/);
   assert.match(text, /错误处理/);
   assert.match(text, /Windows\/macOS 配置检查/);
+  assert.match(text, /10494/);
+  assert.match(text, /访问频率过高/);
   assert.match(text, /deepdraw call dp\.colors\.get --dry-run/);
   assert.match(text, /deepdraw call dp\.product\.create --execute --plan/);
+  assert.match(text, /deepdraw product content --product-code 208326105214 --summary --assets --dry-run/);
   assert.match(text, /--json-file product\.json/);
   assert.match(text, /deepdraw config doctor --dry-run/);
   assert.match(text, /%APPDATA%\\DeepDrawCli\\config\.json/);
@@ -55,6 +58,9 @@ test("README documents cross-platform auth login", () => {
   assert.match(text, /环境变量优先/);
   assert.match(text, /%APPDATA%\\DeepDrawCli\\config\.json/);
   assert.match(text, /credentials\.json/);
+  assert.match(text, /10494/);
+  assert.match(text, /串行队列/);
+  assert.match(text, /deepdraw product content --product-code 208326105214 --summary --assets --execute/);
 });
 
 test("README documents bundled DeepDraw SDK jars and runtime dependency jars", () => {

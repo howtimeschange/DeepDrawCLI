@@ -135,6 +135,7 @@ test("product resource metadata matches documented optional filters", () => {
   const api = expectApi("dp.product.resource");
   const flags = paramFlags(api);
 
+  assert.equal(api.transport, "http");
   assert.deepEqual([...flags.keys()].sort(), [
     "detailPageSite",
     "excludeDetailPageModules",
