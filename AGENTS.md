@@ -39,7 +39,7 @@
 | `dp.product.create` | 创建产品 | `write` | `java-sdk` | `deepdraw call dp.product.create --param merchantId=MERCHANT_ID --param tradeId=TRADE_ID --json-file product.json --plan` | `deepdraw product create` |
 | `dp.product.update` | 更新产品 | `write` | `java-sdk` | `deepdraw call dp.product.update --param productId=PRODUCT_ID --json-file product.json --plan` | `deepdraw product update` |
 | `dp.product.incremental.update` | 产品增量更新 | `write` | `http` | `deepdraw call dp.product.incremental.update --param productId=PRODUCT_ID --json-file patch.json --plan` | `deepdraw product patch` |
-| `dp.product.resource` | 获取产品指定类型资源 | `read` | `http` | `deepdraw call dp.product.resource --param productCode=208226102001 --param resource=form` | `deepdraw product resource` |
+| `dp.product.resource` | 获取产品指定类型资源 | `read` | `java-sdk` | `deepdraw call dp.product.resource --param productCode=208226102001 --param resource=form` | `deepdraw product resource` |
 | `dp.product.search` | 查询产品列表（慎用） | `caution` | `http` | `deepdraw call dp.product.search --param merchantId=MERCHANT_ID --param productCodes=208226102001 --plan` | `deepdraw product search` |
 | `dp.feature.pictures.get` | 获取商品指定类型素材/资源图原图 | `read` | `http` | `deepdraw call dp.feature.pictures.get --param productCode=208226102001 --param pictureType=MODEL` | `deepdraw product pictures` |
 | `dp.product.basic.search` | 查询产品基础信息列表 | `read` | `http` | `deepdraw call dp.product.basic.search --param merchantId=MERCHANT_ID --param productCodes=208226102001` | `deepdraw product basic-search` |
@@ -139,7 +139,7 @@ deepdraw product content --product-code 208326105214 --summary --assets --dry-ru
 deepdraw product content --product-code 208326105214 --summary --assets --execute
 ```
 
-`deepdraw product content` 底层调用 `dp.product.resource`，输出 `summary`、`skus`、`assets.pictures`、`assets.detailPages` 和 `assets.detailModules`，避免 AI agent 处理完整原始大 JSON。
+`deepdraw product content` 底层通过 Java SDK 调用 `dp.product.resource`，输出 `summary`、`skus`、`assets.pictures`、`assets.detailPages` 和 `assets.detailModules`，避免 AI agent 处理完整原始大 JSON。
 
 带参数的只读接口示例：
 

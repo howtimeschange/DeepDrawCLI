@@ -233,9 +233,9 @@ test("deepdraw call --execute runs low-risk HTTP API with injected fetch", async
   assert.deepEqual(payload.data, [{ name: "红色" }]);
 });
 
-test("deepdraw call --execute routes product resource through HTTP without Java", async () => {
-  let requestedUrl = "";
-  let spawned = false;
+test("deepdraw call --execute routes product resource through Java SDK with full query", async () => {
+  let fetched = false;
+  let javaInput: unknown;
   const result = await runCli([
     "call",
     "dp.product.resource",
@@ -244,6 +244,18 @@ test("deepdraw call --execute routes product resource through HTTP without Java"
     "productCode=208226102001",
     "--param",
     "resource=form",
+    "--param",
+    "wgId=watermark-1",
+    "--param",
+    "skc=skc01,skc02",
+    "--param",
+    "material=1",
+    "--param",
+    "video=1",
+    "--param",
+    "detailPageSite=TMALL",
+    "--param",
+    "excludeDetailPageModules=usemap,尺码表",
   ], {
     env: {
       DEEPDRAW_TENANT_NAME: config.tenantName,
@@ -255,25 +267,48 @@ test("deepdraw call --execute routes product resource through HTTP without Java"
       DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*",
     },
     stdin: "",
-    fetchImpl: async (url) => {
-      requestedUrl = String(url);
-      return new Response(JSON.stringify({
-        code: 10200,
-        response: "success",
-        body: { resource: "form" },
-      }), { status: 200 });
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
     },
-    javaSpawnImpl: async () => {
-      spawned = true;
-      return { exitCode: 0, stderr: "", stdout: "{}" };
+    javaSpawnImpl: async (command, args, input) => {
+      if (command === "javac") {
+        assert.equal(input, "");
+        return { exitCode: 0, stderr: "", stdout: "" };
+      }
+      assert.equal(command, "java");
+      assert.equal(args[2], "DeepdrawProductResourceCli");
+      javaInput = JSON.parse(input) as unknown;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: '{"status":200,"response":{"code":10200,"response":"success","body":{"resource":"form"}}}',
+      };
     },
   });
 
   assert.equal(result.exitCode, 0);
   assert.equal(result.stderr, "");
-  assert.equal(spawned, false);
-  assert.match(requestedUrl, /type=dp\.product\.resource/);
-  assert.match(requestedUrl, /productCode=208226102001/);
+  assert.equal(fetched, false);
+  assert.deepEqual(javaInput, {
+    config: {
+      appKey: "app-key",
+      appSecret: "app-secret",
+      dopKey: "dop-key",
+      host: "http://open.deepdraw.cn",
+      merchantId: "1162",
+    },
+    query: {
+      productCode: "208226102001",
+      resource: "form",
+      wgId: "watermark-1",
+      skc: "skc01,skc02",
+      material: "1",
+      video: "1",
+      detailPageSite: "TMALL",
+      excludeDetailPageModules: "usemap,尺码表",
+    },
+  });
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.businessState, "success");

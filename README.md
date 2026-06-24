@@ -12,10 +12,11 @@ npm link
 
 ## Java SDK Runtime
 
-大多数 `dp.*` 接口会直接使用 TypeScript 发起 HTTP 签名请求；`dp.product.resource` 也沿用 Listingify 已验证的 HTTP 直签方式，适合 AI agent 稳定拉取商品资料。下面这些商品写入接口会通过 DeepDraw Java SDK bridge 执行，因为它们的 payload 依赖 SDK entity mapping，直接复刻成 TypeScript 容易出现序列化偏差：
+大多数 `dp.*` 接口会直接使用 TypeScript 发起 HTTP 签名请求；下面这些商品接口会通过 DeepDraw Java SDK bridge 执行，以便和 Listingify 的创建、查重、readback 链路保持一致，并避免 SDK entity mapping 或新版查询参数出现序列化偏差：
 
 - `dp.product.create`
 - `dp.product.update`
+- `dp.product.resource`
 
 使用前需要安装一个同时提供 `java` 和 `javac` 的 JDK。内部发行版已经把 DeepDraw SDK jar 和 Java SDK 运行依赖 jar 放在 `vendor/deepdraw-sdk`，正常公司内部使用时无需 Maven 下载：
 
@@ -73,7 +74,7 @@ deepdraw product content --product-code 208326105214 --summary --assets --dry-ru
 deepdraw product content --product-code 208326105214 --summary --assets --execute
 ```
 
-该命令底层调用 `dp.product.resource` 的 HTTP 签名链路，不输出完整原始大 JSON，而是抽取：
+该命令底层调用 `dp.product.resource` 的 Java SDK 链路，不输出完整原始大 JSON，而是抽取：
 
 - `summary`：款号、DeepDraw productId、标题、品牌、类目、颜色数、尺码数、SKU 数、图片数、详情页资源数。
 - `skus`：颜色、尺码、商家编码、条形码、SKU 编码、价格、数量。

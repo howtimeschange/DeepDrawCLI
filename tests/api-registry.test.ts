@@ -135,7 +135,7 @@ test("product resource metadata matches documented optional filters", () => {
   const api = expectApi("dp.product.resource");
   const flags = paramFlags(api);
 
-  assert.equal(api.transport, "http");
+  assert.equal(api.transport, "java-sdk");
   assert.deepEqual([...flags.keys()].sort(), [
     "detailPageSite",
     "excludeDetailPageModules",
@@ -151,8 +151,8 @@ test("product resource metadata matches documented optional filters", () => {
   for (const [name, required] of flags) {
     assert.equal(required, false, `${name} should be optional for dp.product.resource`);
   }
-  assert.match(api.notes, /productId/);
-  assert.match(api.notes, /merchantId and productCode/);
+  assert.match(api.notes, /Java SDK/);
+  assert.match(api.notes, /newer query filters/);
 });
 
 test("product search metadata matches documented filters", () => {

@@ -499,11 +499,13 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
         configPath: options.configPath,
         credentialStore,
       });
-      const result = await callDeepdrawApi({
+      const result = await callJavaSdkApi({
         config,
         apiName: "dp.product.resource",
         query: contentArgs.query,
-        fetchImpl: options.fetchImpl,
+        env: options.env,
+        cwd,
+        spawnImpl: options.javaSpawnImpl,
       });
       if (!result.ok) {
         return {

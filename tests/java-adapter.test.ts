@@ -169,16 +169,87 @@ test("callJavaSdkApi loads bundled SDK jars and dependency jars from vendor dire
   assert.ok(runClasspaths[0].split(delimiter).includes(join(cwd, "vendor", "deepdraw-sdk", "lib", "*")));
 });
 
-test("callJavaSdkApi rejects product resource because it uses HTTP now", async () => {
-  await assert.rejects(() => callJavaSdkApi({
+test("callJavaSdkApi routes product resource through Java runner with full query", async () => {
+  let stdinPayload: unknown;
+  const result = await callJavaSdkApi({
+    config,
+    apiName: "dp.product.resource",
+    query: {
+      productCode: "208226102001",
+      resource: "form",
+      wgId: "watermark-1",
+      skc: "skc01,skc02",
+      material: "1",
+      video: "1",
+      detailPageSite: "TMALL",
+      excludeDetailPageModules: "usemap,尺码表",
+    },
+    body: undefined,
+    env: { DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" },
+    cwd: "/tmp/deepdraw-cli",
+    spawnImpl: async (command, args, input) => {
+      assert.equal(command, "java");
+      assert.deepEqual(args, ["-cp", `/tmp/deepdraw-cli/.deepdraw-sdk/classes${delimiter}/tmp/fake-sdk/*`, "DeepdrawProductResourceCli"]);
+      stdinPayload = JSON.parse(input) as unknown;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: '{"status":200,"response":{"code":10200,"response":"success","body":{"productId":7788}}}',
+      };
+    },
+  });
+
+  assert.deepEqual(stdinPayload, {
+    config: {
+      appKey: "app-key",
+      appSecret: "app-secret",
+      dopKey: "dop-key",
+      host: "http://open.deepdraw.cn",
+      merchantId: "1162",
+    },
+    query: {
+      productCode: "208226102001",
+      resource: "form",
+      wgId: "watermark-1",
+      skc: "skc01,skc02",
+      material: "1",
+      video: "1",
+      detailPageSite: "TMALL",
+      excludeDetailPageModules: "usemap,尺码表",
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data, { productId: 7788 });
+});
+
+test("callJavaSdkApi compiles product resource bridge source when present", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "deepdraw-sdk-resource-"));
+  await mkdir(join(cwd, "java"), { recursive: true });
+  await mkdir(join(cwd, "vendor", "deepdraw-sdk", "lib"), { recursive: true });
+  await writeFile(join(cwd, "java", "DeepdrawProductResourceCli.java"), "class DeepdrawProductResourceCli {}\n");
+
+  const compiledSources: string[] = [];
+  const result = await callJavaSdkApi({
     config,
     apiName: "dp.product.resource",
     query: { productCode: "208226102001", resource: "form" },
     body: undefined,
-    env: { DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" },
-    cwd: "/tmp/deepdraw-cli",
-    spawnImpl: async () => {
-      throw new Error("java should not run");
+    env: {},
+    cwd,
+    spawnImpl: async (command, args) => {
+      if (command === "javac") {
+        compiledSources.push(...args.slice(3));
+        return { exitCode: 0, stderr: "", stdout: "" };
+      }
+      assert.equal(command, "java");
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: '{"status":200,"response":{"code":10200,"response":"success","body":{"productId":7788}}}',
+      };
     },
-  }), /not supported by the Java SDK runner/);
+  });
+
+  assert.equal(result.ok, true);
+  assert.ok(compiledSources.includes(join(cwd, "java", "DeepdrawProductResourceCli.java")));
 });

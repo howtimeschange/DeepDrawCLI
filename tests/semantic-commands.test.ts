@@ -72,8 +72,8 @@ test("risky semantic --plan --yes still returns approval plan without fetching",
 });
 
 test("product content command extracts summary and assets from product resource", async () => {
-  let requestedUrl = "";
-  let spawned = false;
+  let fetched = false;
+  let javaInput: unknown;
   const result = await runCli([
     "product",
     "content",
@@ -93,82 +93,104 @@ test("product content command extracts summary and assets from product resource"
       DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*",
     },
     stdin: "",
-    fetchImpl: async (url) => {
-      requestedUrl = String(url);
-      return new Response(JSON.stringify({
-        code: 10200,
-        response: "success",
-        requestId: -1,
-        body: {
-          code: "208326105214",
-          productId: 6404619,
-          id: "15954d5aa2c447288be8dd0e73542046",
-          title: "巴拉巴拉儿童外套",
-          brandName: "Balabala/巴拉巴拉",
-          trade: { id: "12390", name: "外套" },
-          colors: { options: ["粉红", "蓝色"] },
-          sizes: { options: ["100cm", "110cm"] },
-          skus: {
-            skuItems: [
-              {
-                color: "蓝色",
-                size: "100cm",
-                values: {
-                  "商家编码": "6942749195651",
-                  "条形码": "6942749195651",
-                  "价格": "359",
-                  "唯品会货号": "20832610521400388100",
-                },
-              },
-            ],
-          },
-          pictures: {
-            pictures: {
-              TMALL: {
-                place: "TMALL",
-                pictures: {
-                  HOME: [
-                    {
-                      id: 688265488,
-                      name: "home.jpg",
-                      url: "//product.resources.deepdraw.biz/demo/home.jpg",
-                      skc: "20832610521400388",
-                      color: "蓝色调00388",
-                      width: "800",
-                      height: "800",
-                      size: "83231",
-                      sortNum: 1,
-                      withWatermark: false,
-                    },
-                  ],
-                },
-              },
-            },
-          },
-          detalPages: [
-            {
-              templateName: "默认详情页",
-              imagePageUrl: "http://product.resources.deepdraw.biz/demo/detail.jpg",
-              screenShotSectionUrls: ["//product.resources.deepdraw.biz/demo/section-1.jpg"],
-              modules: {
-                "商品信息": ["//product.resources.deepdraw.biz/demo/module-1.jpg"],
-              },
-            },
-          ],
-        },
-      }), { status: 200 });
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
     },
-    javaSpawnImpl: async () => {
-      spawned = true;
-      return { exitCode: 0, stderr: "", stdout: "{}" };
+    javaSpawnImpl: async (command, args, input) => {
+      if (command === "javac") {
+        return { exitCode: 0, stderr: "", stdout: "" };
+      }
+      assert.equal(command, "java");
+      assert.equal(args[2], "DeepdrawProductResourceCli");
+      javaInput = JSON.parse(input) as unknown;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: JSON.stringify({
+          status: 200,
+          response: {
+            code: 10200,
+            response: "success",
+            requestId: -1,
+            body: {
+              code: "208326105214",
+              productId: 6404619,
+              id: "15954d5aa2c447288be8dd0e73542046",
+              title: "巴拉巴拉儿童外套",
+              brandName: "Balabala/巴拉巴拉",
+              trade: { id: "12390", name: "外套" },
+              colors: { options: ["粉红", "蓝色"] },
+              sizes: { options: ["100cm", "110cm"] },
+              skus: {
+                skuItems: [
+                  {
+                    color: "蓝色",
+                    size: "100cm",
+                    values: {
+                      "商家编码": "6942749195651",
+                      "条形码": "6942749195651",
+                      "价格": "359",
+                      "唯品会货号": "20832610521400388100",
+                    },
+                  },
+                ],
+              },
+              pictures: {
+                pictures: {
+                  TMALL: {
+                    place: "TMALL",
+                    pictures: {
+                      HOME: [
+                        {
+                          id: 688265488,
+                          name: "home.jpg",
+                          url: "//product.resources.deepdraw.biz/demo/home.jpg",
+                          skc: "20832610521400388",
+                          color: "蓝色调00388",
+                          width: "800",
+                          height: "800",
+                          size: "83231",
+                          sortNum: 1,
+                          withWatermark: false,
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              detalPages: [
+                {
+                  templateName: "默认详情页",
+                  imagePageUrl: "http://product.resources.deepdraw.biz/demo/detail.jpg",
+                  screenShotSectionUrls: ["//product.resources.deepdraw.biz/demo/section-1.jpg"],
+                  modules: {
+                    "商品信息": ["//product.resources.deepdraw.biz/demo/module-1.jpg"],
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      };
     },
   });
 
   assert.equal(result.exitCode, 0);
   assert.equal(result.stderr, "");
-  assert.equal(spawned, false);
-  assert.match(requestedUrl, /type=dp\.product\.resource/);
-  assert.match(requestedUrl, /productCode=208326105214/);
+  assert.equal(fetched, false);
+  assert.deepEqual(javaInput, {
+    config: {
+      appKey: "app-key",
+      appSecret: "app-secret",
+      dopKey: "dop-key",
+      host: "http://open.deepdraw.cn",
+      merchantId: "1162",
+    },
+    query: {
+      productCode: "208326105214",
+    },
+  });
   const payload = parseStdout(result.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.api, "dp.product.resource");
