@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { runCli } from "../src/cli/run.js";
+import { apiRegistry } from "../src/core/api-registry.js";
 
 test("AGENTS.md requires approval before write and paid calls", () => {
   const text = readFileSync("AGENTS.md", "utf8");
@@ -10,6 +11,41 @@ test("AGENTS.md requires approval before write and paid calls", () => {
   assert.match(text, /--yes/);
   assert.match(text, /approval_required/);
   assert.doesNotMatch(text, /appSecret=.*[a-z0-9]{8}/i);
+});
+
+test("AGENTS.md documents Chinese agent calling workflows", () => {
+  const text = readFileSync("AGENTS.md", "utf8");
+  assert.match(text, /深绘 CLI Agent 调用指南/);
+  assert.match(text, /只读调用/);
+  assert.match(text, /写入调用/);
+  assert.match(text, /JSON 输入/);
+  assert.match(text, /授权流程/);
+  assert.match(text, /错误处理/);
+  assert.match(text, /Windows\/macOS 配置检查/);
+  assert.match(text, /deepdraw call dp\.colors\.get --dry-run/);
+  assert.match(text, /deepdraw call dp\.product\.create --execute --plan/);
+  assert.match(text, /--json-file product\.json/);
+  assert.match(text, /deepdraw config doctor --dry-run/);
+  assert.match(text, /%APPDATA%\\DeepDrawCli\\config\.json/);
+});
+
+test("AGENTS.md lists every registered API with calling metadata", () => {
+  const text = readFileSync("AGENTS.md", "utf8");
+  assert.match(text, /## 接口目录与调用方法/);
+
+  for (const group of ["merchant", "trade", "product", "image", "common"]) {
+    assert.match(text, new RegExp(`### ${group}`));
+  }
+
+  for (const api of apiRegistry) {
+    assert.match(text, new RegExp(`\\| \`${api.apiName.replace(/\./g, "\\.")}\` \\|`), `${api.apiName} should be listed`);
+    assert.match(text, new RegExp(`\\| \`${api.transport}\` \\|`), `${api.apiName} transport should be listed`);
+    assert.match(text, new RegExp(`\\| \`${api.riskLevel}\` \\|`), `${api.apiName} risk should be listed`);
+    assert.match(text, new RegExp(escapeRegExp(api.callSyntax)), `${api.apiName} callSyntax should be listed`);
+    if (api.semanticCommand) {
+      assert.match(text, new RegExp(escapeRegExp(api.semanticCommand)), `${api.apiName} semantic command should be listed`);
+    }
+  }
 });
 
 test("README documents cross-platform auth login", () => {
@@ -48,3 +84,7 @@ test("README auth login example reaches implemented stdin-json branch", async ()
   assert.match(result.stderr, /Invalid JSON from stdin/);
   assert.doesNotMatch(result.stderr, /Unknown command|Unknown auth login option/);
 });
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
