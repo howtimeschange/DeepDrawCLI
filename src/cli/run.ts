@@ -3,6 +3,8 @@ import { createExecutionPlan, enforceApproval } from "../core/approval.js";
 import { callDeepdrawApi, type DeepdrawFetch } from "../core/deepdraw-client.js";
 import { resolveDeepdrawConfig } from "../core/config.js";
 import { EnvCredentialStore } from "../core/credentials.js";
+import { redactSensitive } from "../core/redact.js";
+import { jsonLine } from "./format.js";
 
 export interface CliRunOptions {
   env: NodeJS.ProcessEnv;
@@ -90,6 +92,10 @@ function buildPlanParams(callArgs: ReturnType<typeof parseCallArgs>): Record<str
   return { query: callArgs.query, body: callArgs.body };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 export async function runCli(argv: string[], options: CliRunOptions): Promise<CliRunResult> {
   if (argv[0] === "call") {
     const apiName = argv[1];
@@ -174,6 +180,73 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
     return {
       exitCode: 0,
       stdout: JSON.stringify({ ok: true, api: api.apiName, dryRun: true, callSyntax: api.callSyntax }) + "\n",
+      stderr: "",
+    };
+  }
+
+  if (argv[0] === "auth" && argv[1] === "login" && argv[2] === "--stdin-json") {
+    if (argv.length > 3) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: `Unknown auth login option: ${argv[3]}\n`,
+      };
+    }
+
+    let credentialsInput: Record<string, unknown>;
+    try {
+      const parsedInput = JSON.parse(options.stdin) as unknown;
+      if (!isRecord(parsedInput)) {
+        return {
+          exitCode: 1,
+          stdout: "",
+          stderr: "Expected auth input JSON object\n",
+        };
+      }
+      credentialsInput = parsedInput;
+    } catch (error) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: `Invalid JSON from stdin: ${errorMessage(error)}\n`,
+      };
+    }
+
+    return {
+      exitCode: 0,
+      stdout: jsonLine({
+        ok: true,
+        tenant: credentialsInput.tenantName,
+        defaultTenant: Boolean(credentialsInput.defaultTenant),
+        credentials: redactSensitive({
+          appKey: credentialsInput.appKey,
+          appSecret: credentialsInput.appSecret,
+          dopKey: credentialsInput.dopKey,
+        }),
+      }),
+      stderr: "",
+    };
+  }
+
+  if (argv[0] === "config" && argv[1] === "doctor" && argv[2] === "--dry-run") {
+    if (argv.length > 3) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: `Unknown config doctor option: ${argv[3]}\n`,
+      };
+    }
+
+    return {
+      exitCode: 0,
+      stdout: jsonLine({
+        ok: true,
+        dryRun: true,
+        checks: [
+          { name: "config-path", ok: true },
+          { name: "credential-store", ok: true },
+        ],
+      }),
       stderr: "",
     };
   }
