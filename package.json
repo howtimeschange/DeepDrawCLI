@@ -1,0 +1,29 @@
+{
+  "name": "deepdraw-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "deepdraw": "./dist/cli/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "dotenv": "^17.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  },
+  "optionalDependencies": {
+    "keytar": "^7.9.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
