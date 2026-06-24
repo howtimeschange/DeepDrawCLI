@@ -1,8 +1,11 @@
 const SENSITIVE_KEYS = new Set([
+  "apikey",
+  "appkey",
   "appsecret",
   "dopkey",
   "authorization",
   "x-ca-signature",
+  "xcasignature",
   "signature",
 ]);
 
@@ -11,6 +14,7 @@ function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEYS.has(key.toLowerCase()) ||
     SENSITIVE_KEYS.has(normalized) ||
     normalized.includes("secret") ||
+    normalized.includes("signature") ||
     normalized.includes("token");
 }
 

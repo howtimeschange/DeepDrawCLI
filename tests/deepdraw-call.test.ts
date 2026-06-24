@@ -184,16 +184,110 @@ test("deepdraw call --execute runs low-risk HTTP API with injected fetch", async
   assert.deepEqual(payload.data, [{ name: "红色" }]);
 });
 
-test("deepdraw call --execute refuses approval-required APIs before approval gates", async () => {
+test("deepdraw call --execute returns approval plan for approval-required APIs without fetching", async () => {
+  let fetched = false;
   const result = await runCli(["call", "dp.product.search", "--execute"], {
-    env: {},
+    env: {
+      DEEPDRAW_TENANT_NAME: "demo",
+    },
     stdin: "",
-    fetchImpl: async () => new Response("{}", { status: 200 }),
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
+    },
   });
 
   assert.equal(result.exitCode, 1);
-  assert.equal(result.stdout, "");
-  assert.match(result.stderr, /requires approval before execution/);
+  assert.equal(result.stderr, "");
+  assert.equal(fetched, false);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.deepEqual(payload.error, {
+    kind: "approval_required",
+    message: "User approval is required",
+    reason: "approval_required",
+  });
+  assert.equal(payload.plan.api, "dp.product.search");
+  assert.equal(payload.plan.tenant, "demo");
+  assert.equal(payload.plan.riskLevel, "caution");
+  assert.equal(payload.plan.requiresApproval, true);
+});
+
+test("deepdraw call --execute --yes runs approval-required HTTP API with injected fetch", async () => {
+  let fetched = false;
+  const result = await runCli([
+    "call",
+    "dp.product.search",
+    "--execute",
+    "--yes",
+    "--param",
+    "merchantId=1162",
+  ], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+    },
+    stdin: "",
+    fetchImpl: async (url) => {
+      fetched = true;
+      assert.match(String(url), /type=dp\.product\.search/);
+      assert.match(String(url), /merchantId=1162/);
+      return new Response(JSON.stringify({
+        status: 200,
+        response: {
+          code: 10200,
+          response: "success",
+          body: [{ productCode: "208226102001" }],
+        },
+      }), { status: 200 });
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stderr, "");
+  assert.equal(fetched, true);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.deepEqual(payload.data, [{ productCode: "208226102001" }]);
+});
+
+test("deepdraw call approval plan redacts secret-like query and body fields", async () => {
+  const result = await runCli([
+    "call",
+    "dp.product.search",
+    "--execute",
+    "--param",
+    "merchantId=1162",
+    "--param",
+    "accessToken=private-token",
+    "--json",
+    "{\"appSecret\":\"secret\",\"safe\":\"visible\"}",
+  ], {
+    env: {},
+    stdin: "",
+    fetchImpl: async () => {
+      throw new Error("must not fetch without approval");
+    },
+  });
+
+  assert.equal(result.exitCode, 1);
+  assert.equal(result.stderr, "");
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.plan.tenant, "unconfigured");
+  assert.deepEqual(payload.plan.sanitizedParams, {
+    query: {
+      merchantId: "1162",
+      accessToken: "[REDACTED]",
+    },
+    body: {
+      appSecret: "[REDACTED]",
+      safe: "visible",
+    },
+  });
 });
 
 test("deepdraw call --execute rejects GET body before fetch", async () => {

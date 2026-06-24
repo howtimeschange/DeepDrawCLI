@@ -7,16 +7,32 @@ import { redactSensitive } from "../src/core/redact.js";
 test("redactSensitive hides credential-like fields recursively", () => {
   assert.deepEqual(redactSensitive({
     appSecret: "secret",
+    appKey: "app-key",
+    app_key: "snake-app-key",
+    apiKey: "api-key",
     dopKey: "dop",
+    Authorization: "bearer-secret",
+    authorization: "lower-bearer-secret",
     nested: {
       "x-ca-signature": "signature",
+      xCaSignature: "camel-signature",
+      x_ca_signature: "snake-signature",
+      requestSignature: "request-signature",
       safe: "visible",
     },
   }), {
     appSecret: "[REDACTED]",
+    appKey: "[REDACTED]",
+    app_key: "[REDACTED]",
+    apiKey: "[REDACTED]",
     dopKey: "[REDACTED]",
+    Authorization: "[REDACTED]",
+    authorization: "[REDACTED]",
     nested: {
       "x-ca-signature": "[REDACTED]",
+      xCaSignature: "[REDACTED]",
+      x_ca_signature: "[REDACTED]",
+      requestSignature: "[REDACTED]",
       safe: "visible",
     },
   });

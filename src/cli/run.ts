@@ -1,4 +1,5 @@
 import { findApiDefinition } from "../core/api-registry.js";
+import { createExecutionPlan, enforceApproval } from "../core/approval.js";
 import { callDeepdrawApi, type DeepdrawFetch } from "../core/deepdraw-client.js";
 import { resolveDeepdrawConfig } from "../core/config.js";
 import { EnvCredentialStore } from "../core/credentials.js";
@@ -26,15 +27,31 @@ function helpText() {
   ].join("\n") + "\n";
 }
 
-function parseCallArgs(argv: string[]): { execute: boolean; query: Record<string, unknown>; body?: unknown } {
+function parseCallArgs(argv: string[]): {
+  execute: boolean;
+  yes: boolean;
+  plan: boolean;
+  query: Record<string, unknown>;
+  body?: unknown;
+} {
   const query: Record<string, unknown> = {};
   let body: unknown;
   let execute = false;
+  let yes = false;
+  let plan = false;
 
   for (let index = 2; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--execute") {
       execute = true;
+      continue;
+    }
+    if (arg === "--yes") {
+      yes = true;
+      continue;
+    }
+    if (arg === "--plan") {
+      plan = true;
       continue;
     }
     if (arg === "--param") {
@@ -59,11 +76,18 @@ function parseCallArgs(argv: string[]): { execute: boolean; query: Record<string
     throw new Error(`Unknown call option: ${arg}`);
   }
 
-  return { execute, query, body };
+  return { execute, yes, plan, query, body };
 }
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function buildPlanParams(callArgs: ReturnType<typeof parseCallArgs>): Record<string, unknown> {
+  if (callArgs.body === undefined) {
+    return { query: callArgs.query };
+  }
+  return { query: callArgs.query, body: callArgs.body };
 }
 
 export async function runCli(argv: string[], options: CliRunOptions): Promise<CliRunResult> {
@@ -72,7 +96,7 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
     if (!apiName || apiName === "--help") {
       return {
         exitCode: 0,
-        stdout: "Usage: deepdraw call <api-name> [--execute] [--param key=value] [--json JSON] [--json-file file]\n",
+        stdout: "Usage: deepdraw call <api-name> [--execute] [--yes] [--plan] [--param key=value] [--json JSON] [--json-file file]\n",
         stderr: "",
       };
     }
@@ -94,14 +118,32 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
         stderr: `${errorMessage(error)}\n`,
       };
     }
-    if (callArgs.execute && api.approvalRequired) {
-      return {
-        exitCode: 1,
-        stdout: "",
-        stderr: `API ${api.apiName} requires approval before execution. Use dry-run until approval gates are implemented.\n`,
-      };
-    }
     if (callArgs.execute) {
+      const approval = enforceApproval({
+        apiName: api.apiName,
+        argv: argv.slice(2),
+        interactive: false,
+      });
+      if (!approval.allowed) {
+        const plan = createExecutionPlan({
+          apiName: api.apiName,
+          tenant: options.env.DEEPDRAW_TENANT_NAME ?? "unconfigured",
+          params: buildPlanParams(callArgs),
+        });
+        return {
+          exitCode: 1,
+          stdout: JSON.stringify({
+            ok: false,
+            error: {
+              kind: "approval_required",
+              message: "User approval is required",
+              reason: approval.reason,
+            },
+            plan,
+          }) + "\n",
+          stderr: "",
+        };
+      }
       try {
         const config = await resolveDeepdrawConfig({
           env: options.env,
