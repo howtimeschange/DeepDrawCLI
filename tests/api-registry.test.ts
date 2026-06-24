@@ -31,7 +31,7 @@ test("registry covers every dp api in the stable reference", () => {
   const referenceApis = extractReferenceApis(referenceMarkdown);
   const registeredApis = new Set(apiRegistry.map((api) => api.apiName));
 
-  assert.equal(referenceApis.length, 20);
+  assert.equal(referenceApis.length, 21);
   for (const apiName of referenceApis) {
     assert.equal(registeredApis.has(apiName), true, `${apiName} is missing from apiRegistry`);
   }
@@ -84,6 +84,22 @@ test("deepdraw call returns known api dry-run json", async () => {
     api: "dp.colors.get",
     dryRun: true,
     callSyntax: "deepdraw call dp.colors.get",
+  });
+});
+
+test("deepdraw call returns product detail dry-run json", async () => {
+  const result = await runCli(["call", "dp.product.detail.get", "--dry-run"], {
+    env: {},
+    stdin: "",
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stderr, "");
+  assert.deepEqual(JSON.parse(result.stdout), {
+    ok: true,
+    api: "dp.product.detail.get",
+    dryRun: true,
+    callSyntax: "deepdraw call dp.product.detail.get --param productId=PRODUCT_ID",
   });
 });
 
@@ -171,6 +187,22 @@ test("product basic search metadata matches documented filters", () => {
     productCodes: false,
     excludeDraft: false,
   });
+});
+
+test("product detail metadata matches SDK and update record filters", () => {
+  const api = expectApi("dp.product.detail.get");
+
+  assert.equal(api.transport, "http");
+  assert.equal(api.method, "POST");
+  assert.equal(api.path, "/rest");
+  assert.equal(api.riskLevel, "read");
+  assert.equal(api.approvalRequired, false);
+  assertParamFlags("dp.product.detail.get", {
+    productId: true,
+    quality: false,
+    excludeDetailPageModules: false,
+  });
+  assert.match(api.notes, /ProductPostFindDetailPageByIdRequest/);
 });
 
 test("feature pictures metadata matches documented lookup and image filters", () => {

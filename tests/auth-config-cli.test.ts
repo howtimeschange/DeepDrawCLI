@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { test } from "node:test";
 import { runCli } from "../src/cli/run.js";
+import { resolveDeepdrawConfig } from "../src/core/config.js";
+import { FakeCredentialStore } from "../src/core/credentials.js";
+
+async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+  const dir = await mkdtemp(join(tmpdir(), "deepdraw-cli-auth-"));
+  try {
+    return await fn(dir);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
 
 test("auth login --stdin-json returns redacted tenant summary", async () => {
   const result = await runCli(["auth", "login", "--stdin-json"], {
@@ -27,6 +41,62 @@ test("auth login --stdin-json returns redacted tenant summary", async () => {
   assert.equal(payload.credentials.appSecret, "[REDACTED]");
   assert.equal(payload.credentials.dopKey, "[REDACTED]");
   assert.doesNotMatch(result.stdout, /"app-key"|"secret"|"dop"/);
+});
+
+test("auth login --stdin-json writes stored config and credential refs without leaking secrets", async () => {
+  await withTempDir(async (dir) => {
+    const configPath = join(dir, "config.json");
+    const credentialStore = new FakeCredentialStore();
+    const result = await runCli(["auth", "login", "--stdin-json"], {
+      env: {},
+      stdin: JSON.stringify({
+        tenantName: "电商巴拉巴拉",
+        merchantId: "1162",
+        appKey: "app-key",
+        appSecret: "secret",
+        dopKey: "dop",
+        baseUrl: "http://open.deepdraw.cn",
+        timeoutMs: 45000,
+        defaultTenant: true,
+      }),
+      configPath,
+      credentialStore,
+    });
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stderr, "");
+    assert.doesNotMatch(result.stdout, /"app-key"|"secret"|"dop"/);
+    const storedText = await readFile(configPath, "utf8");
+    assert.doesNotMatch(storedText, /"app-key"|"secret"|"dop"/);
+    assert.deepEqual(JSON.parse(storedText), {
+      defaultTenant: "电商巴拉巴拉",
+      tenants: {
+        "电商巴拉巴拉": {
+          merchantId: "1162",
+          baseUrl: "http://open.deepdraw.cn",
+          timeoutMs: 45000,
+          appKeyRef: "tenant:电商巴拉巴拉:appKey",
+          appSecretRef: "tenant:电商巴拉巴拉:appSecret",
+          dopKeyRef: "tenant:电商巴拉巴拉:dopKey",
+        },
+      },
+    });
+    assert.equal(await credentialStore.get("tenant:电商巴拉巴拉:appKey"), "app-key");
+    assert.equal(await credentialStore.get("tenant:电商巴拉巴拉:appSecret"), "secret");
+    assert.equal(await credentialStore.get("tenant:电商巴拉巴拉:dopKey"), "dop");
+
+    const resolved = await resolveDeepdrawConfig({
+      env: {},
+      configPath,
+      credentialStore,
+    });
+    assert.equal(resolved.tenantName, "电商巴拉巴拉");
+    assert.equal(resolved.appKey, "app-key");
+    assert.equal(resolved.appSecret, "secret");
+    assert.equal(resolved.dopKey, "dop");
+    assert.equal(resolved.merchantId, "1162");
+    assert.equal(resolved.credentialSource, "store");
+  });
 });
 
 test("auth login --stdin-json reports invalid JSON as CLI error", async () => {
@@ -72,6 +142,7 @@ test("auth login --stdin-json coerces defaultTenant to boolean", async () => {
     env: {},
     stdin: JSON.stringify({
       tenantName: "未设默认租户",
+      merchantId: "1162",
       appKey: "app-key",
       appSecret: "secret",
       dopKey: "dop",
@@ -81,6 +152,7 @@ test("auth login --stdin-json coerces defaultTenant to boolean", async () => {
     env: {},
     stdin: JSON.stringify({
       tenantName: "字符串默认租户",
+      merchantId: "1162",
       appKey: "app-key",
       appSecret: "secret",
       dopKey: "dop",

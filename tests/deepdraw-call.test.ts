@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { test } from "node:test";
 import type { DeepdrawConfig } from "../src/core/config.js";
 import { callDeepdrawApi } from "../src/core/deepdraw-client.js";
 import { runCli } from "../src/cli/run.js";
+import { apiRegistry, findApiDefinition } from "../src/core/api-registry.js";
 
 const config: DeepdrawConfig = {
   tenantName: "电商巴拉巴拉",
@@ -14,6 +18,15 @@ const config: DeepdrawConfig = {
   timeoutMs: 30000,
   credentialSource: "env",
 };
+
+async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+  const dir = await mkdtemp(join(tmpdir(), "deepdraw-cli-call-"));
+  try {
+    return await fn(dir);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
 
 test("callDeepdrawApi normalizes successful HTTP response", async () => {
   let requestedUrl = "";
@@ -153,6 +166,42 @@ test("deepdraw call remains dry-run by default", async () => {
   });
 });
 
+test("deepdraw call accepts explicit --dry-run", async () => {
+  const result = await runCli(["call", "dp.colors.get", "--dry-run"], {
+    env: {},
+    stdin: "",
+    fetchImpl: async () => {
+      throw new Error("must not fetch during dry run");
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stderr, "");
+  assert.deepEqual(JSON.parse(result.stdout), {
+    ok: true,
+    api: "dp.colors.get",
+    dryRun: true,
+    callSyntax: "deepdraw call dp.colors.get",
+  });
+});
+
+test("deepdraw call rejects conflicting --dry-run and --execute without fetching", async () => {
+  let fetched = false;
+  const result = await runCli(["call", "dp.colors.get", "--dry-run", "--execute"], {
+    env: {},
+    stdin: "",
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
+    },
+  });
+
+  assert.equal(result.exitCode, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /Cannot combine --dry-run and --execute/);
+  assert.equal(fetched, false);
+});
+
 test("deepdraw call --execute runs low-risk HTTP API with injected fetch", async () => {
   const result = await runCli(["call", "dp.colors.get", "--execute", "--param", "locale=zh-CN"], {
     env: {
@@ -182,6 +231,76 @@ test("deepdraw call --execute runs low-risk HTTP API with injected fetch", async
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.ok, true);
   assert.deepEqual(payload.data, [{ name: "红色" }]);
+});
+
+test("deepdraw call --execute routes java-sdk APIs through Java runner without fetching", async () => {
+  let fetched = false;
+  let javaInput: unknown;
+  const result = await runCli([
+    "call",
+    "dp.product.resource",
+    "--execute",
+    "--param",
+    "productCode=208226102001",
+    "--param",
+    "resource=form",
+  ], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+      DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*",
+    },
+    stdin: "",
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
+    },
+    javaSpawnImpl: async (command, args, input) => {
+      if (command === "javac") {
+        assert.equal(input, "");
+        assert.equal(args[0], "-cp");
+        assert.equal(args[1], "/tmp/fake-sdk/*");
+        assert.equal(args[2], "-d");
+        assert.match(args[3] ?? "", /\.deepdraw-sdk\/classes/);
+        return { exitCode: 0, stderr: "", stdout: "" };
+      }
+      assert.equal(command, "java");
+      assert.equal(args[0], "-cp");
+      assert.match(args[1] ?? "", /\.deepdraw-sdk\/classes/);
+      assert.match(args[1] ?? "", /\/tmp\/fake-sdk\/\*/);
+      assert.equal(args[2], "DeepdrawProductResourceCli");
+      javaInput = JSON.parse(input) as unknown;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: 'sdk log\n{"status":200,"response":{"code":10200,"response":"success","body":{"resource":"form"}}}\n',
+      };
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stderr, "");
+  assert.equal(fetched, false);
+  assert.deepEqual(javaInput, {
+    config: {
+      appKey: "app-key",
+      appSecret: "app-secret",
+      dopKey: "dop-key",
+      host: "http://open.deepdraw.cn",
+      merchantId: "1162",
+    },
+    query: {
+      productCode: "208226102001",
+      resource: "form",
+    },
+  });
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.deepEqual(payload.data, { resource: "form" });
 });
 
 test("deepdraw call --execute returns approval plan for approval-required APIs without fetching", async () => {
@@ -312,6 +431,237 @@ test("deepdraw call --execute rejects GET body before fetch", async () => {
   assert.equal(result.stdout, "");
   assert.match(result.stderr, /API dp\.colors\.get uses GET and cannot send a request body/);
   assert.equal(fetched, false);
+});
+
+test("deepdraw call reads --json-file relative to cwd", async () => {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, "body.json"), JSON.stringify({ pageNo: 1 }), "utf8");
+    let requestedBody: unknown;
+    const result = await runCli(["call", "dp.merchant.name.search", "--execute", "--json-file", "body.json"], {
+      env: {
+        DEEPDRAW_TENANT_NAME: config.tenantName,
+        DEEPDRAW_BASE_URL: config.baseUrl,
+        DEEPDRAW_APP_KEY: config.appKey,
+        DEEPDRAW_APP_SECRET: config.appSecret,
+        DEEPDRAW_DOP_KEY: config.dopKey,
+        DEEPDRAW_MERCHANT_ID: config.merchantId,
+      },
+      stdin: "",
+      cwd: dir,
+      fetchImpl: async (_url, init) => {
+        requestedBody = init?.body;
+        return new Response(JSON.stringify({ status: 200, response: { code: 10200, response: "success" } }), {
+          status: 200,
+        });
+      },
+    });
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(requestedBody, JSON.stringify({ pageNo: 1 }));
+  });
+});
+
+test("deepdraw call rejects missing --json-file path and malformed file without fetching", async () => {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, "bad.json"), "{", "utf8");
+    let fetched = false;
+    const missingPath = await runCli(["call", "dp.colors.get", "--json-file"], {
+      env: {},
+      stdin: "",
+      cwd: dir,
+      fetchImpl: async () => {
+        fetched = true;
+        return new Response("{}", { status: 200 });
+      },
+    });
+    const malformed = await runCli(["call", "dp.colors.get", "--json-file", "bad.json"], {
+      env: {},
+      stdin: "",
+      cwd: dir,
+      fetchImpl: async () => {
+        fetched = true;
+        return new Response("{}", { status: 200 });
+      },
+    });
+
+    assert.equal(missingPath.exitCode, 1);
+    assert.match(missingPath.stderr, /--json-file requires a file path/);
+    assert.equal(malformed.exitCode, 1);
+    assert.match(malformed.stderr, /Invalid JSON file/);
+    assert.equal(fetched, false);
+  });
+});
+
+test("deepdraw call validates required params before HTTP fetch", async () => {
+  let fetched = false;
+  const missingProductId = await runCli(["call", "dp.product.distribution.get", "--execute"], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+    },
+    stdin: "",
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
+    },
+  });
+
+  assert.equal(missingProductId.exitCode, 1);
+  assert.match(missingProductId.stderr, /Missing required parameters.*productId/);
+  assert.equal(fetched, false);
+});
+
+test("deepdraw call validates required body params before HTTP fetch and Java spawn", async () => {
+  let fetched = false;
+  let spawned = false;
+  const missingImages = await runCli([
+    "call",
+    "dp.product.image.upload",
+    "--execute",
+    "--yes",
+    "--param",
+    "productId=7788",
+  ], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+    },
+    stdin: "",
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
+    },
+  });
+  const malformedImages = await runCli([
+    "call",
+    "dp.product.image.upload",
+    "--execute",
+    "--yes",
+    "--param",
+    "productId=7788",
+    "--json",
+    JSON.stringify({ foo: "bar" }),
+  ], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+    },
+    stdin: "",
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
+    },
+  });
+  const missingProduct = await runCli([
+    "call",
+    "dp.product.create",
+    "--execute",
+    "--yes",
+    "--param",
+    "tradeId=3001",
+  ], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+      DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*",
+    },
+    stdin: "",
+    javaSpawnImpl: async () => {
+      spawned = true;
+      return { exitCode: 0, stdout: "{}", stderr: "" };
+    },
+  });
+
+  assert.equal(missingImages.exitCode, 1);
+  assert.match(missingImages.stderr, /Missing required parameters.*images/);
+  assert.equal(malformedImages.exitCode, 1);
+  assert.match(malformedImages.stderr, /Missing required parameters.*images/);
+  assert.equal(missingProduct.exitCode, 1);
+  assert.match(missingProduct.stderr, /Missing required parameters.*product/);
+  assert.equal(fetched, false);
+  assert.equal(spawned, false);
+});
+
+test("merchantId required params can be sourced from resolved config before execution", async () => {
+  let requestedUrl = "";
+  const result = await runCli(["call", "dp.merchant.sites.get", "--execute"], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+    },
+    stdin: "",
+    fetchImpl: async (url) => {
+      requestedUrl = String(url);
+      return new Response(JSON.stringify({ status: 200, response: { code: 10200, response: "success" } }), {
+        status: 200,
+      });
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.match(requestedUrl, /merchantId=1162/);
+});
+
+test("registry uses POST for JSON payload mutation APIs", () => {
+  assert.equal(findApiDefinition("dp.product.incremental.update")?.method, "POST");
+  assert.equal(findApiDefinition("dp.product.image.upload")?.method, "POST");
+  assert.equal(findApiDefinition("dp.product.image.update")?.method, "POST");
+});
+
+test("all registered APIs support dry-run and approval-required execute calls do not fetch or spawn without --yes", async () => {
+  for (const api of apiRegistry) {
+    const dryRun = await runCli(["call", api.apiName, "--dry-run"], {
+      env: {},
+      stdin: "",
+      fetchImpl: async () => {
+        throw new Error(`${api.apiName} must not fetch during dry-run`);
+      },
+      javaSpawnImpl: async () => {
+        throw new Error(`${api.apiName} must not spawn during dry-run`);
+      },
+    });
+    assert.equal(dryRun.exitCode, 0, `${api.apiName} dry-run`);
+
+    if (api.approvalRequired) {
+      let fetched = false;
+      let spawned = false;
+      const execute = await runCli(["call", api.apiName, "--execute"], {
+        env: { DEEPDRAW_TENANT_NAME: "demo" },
+        stdin: "",
+        fetchImpl: async () => {
+          fetched = true;
+          return new Response("{}", { status: 200 });
+        },
+        javaSpawnImpl: async () => {
+          spawned = true;
+          return { exitCode: 0, stdout: "{}", stderr: "" };
+        },
+      });
+      assert.equal(execute.exitCode, 1, `${api.apiName} approval gate`);
+      assert.equal(fetched, false, `${api.apiName} no fetch`);
+      assert.equal(spawned, false, `${api.apiName} no spawn`);
+    }
+  }
 });
 
 test("deepdraw call dry-run validates unknown options without fetching", async () => {

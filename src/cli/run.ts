@@ -1,16 +1,26 @@
+import { existsSync, readFileSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { apiRegistry, findApiDefinition } from "../core/api-registry.js";
 import { createExecutionPlan, enforceApproval } from "../core/approval.js";
 import { callDeepdrawApi, type DeepdrawFetch } from "../core/deepdraw-client.js";
-import { resolveDeepdrawConfig } from "../core/config.js";
-import { EnvCredentialStore } from "../core/credentials.js";
+import { configPathForPlatform, resolveDeepdrawConfig, type ConfigPlatform, type DeepdrawConfig, type StoredConfigFile } from "../core/config.js";
+import { type CredentialStore, FileCredentialStore } from "../core/credentials.js";
 import { redactSensitive } from "../core/redact.js";
 import type { ApiDefinition } from "../core/types.js";
+import { callJavaSdkApi, type JavaSdkSpawn } from "../sdk/java-adapter.js";
 import { jsonLine } from "./format.js";
 
 export interface CliRunOptions {
   env: NodeJS.ProcessEnv;
   stdin: string;
   fetchImpl?: DeepdrawFetch;
+  credentialStore?: CredentialStore;
+  configPath?: string;
+  homeDir?: string;
+  platform?: ConfigPlatform;
+  cwd?: string;
+  javaSpawnImpl?: JavaSdkSpawn;
 }
 
 export interface CliRunResult {
@@ -30,7 +40,8 @@ function helpText() {
   ].join("\n") + "\n";
 }
 
-function parseCallArgs(argv: string[]): {
+function parseCallArgs(argv: string[], cwd: string): {
+  dryRun: boolean;
   execute: boolean;
   yes: boolean;
   plan: boolean;
@@ -39,12 +50,17 @@ function parseCallArgs(argv: string[]): {
 } {
   const query: Record<string, unknown> = {};
   let body: unknown;
+  let dryRun = false;
   let execute = false;
   let yes = false;
   let plan = false;
 
   for (let index = 2; index < argv.length; index += 1) {
     const arg = argv[index];
+    if (arg === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
     if (arg === "--execute") {
       execute = true;
       continue;
@@ -76,10 +92,28 @@ function parseCallArgs(argv: string[]): {
       index += 1;
       continue;
     }
+    if (arg === "--json-file") {
+      const jsonPath = argv[index + 1];
+      if (!jsonPath) {
+        throw new Error("--json-file requires a file path");
+      }
+      const fullPath = resolve(cwd, jsonPath);
+      try {
+        body = JSON.parse(readFileSync(fullPath, "utf8")) as unknown;
+      } catch (error) {
+        throw new Error(`Invalid JSON file ${fullPath}: ${errorMessage(error)}`);
+      }
+      index += 1;
+      continue;
+    }
     throw new Error(`Unknown call option: ${arg}`);
   }
 
-  return { execute, yes, plan, query, body };
+  if (dryRun && execute) {
+    throw new Error("Cannot combine --dry-run and --execute");
+  }
+
+  return { dryRun, execute, yes, plan, query, body };
 }
 
 function errorMessage(error: unknown): string {
@@ -190,12 +224,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export async function runCli(argv: string[], options: CliRunOptions): Promise<CliRunResult> {
+  const cwd = options.cwd ?? process.cwd();
   if (argv[0] === "call") {
     const apiName = argv[1];
     if (!apiName || apiName === "--help") {
       return {
         exitCode: 0,
-        stdout: "Usage: deepdraw call <api-name> [--execute] [--yes] [--plan] [--param key=value] [--json JSON] [--json-file file]\n",
+        stdout: "Usage: deepdraw call <api-name> [--dry-run] [--execute] [--yes] [--plan] [--param key=value] [--json JSON] [--json-file file]\n",
         stderr: "",
       };
     }
@@ -209,7 +244,7 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
     }
     let callArgs: ReturnType<typeof parseCallArgs>;
     try {
-      callArgs = parseCallArgs(argv);
+      callArgs = parseCallArgs(argv, cwd);
     } catch (error) {
       return {
         exitCode: 1,
@@ -244,18 +279,34 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
         };
       }
       try {
+        const credentialStore = options.credentialStore ?? new FileCredentialStore(defaultCredentialPath(options));
         const config = await resolveDeepdrawConfig({
           env: options.env,
-          cwd: process.cwd(),
-          credentialStore: new EnvCredentialStore(options.env),
+          cwd,
+          platform: options.platform,
+          homeDir: options.homeDir,
+          configPath: options.configPath,
+          credentialStore,
         });
-        const result = await callDeepdrawApi({
-          config,
-          apiName: api.apiName,
-          query: callArgs.query,
-          body: callArgs.body,
-          fetchImpl: options.fetchImpl,
-        });
+        const query = withConfigDefaults(api, callArgs.query, config);
+        validateRequiredParams(api, query, callArgs.body);
+        const result = api.transport === "java-sdk"
+          ? await callJavaSdkApi({
+            config,
+            apiName: api.apiName,
+            query,
+            body: callArgs.body,
+            env: options.env,
+            cwd,
+            spawnImpl: options.javaSpawnImpl,
+          })
+          : await callDeepdrawApi({
+            config,
+            apiName: api.apiName,
+            query,
+            body: callArgs.body,
+            fetchImpl: options.fetchImpl,
+          });
         return {
           exitCode: result.ok ? 0 : 1,
           stdout: JSON.stringify(result) + "\n",
@@ -351,20 +402,38 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
       };
     }
 
-    return {
-      exitCode: 0,
-      stdout: jsonLine({
-        ok: true,
-        tenant: credentialsInput.tenantName,
-        defaultTenant: Boolean(credentialsInput.defaultTenant),
-        credentials: redactSensitive({
-          appKey: credentialsInput.appKey,
-          appSecret: credentialsInput.appSecret,
-          dopKey: credentialsInput.dopKey,
+    try {
+      const login = validateAuthLoginInput(credentialsInput);
+      const configPath = options.configPath
+        ?? configPathForPlatform(options.platform ?? process.platform, options.homeDir ?? process.env.HOME ?? "", options.env);
+      const credentialStore = options.credentialStore ?? new FileCredentialStore(defaultCredentialPath({ ...options, configPath }));
+      const refs = credentialRefs(login.tenantName);
+      await credentialStore.set(refs.appKeyRef, login.appKey);
+      await credentialStore.set(refs.appSecretRef, login.appSecret);
+      await credentialStore.set(refs.dopKeyRef, login.dopKey);
+      await writeTenantConfig(configPath, login, refs);
+      return {
+        exitCode: 0,
+        stdout: jsonLine({
+          ok: true,
+          tenant: login.tenantName,
+          defaultTenant: Boolean(login.defaultTenant),
+          configPath,
+          credentials: redactSensitive({
+            appKey: login.appKey,
+            appSecret: login.appSecret,
+            dopKey: login.dopKey,
+          }),
         }),
-      }),
-      stderr: "",
-    };
+        stderr: "",
+      };
+    } catch (error) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: `${errorMessage(error)}\n`,
+      };
+    }
   }
 
   if (argv[0] === "config" && argv[1] === "doctor" && argv[2] === "--dry-run") {
@@ -399,4 +468,143 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
     stdout: "",
     stderr: `Unknown command: ${argv[0] ?? ""}\n`,
   };
+}
+
+function defaultCredentialPath(options: Pick<CliRunOptions, "configPath" | "platform" | "homeDir" | "env">): string {
+  const configPath = options.configPath
+    ?? configPathForPlatform(options.platform ?? process.platform, options.homeDir ?? process.env.HOME ?? "", options.env);
+  return join(dirname(configPath), "credentials.json");
+}
+
+function withConfigDefaults(
+  api: ApiDefinition,
+  query: Record<string, unknown>,
+  config: DeepdrawConfig,
+): Record<string, unknown> {
+  if (api.requiredParams.some((param) => param.source === "query" && param.name === "merchantId") && !hasNonEmptyValue(query.merchantId)) {
+    return { ...query, merchantId: config.merchantId };
+  }
+  return query;
+}
+
+function validateRequiredParams(api: ApiDefinition, query: Record<string, unknown>, body: unknown): void {
+  const missing = api.requiredParams.filter((param) => {
+    if (param.source === "query") {
+      return !hasNonEmptyValue(query[param.name]);
+    }
+    return !hasRequiredBodyParam(param.name, body);
+  }).map((param) => param.name);
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required parameters for ${api.apiName}: ${missing.join(", ")}`);
+  }
+}
+
+function hasRequiredBodyParam(name: string, body: unknown): boolean {
+  if (!hasNonEmptyValue(body)) {
+    return false;
+  }
+  if (!isRecord(body)) {
+    return true;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, name)) {
+    return hasNonEmptyValue(body[name]);
+  }
+  if (name === "product") {
+    return true;
+  }
+  if (name === "images") {
+    return ["addImages", "updateImages", "deleteImages"].some((field) => hasNonEmptyValue(body[field]));
+  }
+  return false;
+}
+
+function hasNonEmptyValue(value: unknown): boolean {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  if (typeof value === "string") {
+    return value.trim().length > 0;
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (isRecord(value)) {
+    return Object.keys(value).length > 0;
+  }
+  return true;
+}
+
+interface AuthLoginInput {
+  tenantName: string;
+  merchantId: string;
+  appKey: string;
+  appSecret: string;
+  dopKey: string;
+  baseUrl?: string;
+  timeoutMs?: number;
+  defaultTenant?: boolean;
+}
+
+function validateAuthLoginInput(input: Record<string, unknown>): AuthLoginInput {
+  const required = ["tenantName", "merchantId", "appKey", "appSecret", "dopKey"] as const;
+  const missing = required.filter((field) => !hasNonEmptyValue(input[field]));
+  if (missing.length > 0) {
+    throw new Error(`Missing auth login fields: ${missing.join(", ")}`);
+  }
+  if (input.timeoutMs !== undefined && (!Number.isInteger(input.timeoutMs) || Number(input.timeoutMs) <= 0)) {
+    throw new Error("timeoutMs must be a positive integer");
+  }
+  return {
+    tenantName: String(input.tenantName),
+    merchantId: String(input.merchantId),
+    appKey: String(input.appKey),
+    appSecret: String(input.appSecret),
+    dopKey: String(input.dopKey),
+    baseUrl: input.baseUrl === undefined ? undefined : String(input.baseUrl),
+    timeoutMs: input.timeoutMs === undefined ? undefined : Number(input.timeoutMs),
+    defaultTenant: Boolean(input.defaultTenant),
+  };
+}
+
+function credentialRefs(tenantName: string): Pick<StoredConfigFile["tenants"][string], "appKeyRef" | "appSecretRef" | "dopKeyRef"> {
+  return {
+    appKeyRef: `tenant:${tenantName}:appKey`,
+    appSecretRef: `tenant:${tenantName}:appSecret`,
+    dopKeyRef: `tenant:${tenantName}:dopKey`,
+  };
+}
+
+async function writeTenantConfig(
+  configPath: string,
+  input: AuthLoginInput,
+  refs: Pick<StoredConfigFile["tenants"][string], "appKeyRef" | "appSecretRef" | "dopKeyRef">,
+): Promise<void> {
+  const existing = readExistingStoredConfig(configPath);
+  const defaultTenant = input.defaultTenant || !existing.defaultTenant ? input.tenantName : existing.defaultTenant;
+  const config: StoredConfigFile = {
+    defaultTenant,
+    tenants: {
+      ...existing.tenants,
+      [input.tenantName]: {
+        merchantId: input.merchantId,
+        ...(input.baseUrl ? { baseUrl: input.baseUrl } : {}),
+        ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
+        ...refs,
+      },
+    },
+  };
+  await mkdir(dirname(configPath), { recursive: true });
+  await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+}
+
+function readExistingStoredConfig(configPath: string): StoredConfigFile {
+  if (!existsSync(configPath)) {
+    return { defaultTenant: "", tenants: {} };
+  }
+  const parsed = JSON.parse(readFileSync(configPath, "utf8")) as unknown;
+  if (!isRecord(parsed) || !isRecord(parsed.tenants)) {
+    throw new Error(`Invalid DeepDraw config at ${configPath}: root object with tenants is required.`);
+  }
+  return parsed as unknown as StoredConfigFile;
 }

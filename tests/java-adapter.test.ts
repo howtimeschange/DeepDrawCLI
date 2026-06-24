@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { delimiter } from "node:path";
 import { test } from "node:test";
-import { buildSdkInput, parseSdkOutput } from "../src/sdk/java-adapter.js";
+import { buildSdkInput, callJavaSdkApi, parseSdkOutput } from "../src/sdk/java-adapter.js";
 
 const config = {
   tenantName: "电商巴拉巴拉",
@@ -141,5 +142,43 @@ test("parseSdkOutput normalizes trailing JSON line", () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.requestId, "9901");
+  assert.deepEqual(result.data, { productId: 7788 });
+});
+
+test("callJavaSdkApi writes SDK input to Java stdin and parses normalized output", async () => {
+  let stdinPayload: unknown;
+  const result = await callJavaSdkApi({
+    config,
+    apiName: "dp.product.resource",
+    query: { productCode: "208226102001", resource: "form" },
+    body: undefined,
+    env: { DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" },
+    cwd: "/tmp/deepdraw-cli",
+    spawnImpl: async (command, args, input) => {
+      assert.equal(command, "java");
+      assert.deepEqual(args, ["-cp", `/tmp/deepdraw-cli/.deepdraw-sdk/classes${delimiter}/tmp/fake-sdk/*`, "DeepdrawProductResourceCli"]);
+      stdinPayload = JSON.parse(input) as unknown;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: '{"status":200,"response":{"code":10200,"response":"success","body":{"productId":7788}}}',
+      };
+    },
+  });
+
+  assert.deepEqual(stdinPayload, {
+    config: {
+      appKey: "app-key",
+      appSecret: "app-secret",
+      dopKey: "dop-key",
+      host: "http://open.deepdraw.cn",
+      merchantId: "1162",
+    },
+    query: {
+      productCode: "208226102001",
+      resource: "form",
+    },
+  });
+  assert.equal(result.ok, true);
   assert.deepEqual(result.data, { productId: 7788 });
 });
