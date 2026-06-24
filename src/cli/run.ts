@@ -1,3 +1,4 @@
+import { spawn as spawnChild } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -28,6 +29,36 @@ export interface CliRunResult {
   stdout: string;
   stderr: string;
 }
+
+type DoctorCheck = {
+  name: string;
+  ok: boolean;
+  path?: string;
+  count?: number;
+  missing?: string[];
+  message?: string;
+};
+
+const requiredDeepdrawSdkJars = [
+  "dop-sdk-1.6.0.jar",
+  "sdk-core-java-1.1.0.jar",
+];
+
+const requiredJavaDependencyJars = [
+  "commons-codec-1.15.jar",
+  "commons-collections-3.2.2.jar",
+  "commons-collections4-4.1.jar",
+  "commons-io-2.4.jar",
+  "commons-lang3-3.11.jar",
+  "commons-logging-1.2.jar",
+  "fastjson-1.2.76.jar",
+  "guava-20.0.jar",
+  "httpclient-4.5.13.jar",
+  "httpcore-4.4.14.jar",
+  "okhttp-3.8.1.jar",
+  "okio-1.13.0.jar",
+  "slf4j-api-1.7.25.jar",
+];
 
 function helpText() {
   return [
@@ -445,15 +476,18 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
       };
     }
 
+    const checks = await configDoctorChecks({
+      cwd: options.cwd ?? process.cwd(),
+      env: options.env,
+      spawnImpl: options.javaSpawnImpl,
+    });
+
     return {
       exitCode: 0,
       stdout: jsonLine({
-        ok: true,
+        ok: checks.every((check) => check.ok),
         dryRun: true,
-        checks: [
-          { name: "config-path", ok: true },
-          { name: "credential-store", ok: true },
-        ],
+        checks,
       }),
       stderr: "",
     };
@@ -468,6 +502,83 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
     stdout: "",
     stderr: `Unknown command: ${argv[0] ?? ""}\n`,
   };
+}
+
+async function configDoctorChecks(options: {
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+  spawnImpl?: JavaSdkSpawn;
+}): Promise<DoctorCheck[]> {
+  const sdkDir = options.env.DEEPDRAW_SDK_DIR
+    ? resolve(options.env.DEEPDRAW_SDK_DIR)
+    : join(options.cwd, "vendor", "deepdraw-sdk");
+
+  const javaRuntime = await checkLocalJavaTool("java-runtime", "java", options.spawnImpl);
+  const javac = await checkLocalJavaTool("javac", "javac", options.spawnImpl);
+
+  return [
+    { name: "config-path", ok: true },
+    { name: "credential-store", ok: true },
+    javaRuntime,
+    javac,
+    checkJarSet("deepdraw-sdk-jars", sdkDir, requiredDeepdrawSdkJars),
+    checkJarSet("java-sdk-dependency-jars", join(sdkDir, "lib"), requiredJavaDependencyJars),
+  ];
+}
+
+async function checkLocalJavaTool(name: string, command: string, spawnImpl?: JavaSdkSpawn): Promise<DoctorCheck> {
+  const spawn = spawnImpl ?? defaultDoctorSpawn;
+  try {
+    const run = await spawn(command, ["-version"], "");
+    if (run.exitCode === 0) {
+      return { name, ok: true };
+    }
+    return {
+      name,
+      ok: false,
+      message: (run.stderr || run.stdout || `exit code ${run.exitCode}`).trim(),
+    };
+  } catch (error) {
+    return {
+      name,
+      ok: false,
+      message: errorMessage(error),
+    };
+  }
+}
+
+function checkJarSet(name: string, directory: string, jars: string[]): DoctorCheck {
+  const missing = jars.filter((jar) => !existsSync(join(directory, jar)));
+  return {
+    name,
+    ok: missing.length === 0,
+    path: directory,
+    count: jars.length - missing.length,
+    ...(missing.length > 0 ? { missing } : {}),
+  };
+}
+
+function defaultDoctorSpawn(command: string, args: string[], input: string): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
+  return new Promise((resolveSpawn) => {
+    const child = spawnChild(command, args, { stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      resolveSpawn({ stdout: "", stderr: error.message, exitCode: 1 });
+    });
+    child.on("close", (exitCode) => {
+      resolveSpawn({ stdout, stderr, exitCode });
+    });
+    child.stdin.end(input);
+  });
 }
 
 function defaultCredentialPath(options: Pick<CliRunOptions, "configPath" | "platform" | "homeDir" | "env">): string {

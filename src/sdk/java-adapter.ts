@@ -107,12 +107,20 @@ async function resolveJavaClasspath(cwd: string, env: NodeJS.ProcessEnv, spawnIm
       join(cwd, "vendor", "deepdraw-sdk"),
       "/Users/xingyicheng/Documents/Listingify/vendor/deepdraw-sdk",
     ]);
+  const sdkEntries = javaSdkClasspathEntries(sdkDir);
   if (existsSync(join(cwd, "java"))) {
     await mkdir(classDir, { recursive: true });
-    await compileJavaSources(cwd, classDir, sdkDir ? join(sdkDir, "*") : undefined, spawnImpl);
+    await compileJavaSources(cwd, classDir, sdkEntries.length > 0 ? sdkEntries.join(delimiter) : undefined, spawnImpl);
   }
 
-  return [classDir, sdkDir ? join(sdkDir, "*") : undefined].filter(Boolean).join(delimiter);
+  return [classDir, ...sdkEntries].join(delimiter);
+}
+
+function javaSdkClasspathEntries(sdkDir: string | undefined): string[] {
+  if (!sdkDir) {
+    return [];
+  }
+  return [join(sdkDir, "*"), join(sdkDir, "lib", "*")];
 }
 
 async function compileJavaSources(

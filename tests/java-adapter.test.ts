@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { delimiter } from "node:path";
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { delimiter, join } from "node:path";
 import { test } from "node:test";
 import { buildSdkInput, callJavaSdkApi, parseSdkOutput } from "../src/sdk/java-adapter.js";
 
@@ -181,4 +183,44 @@ test("callJavaSdkApi writes SDK input to Java stdin and parses normalized output
   });
   assert.equal(result.ok, true);
   assert.deepEqual(result.data, { productId: 7788 });
+});
+
+test("callJavaSdkApi loads bundled SDK jars and dependency jars from vendor directory", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "deepdraw-sdk-vendor-"));
+  await mkdir(join(cwd, "java"), { recursive: true });
+  await mkdir(join(cwd, "vendor", "deepdraw-sdk", "lib"), { recursive: true });
+  await writeFile(join(cwd, "java", "DeepdrawProductResourceCli.java"), "class DeepdrawProductResourceCli {}\n");
+
+  const compileClasspaths: string[] = [];
+  const runClasspaths: string[] = [];
+
+  const result = await callJavaSdkApi({
+    config,
+    apiName: "dp.product.resource",
+    query: { productCode: "208226102001" },
+    body: undefined,
+    env: {},
+    cwd,
+    spawnImpl: async (command, args) => {
+      if (command === "javac") {
+        compileClasspaths.push(args[1]);
+        return { exitCode: 0, stderr: "", stdout: "" };
+      }
+      assert.equal(command, "java");
+      runClasspaths.push(args[1]);
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: '{"status":200,"response":{"code":10200,"response":"success","body":{"productId":7788}}}',
+      };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(compileClasspaths.length, 1);
+  assert.equal(runClasspaths.length, 1);
+  assert.ok(compileClasspaths[0].split(delimiter).includes(join(cwd, "vendor", "deepdraw-sdk", "*")));
+  assert.ok(compileClasspaths[0].split(delimiter).includes(join(cwd, "vendor", "deepdraw-sdk", "lib", "*")));
+  assert.ok(runClasspaths[0].split(delimiter).includes(join(cwd, "vendor", "deepdraw-sdk", "*")));
+  assert.ok(runClasspaths[0].split(delimiter).includes(join(cwd, "vendor", "deepdraw-sdk", "lib", "*")));
 });

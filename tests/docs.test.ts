@@ -16,9 +16,20 @@ test("README documents cross-platform auth login", () => {
   const text = readFileSync("README.md", "utf8");
   assert.match(text, /deepdraw auth login/);
   assert.match(text, /deepdraw auth login --stdin-json/);
-  assert.match(text, /Environment variables take priority/);
+  assert.match(text, /环境变量优先/);
   assert.match(text, /%APPDATA%\\DeepDrawCli\\config\.json/);
   assert.match(text, /credentials\.json/);
+});
+
+test("README documents bundled DeepDraw SDK jars and runtime dependency jars", () => {
+  const text = readFileSync("README.md", "utf8");
+  assert.match(text, /vendor\/deepdraw-sdk/);
+  assert.match(text, /dop-sdk-1\.6\.0\.jar/);
+  assert.match(text, /sdk-core-java-1\.1\.0\.jar/);
+  assert.match(text, /vendor\/deepdraw-sdk\/lib/);
+  assert.match(text, /Java SDK 运行依赖 jar/);
+  assert.match(text, /无需 Maven 下载/);
+  assert.match(text, /Windows/);
 });
 
 test("README does not document nonexistent execute command", () => {

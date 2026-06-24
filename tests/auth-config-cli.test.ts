@@ -180,6 +180,7 @@ test("config doctor --dry-run rejects unknown trailing args", async () => {
 
 test("config doctor --dry-run succeeds without live network calls", async () => {
   let fetched = false;
+  const javaCommands: string[] = [];
   const result = await runCli(["config", "doctor", "--dry-run"], {
     env: {},
     stdin: "",
@@ -187,17 +188,28 @@ test("config doctor --dry-run succeeds without live network calls", async () => 
       fetched = true;
       throw new Error("network should not be called");
     },
+    javaSpawnImpl: async (command) => {
+      javaCommands.push(command);
+      return { exitCode: 0, stdout: "", stderr: "" };
+    },
   });
 
   assert.equal(result.exitCode, 0);
   assert.equal(result.stderr, "");
   assert.equal(fetched, false);
+  assert.deepEqual(javaCommands, ["java", "javac"]);
 
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.ok, true);
   assert.equal(payload.dryRun, true);
-  assert.deepEqual(payload.checks, [
-    { name: "config-path", ok: true },
-    { name: "credential-store", ok: true },
+  assert.deepEqual(payload.checks.map((check: { name: string }) => check.name), [
+    "config-path",
+    "credential-store",
+    "java-runtime",
+    "javac",
+    "deepdraw-sdk-jars",
+    "java-sdk-dependency-jars",
   ]);
+  assert.equal(payload.checks.find((check: { name: string }) => check.name === "deepdraw-sdk-jars").ok, true);
+  assert.equal(payload.checks.find((check: { name: string }) => check.name === "java-sdk-dependency-jars").count, 13);
 });
