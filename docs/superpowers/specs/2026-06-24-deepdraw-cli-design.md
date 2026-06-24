@@ -14,7 +14,7 @@
 ## 目标
 
 1. 提供统一命令入口 `deepdraw`，让 AI agent 能以 JSON 输入输出调用深绘开放平台。
-2. 覆盖文档中的所有 `dp.*` 接口：高频接口提供语义化命令，低频接口通过 `deepdraw call <api>` 覆盖。
+2. 覆盖参考文档中的所有开放平台接口调用方式：`docs/reference/deepdraw-openapi.md` 的 API 快速索引和正文“接口名称”小节中出现的每个 `dp.*` 接口都必须进入 CLI 接口注册表，并且至少能通过 `deepdraw call <api>` 调用；高频接口再额外提供语义化命令。
 3. 支持多租户凭据管理，不要求用户手写 `.env.local`。
 4. 对写入、收费、慎用接口默认先生成执行计划，必须获得用户授权后才真正请求深绘。
 5. 默认脱敏敏感信息，避免日志、终端输出和仓库文件泄露 `appSecret`、`dopKey` 或签名。
@@ -111,7 +111,18 @@ deepdraw call dp.product.resource --json-file query.json
 
 ## 接口注册表
 
-所有接口先进入 `api-registry.ts`，每个条目声明：
+所有参考文档接口必须先进入 `api-registry.ts`。这是 v1 的硬性范围，不允许只实现高频接口，也不允许把文档接口留在“以后补”的状态。
+
+覆盖规则：
+
+1. 以 `docs/reference/deepdraw-openapi.md` 为稳定来源。
+2. 从 API 快速索引和正文“接口名称”小节提取全部 `dp.*` 接口。
+3. 每个接口必须有注册表条目、风险等级、调用路径、参数定义和 transport 选择。
+4. 每个接口必须至少支持 `deepdraw call <api-name>` 调用。
+5. 高频接口可以在 `deepdraw call` 之外增加语义化命令，但语义化命令不能替代注册表覆盖。
+6. 文档新增接口时，接口覆盖测试必须失败，直到注册表补齐该接口。
+
+每个条目声明：
 
 - `apiName`：例如 `dp.product.basic.search`
 - `group`：merchant、trade、product、image、common
@@ -150,7 +161,7 @@ deepdraw call dp.product.resource --json-file query.json
 | `dp.product.image.update` | `image update` | paid/write | http |
 | `dp.colors.get` | `color list` | read | http |
 
-`deepdraw call` 必须能调用注册表中的全部接口。语义化命令只是更友好的薄封装。
+`deepdraw call` 必须能调用注册表中的全部接口。语义化命令只是更友好的薄封装，不能成为唯一调用入口。
 
 ## 配置与凭据
 
@@ -419,7 +430,8 @@ SDK 依赖：
 
 - 签名 canonical string 和 header。
 - 参数排序、编码、敏感 query 防覆盖。
-- 接口注册表包含文档全部 `dp.*` 接口。
+- 接口注册表包含参考文档 API 快速索引和正文“接口名称”小节中的全部 `dp.*` 接口。
+- 覆盖测试从 `docs/reference/deepdraw-openapi.md` 提取接口名，并断言每个接口都有注册表条目和 `deepdraw call` 调用路径。
 - 风险分级和授权拦截。
 - 输出归一和错误类型。
 - 配置优先级。
@@ -498,7 +510,7 @@ deepdraw --help
 ## 验收标准
 
 1. `docs/reference/deepdraw-openapi.md` 是项目内稳定 API 参考。
-2. `deepdraw call` 能覆盖 API 快速索引中的全部 `dp.*` 接口。
+2. `deepdraw call` 能覆盖 `docs/reference/deepdraw-openapi.md` 中 API 快速索引和正文“接口名称”小节列出的全部 `dp.*` 接口。
 3. 高频接口有语义化命令。
 4. `auth login` 支持交互式配置，且 macOS、Windows、Linux 有明确凭据策略。
 5. 写入、收费、慎用接口在没有授权时不会请求深绘。
