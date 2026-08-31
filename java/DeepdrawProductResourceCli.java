@@ -15,7 +15,8 @@ public class DeepdrawProductResourceCli {
     "material",
     "video",
     "detailPageSite",
-    "excludeDetailPageModules"
+    "excludeDetailPageModules",
+    "tags"
   };
 
   private static class ExtendedProductGetByIdRequest extends ProductGetByIdRequest {

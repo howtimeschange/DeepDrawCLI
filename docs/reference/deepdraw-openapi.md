@@ -1,11 +1,15 @@
-# 深绘开放平台接口文档
+# 深绘开放平台接口文档（2026-08-27 source snapshot）
 
-> 本文件由 PDF 文档自动解析生成，面向 AI agent 检索和调用参考。
-> 原始文件: `/Users/xingyicheng/Downloads/深绘开放平台API接口文档202603010.pdf`
-> PDF 页数: 93
-> PDF 创建时间: D:20260310163259+08'32'
+> 本文件依据新版 PDF 全文提取并整理，面向 AI agent 检索和调用参考。
+> 原始文件: `/Users/xingyicheng/Downloads/深绘开放平台API接口文档20260827.pdf`
+> PDF 页数: 96
+> PDF 创建时间: 2026-08-27 16:15:38 CST
 > PDF 作者: DEEPDRAW-DANNY
-> 转换时间: 2026-06-24 19:18:29
+> 对应 SDK: `dop-sdk-1.6.24.jar`
+> SDK SHA-256: `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8`
+> 提取与核验: 使用 pdfplumber 提取 96 页文本，并使用 Poppler `pdftoppm` 渲染 96 页检查版面；PDF 内容只用于接口事实核对，不构成真实接口执行授权。
+
+> 版本提示：PDF 封面仍显示“当前版本号 1.2 / 最后更新时间 2023.08.10”；本参考以 PDF 的修改历史为准，已纳入 1.6.23、1.6.24 及 2026.08.03 文档补充。仓库 vendor 使用的 SDK 版本为 1.6.24。
 
 ## Agent 读取提示
 
@@ -13,6 +17,9 @@
 - SDK 调用通常需要 `appKey`、`appSecret`、`dopKey`、`host` 等公共参数。
 - 响应示例中外层 `status` 是 HTTP 状态码；`response.body` 或响应对象中的 `body` 才是业务数据。
 - 下方“API 快速索引”按接口名列出 `dp.*` 方法，正文继续保留请求参数、响应参数、Java 示例和 JSON 示例。
+- 文档中的写入、付费和慎用示例仅用于说明请求形状；CLI 必须先生成计划，并在用户明确授权后才可真实执行。
+- `dp.product.resource`、`dp.product.search`、`dp.feature.pictures.get`、`dp.product.basic.search` 支持按 `tags` 过滤产品标签。
+- `dp.product.detail.get` 支持 `detailPageSite` 平台过滤；详情读回还应关注 `active`、`templateWidth`、`templateSites`、`remark`、`complete` 和 `videos` 等字段。
 
 ## API 快速索引
 
@@ -25,19 +32,25 @@
 | 3.2 | 获取类目字段 | `dp.trade.fields` | v1 | 16 |
 | 4.1 | 创建产品 | `dp.product.create` | v1 | 19 |
 | 4.2 | 更新产品 | `dp.product.update` | v1 | 22 |
-| 4.3 | 产品增量更新 | `dp.product.incremental.update` | v2 | 24 |
-| 4.4 | 获取产品指定类型资源 | `dp.product.resource` | v2 | 26 |
+| 4.3 | 产品增量更新 | `dp.product.incremental.update` | v2 | 25 |
+| 4.4 | 获取产品指定类型资源 | `dp.product.resource` | v2 | 27 |
+| registry supplement | 查询产品详情页 | `dp.product.detail.get` | v1 | PDF 修改历史 / registry |
 | 4.5 | 查询产品列表（慎用） | `dp.product.search` | v2 | 29 |
-| 4.6 | 获取商品指定类型素材/资源图原图 | `dp.feature.pictures.get` | v2 | 31 |
-| 4.7 | 查询产品基础信息列表 | `dp.product.basic.search` | v2 | 35 |
-| 4.8 | 查询产品上架状态 | `dp.product.distribution.get` | v2 | 37 |
-| 5.1 | 以图搜款-款号接口（额外收费） | `dp.product.retrieve.image` | v2 | 39 |
-| 5.2 | 以图搜款-查询上货记录 | `dp.product.distributions.get` | v2 | 41 |
-| 5.3 | 图片服装多标签分析（额外收费） | `dp.product.label.image` | v2 | 43 |
-| 5.4 | 图片素材上传接口（额外收费） | `dp.product.image.upload` | v2 | 46 |
-| 5.5 | 查询上传图片素材任务接口（额外收费） | `dp.product.image.query` | v2 | 47 |
-| 5.6 | 图片修改（额外收费） | `dp.product.image.update` | v2 | 48 |
-| 6.1 | 获取深绘标准颜色 | `dp.colors.get` | v2 | 51 |
+| 4.6 | 获取商品指定类型素材/资源图原图 | `dp.feature.pictures.get` | v2 | 32 |
+| 4.7 | 查询产品基础信息列表 | `dp.product.basic.search` | v2 | 36 |
+| 4.8 | 查询产品上架状态 | `dp.product.distribution.get` | v2 | 38 |
+| 4.9 | 产品颜色与 SKU 增量更新（特殊用户定制需求） | `dp.product.sku.color.incremental.update` | v2 | 40 |
+| 5.1 | 以图搜款-款号接口（额外收费） | `dp.product.retrieve.image` | v2 | 42 |
+| 5.2 | 以图搜款-查询上货记录 | `dp.product.distributions.get` | v2 | 44 |
+| 5.3 | 图片服装多标签分析（额外收费） | `dp.product.label.image` | v2 | 46 |
+| 5.4 | 图片素材上传接口（额外收费） | `dp.product.image.upload` | v2 | 49 |
+| 5.5 | 查询上传图片素材任务接口（额外收费） | `dp.product.image.query` | v2 | 50 |
+| 5.6 | 图片修改（额外收费） | `dp.product.image.update` | v2 | 51 |
+| 6.1 | 获取深绘标准颜色 | `dp.colors.get` | v2 | 54 |
+| 附录一 | AllInOneProduct | - | - | 55 |
+| 附录二 | DpProductPictures | - | - | 76 |
+| 附录三 | DpDetalPage | - | - | 88 |
+| 附录四 | DpProductVideos | - | - | 90 |
 
 ## 正文
 
@@ -79,6 +92,9 @@
 | 1.6.20 | 胡凡 | 2025.10.29 | 5.6新增参数pictureAddType 图片新增方式:支<br>持追加、按文件名更新、全量覆盖 |
 | - | 胡凡 | 2025.12.16 | 补充接口4.8 查询产品上架状态 |
 | 1.6.22 | 胡凡 | 2026.03.10 | 1、详情页支持按模块名称过滤详情页<br>4.4dp.product.resource<br>4.5dp.product.search<br>dp.product.detail.get<br>新增参数：excludeDetailPageModules<br>2、上货接口返回水印、详情页、是否启用视频主<br>图<br>4.8dp.product.distribution.get<br>5.2dp.product.distributions.get |
+| 1.6.23 | 胡凡 | 2026.03.27 | 4.9 `dp.product.sku.color.incremental.update`：特殊用户新增接口，支持产品颜色与 SKU 增量更新 |
+| 1.6.24 | 胡凡 | 2026.06.16 | 支持产品标签搜索，新增查询条件 `tags`：4.4 `dp.product.resource`、4.5 `dp.product.search`、4.6 `dp.feature.pictures.get`、4.7 `dp.product.basic.search` |
+| - | 胡凡 | 2026.08.03 | 文档说明更新：`AllInOneProduct` 补充 `remark` 备注；`DpDetalPage` 补充 `active` 启用状态；4.1.2 补充特殊格式说明 |
 
 ## 目录
 
@@ -91,6 +107,8 @@
 深绘提供了 Java 环境下的 SDK。SDK 依赖下列的包：
 fastjson-1.1.41，commons-lang3-3.8.1，httpclient-4.5.3，commons-io-2.5，httpcore-4.4.6，commons-collections-3.2.2。
 另外 SDK 需要依赖 sdk-core-java-1.1.0.jar，请联系深绘在提供 SDK 的时候同时提供这个包。
+
+本仓库固定使用 `vendor/deepdraw-sdk/dop-sdk-1.6.24.jar`，其 SHA-256 为 `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8`；同时保留 `sdk-core-java-1.1.0.jar` 与 `vendor/deepdraw-sdk/lib/*.jar` 运行依赖。不要把真实凭据写入 SDK 或参考文档。
 
 ### 1.2 公共参数
 
@@ -666,6 +684,21 @@ System.out.println("请求失败");
 注意：当创建产品时若传入尺码表、唯品会尺码表或商家 SKU，那么销售属性必填（接口 dp.trade.fields 中 isSaleProp 为 tru
 e 的字段）
 
+#### 4.1.2.1 支持的特殊字段格式
+
+以下格式来自新版 PDF 的特殊格式说明，分隔符必须使用英文标点：
+
+- 多选按钮：使用分号 `;` 分隔，例如 `青年;大码人群;中年`。
+- 多文本框或多文本域：使用星号 `*` 分隔，例如 `ABC*EFG`。
+- 材质成分：使用“材质,占比;”格式，例如 `聚酯纤维,64.7;粘胶纤维(粘纤),26.0`。
+- 所在地：两个下拉框使用“省,市”格式，例如 `广东,深圳`。
+- 得物发售日期：使用 `1*YYYY-MM-DD`（年月日）、`2*YYYY-MM`（年月）或 `3*YYYY*季度`（年/季度）。
+- 颜色色码：颜色别名部分与色码部分以 `*` 分隔，颜色条目用 `;` 分隔，例如 `黑色,黑色A01;深灰,奶奶灰*黑色,A01;深灰,B02`。
+- 自定义洗涤图标：支持 PDF 中列出的三种 `<img ...>` 组合格式；其中图标、配置名和配置 ID 应保持成对。
+- 售后服务承诺：格式为 `选项索引_天数`；不设置为 `0`，寄修为 `1`，延保为 `2`，例如 `1_1825`、`2_90`。
+
+暂不支持的特殊格式字段包括：`淘宝 SKU 参数`、`天猫 SKU 参数`、`天猫导购标题`、`京东规格子属性`、`京东自营子属性`、`淘宝导购标题`、`颜色备注` 等。遇到这些字段时应停止自动建档并交由人工确认，不要把不支持格式当作普通字符串强行提交。
+
 #### 4.1.3 响应参数
 
 | 名称 | 类型 | 示例值 | 描述 |
@@ -1000,6 +1033,7 @@ System.out.println("请求失败");
 | video | bit | 否 | 0 | 是否返回视频信息，1或0，默认0不返回<br>。天猫淘宝平台可以存在多个视频 |
 | detailPageSite | String | 否 | TMALL | 查询指定平台的详情页图（某些情况不同<br>平台展示的详情图不一样）<br>会过滤详情页modules和screenShotSec<br>tionUrls的返回结果 |
 | excludeDetailPageModules | String | 否 | usemap,推荐搭配,尺码表 | 详情页过滤掉指定的详情页模块(存在搭<br>配链接的用usemap其他按模块名过滤，<br>多个用,分隔)<br>会过滤详情页modules和screenShotSec<br>tionUrls的返回结果 |
+| tags | String | 否 | 标签1,标签2 | 产品标签，如果有多个用逗号分割 |
 
 需要注意的是，既可以通过 productId 也可以通过 merchantId 和 productCode 的组合来查询商品，如果两者都填了，则默认会
 通过 productId 来查询，不管这个 productId 是否正确。
@@ -1080,6 +1114,19 @@ System.out.println("请求失败");
 }
 ```
 
+### 4.4A 查询产品详情页（CLI registry supplement）
+
+`dp.product.detail.get` 在 PDF 的 1.6.22 修改历史中与详情页模块过滤一起被引用；CLI registry 对该只读接口提供以下可检索参数，以便与新版 SDK/运行时保持一致。
+
+| 名称 | 类型 | 是否必须 | 示例值 | 描述 |
+| --- | --- | --- | --- | --- |
+| productId | Long | 是 | 123 | 深绘产品 id |
+| quality | String | 否 | high | 详情页质量筛选 |
+| detailPageSite | String | 否 | TMALL | 查询指定平台的详情页图 |
+| excludeDetailPageModules | String | 否 | usemap,推荐搭配,尺码表 | 过滤详情页模块，多个用逗号分隔 |
+
+该补充项使用 CLI registry 中的 HTTP POST `/rest` 路径；只读不代表无须检查返回业务码，响应仍应按外层 HTTP `status` 和 DeepDraw 业务 `code` 双层判断。
+
 ### 4.5 查询产品列表（慎用）
 
 #### 4.5.1 接口名称
@@ -1108,6 +1155,7 @@ System.out.println("请求失败");
 | excludeDraft | bit | 否 | 1 | 是否排除草稿状态货号，1或0，默认1排除。 |
 | detailPageSite | String | 否 | TMALL | 查询指定平台的详情页图（某些情况不同平台展<br>示的详情图不一样）<br>会过滤详情页modules和screenShotSectionUrl<br>s的返回结果 |
 | excludeDetailPageModules | String | 否 | usemap,推荐搭配,<br>尺码表 | 详情页过滤掉指定的详情页模块(存在搭配链接的<br>用usemap其他按模块名过滤，多个用,分隔)<br>会过滤详情页modules和screenShotSectionUrl<br>s的返回结果 |
+| tags | String | 否 | 标签1,标签2 | 产品标签，如果有多个用逗号分割 |
 
 #### 4.5.3 响应参数
 
@@ -1206,6 +1254,7 @@ System.out.println("请求失败");
 | body_part | String | 否 | whole | 人体位置，可选值：whole(全身)，uppe<br>r(上半身)，lower(下半身)。人体位置仅<br>适用模特图。 |
 | body_orientation | String | 否 | front | 主体正反，可选值：back(背)，front(正)<br>，主体正反仅适用挂拍图。 |
 | skc | String | 否 | skc01,skc02 | 产品的skc，如果有多个用逗号分割 |
+| tags | String | 否 | 标签1,标签2 | 产品标签，如果有多个用逗号分割 |
 
 需要注意的是，既可以通过 productId 也可以通过 merchantId 和 productCode 的组合来查询，如果两者都填了，则默认会通过
 productId 来查询，不管这个 productId 是否正确。
@@ -1295,6 +1344,7 @@ System.out.println("请求失败");
 | detail | bit | 否 | 1 | 1或0，默认0。如果是1，则会查询这个时间段<br>内详情页变化的产品 |
 | productCodes | String | 否 | 货号1,货号2 | 货号，多个货号用逗号拼接 |
 | excludeDraft | bit | 否 | 1 | 是否排除草稿状态货号，1或0，默认1排除。 |
+| tags | String | 否 | 标签1,标签2 | 产品标签，如果有多个用逗号分割 |
 
 #### 4.7.3 响应参数
 
@@ -1434,6 +1484,66 @@ System.out.println("请求失败");
 "requestId": 1066,
 "response": "success",
 "timestamp": 1554286782459
+}
+```
+
+### 4.9 产品颜色与 SKU 增量更新（特殊用户定制需求）
+
+#### 4.9.1 接口名称
+
+**接口名:** `dp.product.sku.color.incremental.update`
+
+**版本:** v2
+
+**传输:** 仅 HTTP；仓库 CLI 通过 1.6.24 SDK bridge 的对应 request class 调用。
+
+#### 4.9.2 请求参数
+
+| 名称 | 类型 | 是否必须 | 示例值 | 描述 |
+| --- | --- | --- | --- | --- |
+| productId | String（PDF）/ Long（SDK setter） | 是 | 519b97a3bb5e451595c9ff5cdd13e40d | 产品在深绘系统内的 id，作为 query 参数发送；CLI bridge 接受可解析为十进制 Long 的产品 id |
+| product | Product | 是 | `cn.deepdraw.api.rest.entity.Product` | 作为 POST entity 发送的产品增量 payload |
+
+> 版本边界：PDF 将 `productId` 示例写作 String/十六进制样式，而 1.6.24 SDK request setter 为 `Long`。CLI 不会把 PDF 示例当作真实授权或在线探测；使用 CLI 时应提供 SDK 可解析的十进制产品 id。
+
+#### 4.9.3 注意事项-重要
+
+- 这是颜色、SKU、尺码的增量更新接口，颜色、SKU、尺码必填。
+- 尺码表（包括唯品会尺码表）存在时，更新数据必须同时包含尺码；尺码表中的每个尺码必须能在尺码字段中找到，否则会返回“尺码表错误”。
+- 商家 SKU 存在时，更新数据必须同时包含尺码和颜色；SKU 中的尺码必须能在尺码字段中找到，SKU 中的颜色必须能在颜色字段的颜色别名中找到，否则会返回“sku 错误”。
+- 颜色字段由“颜色名,别名;...”与可选的“颜色别名,色码;...”两部分组成，使用英文标点。颜色名、别名、色码不能重复；色码部分的颜色名必须已出现在颜色别名部分。
+- 该接口会修改产品，CLI 必须先生成 `--plan`，只有用户明确授权后才能用 `--execute --yes`；文档中的示例不等于授权。
+
+#### 4.9.4 响应参数
+
+| 名称 | 类型 | 示例值 | 描述 |
+| --- | --- | --- | --- |
+| id | String | 1c150d3ed75a49d1aa3a8f3439db3ecf | 更新的产品 id |
+| updates | List | `["标题","平台"]` | 更新成功的字段 |
+
+#### 4.9.5 请求示例
+
+```java
+ProductPostIncrementalUpdateProductSkuColorByIdRequest request =
+    new ProductPostIncrementalUpdateProductSkuColorByIdRequest(appKey, appSecret, dopKey, host);
+request.setProductId(productId);
+request.setProduct(product);
+Reply reply = request.execute();
+```
+
+#### 4.9.6 响应示例
+
+```json
+{
+  "body": {
+    "id": "1c150d3ed75a49d1aa3a8f3439db3ecf",
+    "updates": ["颜色", "平台"]
+  },
+  "code": 10200,
+  "reason": "访问成功！",
+  "requestId": 1616,
+  "response": "success",
+  "timestamp": 1555982680755
 }
 ```
 
@@ -1999,6 +2109,8 @@ AllInOneProduct
 | lastUpdateDate |  | 更新时间 |
 | title |  | 产品名 |
 | brandName |  | 品牌名 |
+| remark |  | 产品备注 |
+| complete |  | 草稿状态：`false` 为草稿，`true` 为完成 |
 | primaryColor |  | 产品主色 |
 | places |  | 产品配置的电商平台 |
 | retailPrice |  | 标准价格 |
@@ -2017,6 +2129,7 @@ AllInOneProduct
 | pictures |  | 产品图片信息（包括对应平台，类型），见附录二 |
 | detalPages |  | 产品详情页信息，见附录三 |
 | videos |  | 产品视频信息，见附录四 |
+| tags |  | 产品标签集合 |
 
 ```json
 {
@@ -3256,6 +3369,7 @@ DpDetalPage
 | templateWidth | 详情页模板宽度（如750px，790px，1200px宽） |
 | templateSites | 详情页支持的上货平台集合 |
 | time | 修改时间 |
+| active | 详情页启用状态（`true` 启用，`false` 禁用） |
 
 ```json
 {
@@ -3348,7 +3462,8 @@ DpDetalPage
 "templateName": "_t 颜色循环",
 "templateWidth": 790,
 "templateSites": ["TAOBAO","JD","VIP"],
-"time": 1554694045000
+"time": 1554694045000,
+"active": true
 }
 ```
 

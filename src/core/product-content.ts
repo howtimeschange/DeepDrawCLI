@@ -4,6 +4,9 @@ export interface ProductContentSummary {
   uid: string | null;
   title: string | null;
   brandName: string | null;
+  remark: string | null;
+  complete: boolean | null;
+  tags: string[];
   tradeId: string | null;
   tradeName: string | null;
   colorCount: number;
@@ -43,10 +46,31 @@ export interface PictureAsset {
 export interface DetailPageAsset {
   pageIndex: number;
   templateName: string | null;
+  templateWidth: number | string | null;
+  templateSites: string[];
+  active: boolean | null;
   htmlPageUrl: string | null;
   imagePageUrl: string | null;
   mixedPageUrl: string | null;
   screenshotUrls: string[];
+}
+
+export interface VideoAsset {
+  place: string | null;
+  videoType: string;
+  address: string | null;
+  normalizedAddress: string | null;
+  coverAddress: string | null;
+  normalizedCoverAddress: string | null;
+  feature: string | null;
+  id: string | null;
+  width: number | null;
+  height: number | null;
+  fileSize: number | null;
+  sortNo: number | null;
+  proportion: string | null;
+  template: string | null;
+  thirdPartyAddress: string | null;
 }
 
 export interface DetailModuleAsset {
@@ -61,6 +85,7 @@ export interface ProductContentAssets {
   pictures: PictureAsset[];
   detailPages: DetailPageAsset[];
   detailModules: DetailModuleAsset[];
+  videos: VideoAsset[];
 }
 
 export interface ProductContentExtraction {
@@ -90,6 +115,23 @@ function numberOrNull(value: unknown): number | null {
   if (value === undefined || value === null || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function numberOrStringOrNull(value: unknown): number | string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const text = String(value).trim();
+  if (!text) return null;
+  const number = Number(text);
+  return Number.isFinite(number) ? number : text;
+}
+
+function stringArray(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : [value];
+  return values.flatMap((item) => {
+    const text = stringOrNull(item);
+    return text ? text.split(",").map((part) => part.trim()).filter(Boolean) : [];
+  });
 }
 
 function booleanOrNull(value: unknown): boolean | null {
@@ -184,6 +226,9 @@ function extractDetailAssets(body: Record<string, unknown>): Pick<ProductContent
     detailPages.push({
       pageIndex: index,
       templateName: stringOrNull(page.templateName),
+      templateWidth: numberOrStringOrNull(page.templateWidth),
+      templateSites: stringArray(page.templateSites),
+      active: booleanOrNull(page.active),
       htmlPageUrl: pageUrl(page.htmlPageUrl),
       imagePageUrl: pageUrl(page.imagePageUrl),
       mixedPageUrl: pageUrl(page.mixedPageUrl),
@@ -209,6 +254,39 @@ function extractDetailAssets(body: Record<string, unknown>): Pick<ProductContent
   return { detailPages, detailModules };
 }
 
+function extractVideos(body: Record<string, unknown>): VideoAsset[] {
+  const videosRoot = record(record(body.videos).videos);
+  const assets: VideoAsset[] = [];
+  for (const [placeName, placeValue] of Object.entries(videosRoot)) {
+    const place = record(placeValue);
+      const groups = record(place.videos);
+      for (const [videoType, videos] of Object.entries(groups)) {
+      array(videos).filter(isRecord).forEach((video, index) => {
+        const address = stringOrNull(video.address) ?? stringOrNull(video.url);
+        const coverAddress = stringOrNull(video.coverAddress) ?? stringOrNull(video.coverUrl);
+        assets.push({
+          place: stringOrNull(place.place) ?? placeName,
+          videoType,
+          address,
+          normalizedAddress: normalizeDeepdrawUrl(address),
+          coverAddress,
+          normalizedCoverAddress: normalizeDeepdrawUrl(coverAddress),
+          feature: stringOrNull(video.feature),
+          id: stringOrNull(video.id),
+          width: numberOrNull(video.width),
+          height: numberOrNull(video.height),
+          fileSize: numberOrNull(video.size),
+          sortNo: numberOrNull(video.sortNum) ?? index + 1,
+          proportion: stringOrNull(video.proportion),
+          template: stringOrNull(video.template),
+          thirdPartyAddress: stringOrNull(video.thirdPartyAddress),
+        });
+      });
+    }
+  }
+  return assets;
+}
+
 function detailAssetCount(assets: ProductContentAssets): number {
   return assets.detailModules.length + assets.detailPages.reduce((count, page) => {
     return count +
@@ -225,9 +303,11 @@ export function extractDeepdrawProductContent(payload: unknown): ProductContentE
   const skus = extractSkus(body);
   const pictures = extractPictures(body);
   const detailAssets = extractDetailAssets(body);
+  const videos = extractVideos(body);
   const assets: ProductContentAssets = {
     pictures,
     ...detailAssets,
+    videos,
   };
 
   return {
@@ -237,6 +317,9 @@ export function extractDeepdrawProductContent(payload: unknown): ProductContentE
       uid: stringOrNull(body.id),
       title: stringOrNull(body.title),
       brandName: stringOrNull(body.brandName),
+      remark: stringOrNull(body.remark),
+      complete: booleanOrNull(body.complete),
+      tags: stringArray(body.tags),
       tradeId: stringOrNull(trade.id),
       tradeName: stringOrNull(trade.name),
       colorCount: array(record(body.colors).options).length,

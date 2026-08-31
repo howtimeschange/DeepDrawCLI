@@ -13,6 +13,29 @@ test("AGENTS.md requires approval before write and paid calls", () => {
   assert.doesNotMatch(text, /appSecret=.*[a-z0-9]{8}/i);
 });
 
+test("reference tracks the 2026-08-27 PDF and SDK 1.6.24 contract", () => {
+  const text = readFileSync("docs/reference/deepdraw-openapi.md", "utf8");
+  assert.match(text, /深绘开放平台API接口文档20260827\.pdf/);
+  assert.match(text, /PDF 页数: 96/);
+  assert.match(text, /dop-sdk-1\.6\.24\.jar/);
+  assert.match(text, /1\.6\.23/);
+  assert.match(text, /1\.6\.24/);
+  for (const field of [
+    "dp.product.sku.color.incremental.update",
+    "tags",
+    "detailPageSite",
+    "remark",
+    "complete",
+    "videos",
+    "active",
+    "templateWidth",
+    "templateSites",
+    "暂不支持的特殊格式字段",
+  ]) {
+    assert.match(text, new RegExp(escapeRegExp(field)), `${field} should be documented`);
+  }
+});
+
 test("AGENTS.md documents Chinese agent calling workflows", () => {
   const text = readFileSync("AGENTS.md", "utf8");
   assert.match(text, /深绘 CLI Agent 调用指南/);
@@ -66,12 +89,22 @@ test("README documents cross-platform auth login", () => {
 test("README documents bundled DeepDraw SDK jars and runtime dependency jars", () => {
   const text = readFileSync("README.md", "utf8");
   assert.match(text, /vendor\/deepdraw-sdk/);
-  assert.match(text, /dop-sdk-1\.6\.0\.jar/);
+  assert.match(text, /dop-sdk-1\.6\.24\.jar/);
   assert.match(text, /sdk-core-java-1\.1\.0\.jar/);
   assert.match(text, /vendor\/deepdraw-sdk\/lib/);
   assert.match(text, /Java SDK 运行依赖 jar/);
   assert.match(text, /无需 Maven 下载/);
   assert.match(text, /Windows/);
+  assert.match(text, /dp\.product\.sku\.color\.incremental\.update/);
+  assert.match(text, /dop-sdk-1\.6\.24\.jar/);
+  assert.match(text, /1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8/);
+  assert.match(text, /tags/);
+  assert.match(text, /detailPageSite/);
+  assert.match(text, /templateWidth/);
+  assert.match(text, /templateSites/);
+  assert.match(text, /active/);
+  assert.match(text, /videos/);
+  assert.match(text, /不支持/);
 });
 
 test("README does not document nonexistent execute command", () => {

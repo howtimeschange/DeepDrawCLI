@@ -256,6 +256,8 @@ test("deepdraw call --execute routes product resource through Java SDK with full
     "detailPageSite=TMALL",
     "--param",
     "excludeDetailPageModules=usemap,尺码表",
+    "--param",
+    "tags=春季,新品",
   ], {
     env: {
       DEEPDRAW_TENANT_NAME: config.tenantName,
@@ -307,6 +309,7 @@ test("deepdraw call --execute routes product resource through Java SDK with full
       video: "1",
       detailPageSite: "TMALL",
       excludeDetailPageModules: "usemap,尺码表",
+      tags: "春季,新品",
     },
   });
   const payload = JSON.parse(result.stdout);
@@ -379,6 +382,123 @@ test("deepdraw call --execute --yes routes product create through Java runner wi
     },
   });
   assert.equal(JSON.parse(result.stdout).ok, true);
+});
+
+test("deepdraw call requires approval for SKU color incremental updates", async () => {
+  let spawned = false;
+  const result = await runCli([
+    "call",
+    "dp.product.sku.color.incremental.update",
+    "--execute",
+    "--param",
+    "productId=7788",
+    "--json",
+    JSON.stringify({ code: "208226102001", title: "颜色更新" }),
+  ], {
+    env: { DEEPDRAW_TENANT_NAME: "demo" },
+    stdin: "",
+    javaSpawnImpl: async () => {
+      spawned = true;
+      return { exitCode: 0, stdout: "", stderr: "" };
+    },
+  });
+
+  assert.equal(result.exitCode, 1);
+  assert.equal(result.stderr, "");
+  assert.equal(spawned, false);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.deepEqual(payload.error, {
+    kind: "approval_required",
+    message: "User approval is required",
+    reason: "approval_required",
+  });
+  assert.equal(payload.plan.api, "dp.product.sku.color.incremental.update");
+  assert.equal(payload.plan.riskLevel, "write");
+  assert.equal(payload.plan.requiresApproval, true);
+});
+
+test("deepdraw call --execute --yes routes SKU color incremental updates through Java bridge", async () => {
+  let fetched = false;
+  let javaInput: unknown;
+  const result = await runCli([
+    "call",
+    "dp.product.sku.color.incremental.update",
+    "--execute",
+    "--yes",
+    "--param",
+    "productId=7788",
+    "--json",
+    JSON.stringify({
+      code: "208226102001",
+      title: "颜色更新",
+      fields: {
+        颜色: "红色,red",
+        尺码: "M",
+        "商家 SKU": {
+          title: "价格",
+          red: { M: "SKU001" },
+        },
+      },
+    }),
+  ], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+      DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*",
+    },
+    stdin: "",
+    fetchImpl: async () => {
+      fetched = true;
+      return new Response("{}", { status: 200 });
+    },
+    javaSpawnImpl: async (command, args, input) => {
+      if (command === "javac") {
+        return { exitCode: 0, stderr: "", stdout: "" };
+      }
+      assert.equal(command, "java");
+      assert.equal(args[2], "DeepdrawProductSkuColorIncrementalUpdateCli");
+      javaInput = JSON.parse(input) as unknown;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: '{"status":200,"response":{"code":10200,"response":"success","body":{"id":"product-1","updates":["颜色"]}}}',
+      };
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stderr, "");
+  assert.equal(fetched, false);
+  assert.deepEqual(javaInput, {
+    config: {
+      appKey: "app-key",
+      appSecret: "app-secret",
+      dopKey: "dop-key",
+      host: "http://open.deepdraw.cn",
+      merchantId: "1162",
+    },
+    query: { productId: "7788" },
+    product: {
+      code: "208226102001",
+      title: "颜色更新",
+      fields: {
+        颜色: "红色,red",
+        尺码: "M",
+        "商家 SKU": {
+          title: "价格",
+          red: { M: "SKU001" },
+        },
+      },
+    },
+  });
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, true);
+  assert.deepEqual(payload.data, { id: "product-1", updates: ["颜色"] });
 });
 
 test("deepdraw call --execute returns approval plan for approval-required APIs without fetching", async () => {

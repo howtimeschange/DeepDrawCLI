@@ -31,7 +31,7 @@ test("registry covers every dp api in the stable reference", () => {
   const referenceApis = extractReferenceApis(referenceMarkdown);
   const registeredApis = new Set(apiRegistry.map((api) => api.apiName));
 
-  assert.equal(referenceApis.length, 21);
+  assert.equal(referenceApis.length, 22);
   for (const apiName of referenceApis) {
     assert.equal(registeredApis.has(apiName), true, `${apiName} is missing from apiRegistry`);
   }
@@ -131,6 +131,24 @@ test("product create metadata includes documented merchant, trade, and product p
   });
 });
 
+test("SKU color incremental update metadata uses the 1.6.24 Java SDK bridge", () => {
+  const api = expectApi("dp.product.sku.color.incremental.update");
+
+  assert.equal(api.version, "v2");
+  assert.equal(api.transport, "java-sdk");
+  assert.equal(api.method, "POST");
+  assert.equal(api.path, "/rest");
+  assert.equal(api.riskLevel, "write");
+  assert.equal(api.approvalRequired, true);
+  assertParamFlags("dp.product.sku.color.incremental.update", {
+    productId: true,
+    product: true,
+  });
+  assert.match(api.notes, /ProductPostIncrementalUpdateProductSkuColorByIdRequest/);
+  assert.match(api.notes, /String/);
+  assert.match(api.notes, /Long/);
+});
+
 test("product resource metadata matches documented optional filters", () => {
   const api = expectApi("dp.product.resource");
   const flags = paramFlags(api);
@@ -145,6 +163,7 @@ test("product resource metadata matches documented optional filters", () => {
     "productId",
     "resource",
     "skc",
+    "tags",
     "video",
     "wgId",
   ].sort());
@@ -171,6 +190,7 @@ test("product search metadata matches documented filters", () => {
     excludeDraft: false,
     detailPageSite: false,
     excludeDetailPageModules: false,
+    tags: false,
   });
 });
 
@@ -187,6 +207,7 @@ test("product basic search metadata matches documented filters", () => {
     detail: false,
     productCodes: false,
     excludeDraft: false,
+    tags: false,
   });
 });
 
@@ -201,6 +222,7 @@ test("product detail metadata matches SDK and update record filters", () => {
   assertParamFlags("dp.product.detail.get", {
     productId: true,
     quality: false,
+    detailPageSite: false,
     excludeDetailPageModules: false,
   });
   assert.match(api.notes, /ProductPostFindDetailPageByIdRequest/);
@@ -220,6 +242,7 @@ test("feature pictures metadata matches documented lookup and image filters", ()
     body_part: false,
     body_orientation: false,
     skc: false,
+    tags: false,
   });
   assert.match(api.notes, /productId/);
   assert.match(api.notes, /merchantId and productCode/);

@@ -4,6 +4,8 @@
 
 这个项目目前服务于 Listingify / 深绘上新自动化一类工作流：读取商家、类目、字段模板、商品资料，创建或更新深绘商品，并把商品内容包整理成更适合 AI agent 消费的结构化摘要。
 
+当前接口事实以源文件《深绘开放平台API接口文档20260827.pdf》的 96 页内容为准，仓库机器可读镜像见 [`docs/reference/deepdraw-openapi.md`](docs/reference/deepdraw-openapi.md)；该快照已纳入 SDK 1.6.24 的修改历史和字段增量。PDF 中的示例只说明请求形状，不是执行授权。
+
 ## 项目背景
 
 深绘开放平台的接口有几类现实问题：
@@ -19,7 +21,7 @@
 - 所有参考文档里的 `dp.*` 接口都注册在 `src/core/api-registry.ts`。
 - 低风险只读接口可以 dry-run 后执行。
 - 写入、付费和慎用接口必须先生成执行计划，用户明确授权后才允许执行。
-- 商品创建、更新、商品资源读取走 DeepDraw Java SDK bridge。
+- 商品创建、更新、颜色/SKU 增量更新和商品资源读取走 DeepDraw Java SDK bridge。
 - 简单元数据和查询接口走 TypeScript HTTP 签名请求。
 
 ## 能实现什么效果
@@ -73,9 +75,11 @@ deepdraw config doctor --dry-run
 
 - `java` 是否可用
 - `javac` 是否可用
-- `vendor/deepdraw-sdk/dop-sdk-1.6.0.jar`
+- `vendor/deepdraw-sdk/dop-sdk-1.6.24.jar`
 - `vendor/deepdraw-sdk/sdk-core-java-1.1.0.jar`
 - `vendor/deepdraw-sdk/lib/*.jar`
+
+当前 `dop-sdk-1.6.24.jar` 的 SHA-256 为 `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8`；来源与完整校验表见 [`vendor/deepdraw-sdk/README.md`](vendor/deepdraw-sdk/README.md)。
 
 ### 4. 配置凭据
 
@@ -134,11 +138,12 @@ npm run build
 
 - `dp.product.create`
 - `dp.product.update`
+- `dp.product.sku.color.incremental.update`
 - `dp.product.resource`
 
 这些接口需要本机可用的 `java` 和 `javac`。仓库已经内置 DeepDraw SDK jar 和 Java SDK 运行依赖 jar：
 
-- `vendor/deepdraw-sdk/dop-sdk-1.6.0.jar`
+- `vendor/deepdraw-sdk/dop-sdk-1.6.24.jar`
 - `vendor/deepdraw-sdk/sdk-core-java-1.1.0.jar`
 - `vendor/deepdraw-sdk/lib/*.jar`
 
@@ -206,8 +211,10 @@ deepdraw product content --product-code 208326105214 --summary --assets --execut
 - `summary`: 款号、DeepDraw productId、标题、品牌、类目、颜色数、尺码数、SKU 数、图片数、详情页资源数。
 - `skus`: 颜色、尺码、商家编码、条形码、SKU 编码、价格、数量。
 - `assets.pictures`: 商品图片 URL，含 `place`、`pictureType`、`skc`、颜色、尺寸、水印标记。
-- `assets.detailPages`: 详情页图片版 URL、截图切片 URL。
+- `assets.detailPages`: 详情页图片版 URL、截图切片 URL，以及 `templateWidth`、`templateSites`、`active`。
 - `assets.detailModules`: 详情模块 URL。
+- `assets.videos`: 视频平台、视频类型、地址、封面、尺寸、排序、比例和模板来源。
+- `summary.remark`、`summary.complete`、`summary.tags`: 产品备注、草稿状态和产品标签；`complete=false` 表示草稿。
 
 也支持资源过滤参数：
 
@@ -220,6 +227,7 @@ deepdraw product content \
   --video 1 \
   --detail-page-site TMALL \
   --exclude-detail-page-modules usemap,尺码表 \
+  --tags 春季,新品 \
   --summary \
   --assets \
   --execute
@@ -283,14 +291,14 @@ Java SDK bridge 接口会把 `--json-file product.json` 作为 SDK entity payloa
 | --- | --- | --- |
 | merchant | `dp.merchant.name.search`, `dp.merchant.sites.get`, `dp.merchant.watermarks.get` | 查询商家和商户平台信息 |
 | trade | `dp.merchant.trades`, `dp.trade.fields` | 同步类目树和类目字段模板 |
-| product | `dp.product.create`, `dp.product.update`, `dp.product.resource`, `dp.product.basic.search` | 商品创建、更新、查重、readback 和基础查询 |
+| product | `dp.product.create`, `dp.product.update`, `dp.product.sku.color.incremental.update`, `dp.product.resource`, `dp.product.basic.search` | 商品创建、更新、颜色/SKU 增量更新、查重、readback 和基础查询 |
 | image | `dp.product.retrieve.image`, `dp.product.label.image`, `dp.product.image.upload` | 以图搜款、图片标签、素材上传和图片修改 |
 | common | `dp.colors.get` | 深绘标准颜色 |
 
 transport 策略：
 
 - `http`: TypeScript 手写签名请求，适合简单查询、元数据同步和轻量接口。
-- `java-sdk`: Java SDK bridge，适合商品创建、商品更新、商品资源读取等和 SDK entity mapping 强相关的接口。
+- `java-sdk`: Java SDK bridge，适合商品创建、商品更新、颜色/SKU 增量更新、商品资源读取等和 SDK entity mapping 强相关的接口。
 
 风险策略：
 
@@ -374,6 +382,7 @@ CLI 根据注册表统一处理 dry-run、参数校验、风险授权和 transpo
 
 - `DeepdrawProductCreateCli`: 调用 `ProductPostCreateProductRequest`。
 - `DeepdrawProductUpdateCli`: 调用 `ProductPostUpdateProductByIdRequest`。
+- `DeepdrawProductSkuColorIncrementalUpdateCli`: 调用 `ProductPostIncrementalUpdateProductSkuColorByIdRequest`，执行颜色/SKU 增量更新。
 - `DeepdrawProductResourceCli`: 调用 `ProductGetByIdRequest`，并额外保留 SDK 没有显式 setter 的新版 query 参数。
 
 ### 4. 授权和计划
@@ -394,6 +403,7 @@ CLI 根据注册表统一处理 dry-run、参数校验、风险授权和 transpo
 - 图片资源
 - 详情页资源
 - 详情模块资源
+- 视频资源，以及 `remark`、`complete`、`tags`、`active`、`templateWidth`、`templateSites` 等新版读回字段
 
 这让后续 agent 不需要直接遍历完整深绘原始响应。
 
@@ -408,6 +418,13 @@ Agent 调用本项目时应遵守：
 5. 如果返回 `error.kind = "approval_required"`，必须停下来问用户，不要自行补 `--yes`。
 6. 不要把真实 `appSecret`、`dopKey`、签名、租户凭据 JSON 写入 tracked files。
 7. 批量读取深绘接口必须串行队列，不要并发打同一租户。
+
+建档与字段边界：
+
+- `dp.product.resource`、`dp.product.search`、`dp.feature.pictures.get`、`dp.product.basic.search` 的 `tags` 可选查询参数使用英文逗号分隔。
+- `dp.product.detail.get` 的 `detailPageSite` 用于按平台过滤详情页；详情读回中的 `active`、`templateWidth`、`templateSites`、`remark`、`complete`、`videos` 需要保留并人工确认。
+- 创建或颜色/SKU 增量更新时，特殊字段使用英文分隔符：多选 `;`、多文本 `*`、材质成分 `材质,占比;`、所在地 `省,市`、得物日期 `1*日期`/`2*月份`/`3*年份*季度`、售后服务承诺 `选项索引_天数`。
+- `淘宝 SKU 参数`、`天猫 SKU 参数`、`天猫导购标题`、`京东规格子属性`、`京东自营子属性`、`淘宝导购标题`、`颜色备注` 等特殊格式目前不支持；遇到这些字段要停止自动建档，转人工确认。
 
 ## 调用频率与退避
 

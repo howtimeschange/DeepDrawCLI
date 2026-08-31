@@ -6,7 +6,7 @@ This directory vendors the Java SDK jars needed by the DeepDraw CLI internal dis
 
 | Path | Purpose |
 | --- | --- |
-| `dop-sdk-1.6.0.jar` | DeepDraw OpenAPI SDK models and requests |
+| `dop-sdk-1.6.24.jar` | DeepDraw OpenAPI SDK models and requests |
 | `sdk-core-java-1.1.0.jar` | Aliyun API Gateway SDK core |
 | `lib/*.jar` | Java SDK runtime dependency jars |
 
@@ -14,13 +14,13 @@ The CLI classpath loads both `vendor/deepdraw-sdk/*` and `vendor/deepdraw-sdk/li
 
 ## Source
 
-The DeepDraw jars came from:
+The DeepDraw SDK jar used by this bundle came from:
 
 ```text
-/Users/xingyicheng/Downloads/dop-jar.zip
+/Users/xingyicheng/Downloads/dop-sdk-1.6.24.jar
 ```
 
-The original zip also contained `.DS_Store` and `__MACOSX` metadata. This directory keeps only jar files and this README.
+The 1.6.24 jar corresponds to the 2026-08-27 API document snapshot. The source PDF records the 1.6.23 color/SKU incremental endpoint, the 1.6.24 `tags` filters, and the later `remark`/`active` documentation additions. This directory keeps only jar files and this README; credentials never belong here.
 
 Third-party dependency jars came from the local Maven cache and are vendored so internal users do not need Maven or internet access after checkout.
 
@@ -28,7 +28,7 @@ Third-party dependency jars came from the local Maven cache and are vendored so 
 
 | File | SHA-256 |
 | --- | --- |
-| `dop-sdk-1.6.0.jar` | `81d1265762062e90363cffd8c4a865571c373e46f8a41471ab37fbedd0e2a627` |
+| `dop-sdk-1.6.24.jar` | `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8` |
 | `sdk-core-java-1.1.0.jar` | `a9eb423b2522c9be4c632d75bd763a4dee7a6d4c1c982772ab3cf4309f37f3d3` |
 | `lib/commons-codec-1.15.jar` | `b3e9f6d63a790109bf0d056611fbed1cf69055826defeb9894a71369d246ed63` |
 | `lib/commons-collections-3.2.2.jar` | `eeeae917917144a68a741d4c0dff66aa5c5c5fd85593ff217bced3fc8ca783b8` |

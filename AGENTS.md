@@ -39,6 +39,7 @@
 | `dp.product.create` | 创建产品 | `write` | `java-sdk` | `deepdraw call dp.product.create --param merchantId=MERCHANT_ID --param tradeId=TRADE_ID --json-file product.json --plan` | `deepdraw product create` |
 | `dp.product.update` | 更新产品 | `write` | `java-sdk` | `deepdraw call dp.product.update --param productId=PRODUCT_ID --json-file product.json --plan` | `deepdraw product update` |
 | `dp.product.incremental.update` | 产品增量更新 | `write` | `http` | `deepdraw call dp.product.incremental.update --param productId=PRODUCT_ID --json-file patch.json --plan` | `deepdraw product patch` |
+| `dp.product.sku.color.incremental.update` | 产品颜色与 SKU 增量更新（特殊用户定制需求） | `write` | `java-sdk` | `deepdraw call dp.product.sku.color.incremental.update --param productId=PRODUCT_ID --json-file product.json --plan` | - |
 | `dp.product.resource` | 获取产品指定类型资源 | `read` | `java-sdk` | `deepdraw call dp.product.resource --param productCode=208226102001 --param resource=form` | `deepdraw product resource` |
 | `dp.product.search` | 查询产品列表（慎用） | `caution` | `http` | `deepdraw call dp.product.search --param merchantId=MERCHANT_ID --param productCodes=208226102001 --plan` | `deepdraw product search` |
 | `dp.feature.pictures.get` | 获取商品指定类型素材/资源图原图 | `read` | `http` | `deepdraw call dp.feature.pictures.get --param productCode=208226102001 --param pictureType=MODEL` | `deepdraw product pictures` |
@@ -74,9 +75,11 @@ deepdraw config doctor --dry-run
 `doctor` 不会联网，也不会调用深绘接口。它会检查：
 
 - `java` 和 `javac` 是否可用
-- `vendor/deepdraw-sdk/dop-sdk-1.6.0.jar`
+- `vendor/deepdraw-sdk/dop-sdk-1.6.24.jar`
 - `vendor/deepdraw-sdk/sdk-core-java-1.1.0.jar`
 - `vendor/deepdraw-sdk/lib/*.jar`
+
+当前 vendor SDK 固定为 `dop-sdk-1.6.24.jar`，SHA-256 为 `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8`；`sdk-core-java-1.1.0.jar` 和 `lib/*.jar` 是配套运行依赖。来源、校验值和目录布局见 `vendor/deepdraw-sdk/README.md`。
 
 默认配置路径：
 
@@ -140,6 +143,10 @@ deepdraw product content --product-code 208326105214 --summary --assets --execut
 ```
 
 `deepdraw product content` 底层通过 Java SDK 调用 `dp.product.resource`，输出 `summary`、`skus`、`assets.pictures`、`assets.detailPages` 和 `assets.detailModules`，避免 AI agent 处理完整原始大 JSON。
+
+新版 1.6.24 读回还会保留 `summary.remark`、`summary.complete`、`summary.tags`，以及详情页的 `templateWidth`、`templateSites`、`active` 和 `assets.videos`。其中 `complete=false` 表示草稿，`active=false` 表示详情页禁用；这些状态必须在后续人工确认中保留，不能因为 HTTP 200 就当作已完成上架。
+
+商品内容包需要按标签过滤时，可传 `--tags 标签1,标签2`；该参数最终对应 `dp.product.resource` 的 `tags` 查询条件。
 
 带参数的只读接口示例：
 
@@ -216,6 +223,15 @@ Agent 执行高风险接口时必须遵守这个顺序：
 | `Failed to compile DeepDraw Java SDK bridge` | JDK 或 SDK jar 配置异常 | 先运行 `deepdraw config doctor --dry-run`，再检查 JDK 和 `vendor/deepdraw-sdk` |
 
 如果返回里包含 `requestId`，需要在反馈给用户时保留它，方便深绘侧排查。
+
+## 1.6.24 字段与建档边界
+
+- `dp.product.resource`、`dp.product.search`、`dp.feature.pictures.get`、`dp.product.basic.search` 都支持可选查询条件 `tags`；多个标签使用英文逗号分隔。
+- `dp.product.detail.get` 支持可选 `detailPageSite`，用于按平台过滤详情页；`excludeDetailPageModules` 仍用于按模块过滤。
+- 新版读回字段包括 `remark`、`complete`、`tags`、详情页 `active`、`templateWidth`、`templateSites` 和 `videos`。`complete=false` 是草稿，`active=false` 是禁用详情页，必须交给人工确认。
+- 创建或颜色/SKU 增量更新时，尺码表、商家 SKU、颜色和销售属性之间必须满足参考文档约束；颜色、SKU、尺码不完整时不要提交。
+- 特殊格式字段的分隔符必须使用英文标点：多选用 `;`，多文本用 `*`，材质成分用 `材质,占比;`，所在地用 `省,市`，得物日期用 `1*日期`/`2*月份`/`3*年份*季度`，售后服务承诺用 `选项索引_天数`。
+- 暂不支持的特殊格式字段包括 `淘宝 SKU 参数`、`天猫 SKU 参数`、`天猫导购标题`、`京东规格子属性`、`京东自营子属性`、`淘宝导购标题`、`颜色备注` 等；遇到这些字段应停止自动建档并转人工确认。
 
 ## 开发与验证命令
 

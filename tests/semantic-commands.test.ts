@@ -80,6 +80,8 @@ test("product content command extracts summary and assets from product resource"
     "--execute",
     "--product-code",
     "208326105214",
+    "--tags",
+    "春季,新品",
     "--summary",
     "--assets",
   ], {
@@ -119,6 +121,9 @@ test("product content command extracts summary and assets from product resource"
               id: "15954d5aa2c447288be8dd0e73542046",
               title: "巴拉巴拉儿童外套",
               brandName: "Balabala/巴拉巴拉",
+              remark: "儿童春季新品",
+              complete: true,
+              tags: ["春季", "新品"],
               trade: { id: "12390", name: "外套" },
               colors: { options: ["粉红", "蓝色"] },
               sizes: { options: ["100cm", "110cm"] },
@@ -162,6 +167,9 @@ test("product content command extracts summary and assets from product resource"
               detalPages: [
                 {
                   templateName: "默认详情页",
+                  templateWidth: 790,
+                  templateSites: ["TMALL", "JD"],
+                  active: true,
                   imagePageUrl: "http://product.resources.deepdraw.biz/demo/detail.jpg",
                   screenShotSectionUrls: ["//product.resources.deepdraw.biz/demo/section-1.jpg"],
                   modules: {
@@ -169,6 +177,30 @@ test("product content command extracts summary and assets from product resource"
                   },
                 },
               ],
+              videos: {
+                videos: {
+                  TMALL: {
+                    place: "TMALL",
+                    videos: {
+                      VIDEO: [
+                        {
+                          id: 155114,
+                          address: "//product.resources.deepdraw.biz/demo/video.mp4",
+                          coverAddress: "http://product.resources.deepdraw.biz/demo/video-cover.jpg",
+                          feature: "{\"detail\":true}",
+                          width: 800,
+                          height: 800,
+                          size: 1401352,
+                          sortNum: 1,
+                          proportion: "3:4",
+                          template: "UPLOAD",
+                          thirdPartyAddress: "",
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
             },
           },
         }),
@@ -189,6 +221,7 @@ test("product content command extracts summary and assets from product resource"
     },
     query: {
       productCode: "208326105214",
+      tags: "春季,新品",
     },
   });
   const payload = parseStdout(result.stdout);
@@ -200,6 +233,9 @@ test("product content command extracts summary and assets from product resource"
     uid: "15954d5aa2c447288be8dd0e73542046",
     title: "巴拉巴拉儿童外套",
     brandName: "Balabala/巴拉巴拉",
+    remark: "儿童春季新品",
+    complete: true,
+    tags: ["春季", "新品"],
     tradeId: "12390",
     tradeName: "外套",
     colorCount: 2,
@@ -242,6 +278,9 @@ test("product content command extracts summary and assets from product resource"
       {
         pageIndex: 1,
         templateName: "默认详情页",
+        templateWidth: 790,
+        templateSites: ["TMALL", "JD"],
+        active: true,
         htmlPageUrl: null,
         imagePageUrl: "http://product.resources.deepdraw.biz/demo/detail.jpg",
         mixedPageUrl: null,
@@ -255,6 +294,25 @@ test("product content command extracts summary and assets from product resource"
         moduleIndex: 1,
         url: "//product.resources.deepdraw.biz/demo/module-1.jpg",
         normalizedUrl: "http://product.resources.deepdraw.biz/demo/module-1.jpg",
+      },
+    ],
+    videos: [
+      {
+        place: "TMALL",
+        videoType: "VIDEO",
+        address: "//product.resources.deepdraw.biz/demo/video.mp4",
+        normalizedAddress: "http://product.resources.deepdraw.biz/demo/video.mp4",
+        coverAddress: "http://product.resources.deepdraw.biz/demo/video-cover.jpg",
+        normalizedCoverAddress: "http://product.resources.deepdraw.biz/demo/video-cover.jpg",
+        feature: "{\"detail\":true}",
+        id: "155114",
+        width: 800,
+        height: 800,
+        fileSize: 1401352,
+        sortNo: 1,
+        proportion: "3:4",
+        template: "UPLOAD",
+        thirdPartyAddress: null,
       },
     ],
   });

@@ -77,6 +77,40 @@ test("buildSdkInput maps product update calls to SDK query and product", () => {
   );
 });
 
+test("buildSdkInput maps SKU color incremental updates to the Product SDK payload", () => {
+  const product = {
+    code: "208226102001",
+    fields: {
+      颜色: "红色,red",
+      尺码: "M",
+      "商家 SKU": {
+        title: "价格",
+        red: { M: "SKU001" },
+      },
+    },
+  };
+
+  assert.deepEqual(
+    buildSdkInput({
+      config,
+      apiName: "dp.product.sku.color.incremental.update",
+      query: { productId: "7788" },
+      body: product,
+    }),
+    {
+      config: {
+        appKey: "app-key",
+        appSecret: "app-secret",
+        dopKey: "dop-key",
+        host: "http://open.deepdraw.cn",
+        merchantId: "1162",
+      },
+      query: { productId: "7788" },
+      product,
+    },
+  );
+});
+
 test("parseSdkOutput normalizes trailing JSON line", () => {
   const result = parseSdkOutput(
     "dp.product.create",
@@ -183,6 +217,7 @@ test("callJavaSdkApi routes product resource through Java runner with full query
       video: "1",
       detailPageSite: "TMALL",
       excludeDetailPageModules: "usemap,尺码表",
+      tags: "春季,新品",
     },
     body: undefined,
     env: { DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" },
@@ -216,10 +251,73 @@ test("callJavaSdkApi routes product resource through Java runner with full query
       video: "1",
       detailPageSite: "TMALL",
       excludeDetailPageModules: "usemap,尺码表",
+      tags: "春季,新品",
     },
   });
   assert.equal(result.ok, true);
   assert.deepEqual(result.data, { productId: 7788 });
+});
+
+test("callJavaSdkApi routes SKU color incremental updates through the dedicated Java bridge", async () => {
+  let stdinPayload: unknown;
+  const result = await callJavaSdkApi({
+    config,
+    apiName: "dp.product.sku.color.incremental.update",
+    query: { productId: "7788" },
+    body: {
+      code: "208226102001",
+      title: "颜色更新",
+      fields: {
+        颜色: "红色,red",
+        尺码: "M",
+        "商家 SKU": {
+          title: "价格",
+          red: { M: "SKU001" },
+        },
+      },
+    },
+    env: { DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" },
+    cwd: "/tmp/deepdraw-cli",
+    spawnImpl: async (command, args, input) => {
+      assert.equal(command, "java");
+      assert.deepEqual(args, [
+        "-cp",
+        `/tmp/deepdraw-cli/.deepdraw-sdk/classes${delimiter}/tmp/fake-sdk/*`,
+        "DeepdrawProductSkuColorIncrementalUpdateCli",
+      ]);
+      stdinPayload = JSON.parse(input) as unknown;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: '{"status":200,"response":{"code":10200,"response":"success","body":{"id":"product-1","updates":["颜色"]}}}',
+      };
+    },
+  });
+
+  assert.deepEqual(stdinPayload, {
+    config: {
+      appKey: "app-key",
+      appSecret: "app-secret",
+      dopKey: "dop-key",
+      host: "http://open.deepdraw.cn",
+      merchantId: "1162",
+    },
+    query: { productId: "7788" },
+    product: {
+      code: "208226102001",
+      title: "颜色更新",
+      fields: {
+        颜色: "红色,red",
+        尺码: "M",
+        "商家 SKU": {
+          title: "价格",
+          red: { M: "SKU001" },
+        },
+      },
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data, { id: "product-1", updates: ["颜色"] });
 });
 
 test("callJavaSdkApi compiles product resource bridge source when present", async () => {

@@ -41,7 +41,7 @@ type DoctorCheck = {
 };
 
 const requiredDeepdrawSdkJars = [
-  "dop-sdk-1.6.0.jar",
+  "dop-sdk-1.6.24.jar",
   "sdk-core-java-1.1.0.jar",
 ];
 
@@ -291,6 +291,10 @@ function parseProductContentArgs(argv: string[]): {
     }
     if (arg === "--exclude-detail-page-modules") {
       query.excludeDetailPageModules = next();
+      continue;
+    }
+    if (arg === "--tags") {
+      query.tags = next();
       continue;
     }
     if (arg === "--param") {
