@@ -11,6 +11,17 @@ const bridgeClass = "DeepdrawProductSkuColorIncrementalUpdateCli";
 const bridgeSource = join(process.cwd(), "java", `${bridgeClass}.java`);
 const sdkDir = join(process.cwd(), "vendor", "deepdraw-sdk");
 const sdkClasspath = [join(sdkDir, "*"), join(sdkDir, "lib", "*")].join(delimiter);
+const sdkSizeFieldAliases = [
+  "尺码",
+  "尺码规格",
+  "规格尺码",
+  "规格",
+  "尺寸规格",
+  "商品规格",
+  "尺寸",
+  "规格尺码/含量",
+  "产品规格",
+] as const;
 
 type BridgeResult = {
   exitCode: number | null;
@@ -63,10 +74,10 @@ function baseInput(product: Record<string, unknown>) {
   };
 }
 
-function validFields() {
+function validFields(sizeField: (typeof sdkSizeFieldAliases)[number] = "尺码") {
   return {
     颜色: "黑色,black",
-    尺码: "M",
+    [sizeField]: "M",
     "商家 SKU": {
       title: "价格",
       black: { M: "SKU001" },
@@ -118,9 +129,16 @@ test("SKU color bridge emits no empty optional fields and rejects invalid requir
     assert.equal(productFields["颜色"], "黑色,black");
     assert.equal(productFields["尺码"], "M");
 
-    const productFieldsResult = await runBridge(classDir, baseInput({ productFields: validFields() }));
-    assert.equal(productFieldsResult.exitCode, 0, productFieldsResult.stderr);
-    assert.equal(productFieldsResult.stderr, "");
+    for (const sizeField of sdkSizeFieldAliases) {
+      const result = await runBridge(classDir, baseInput({ productFields: validFields(sizeField) }));
+      assert.equal(result.exitCode, 0, `${sizeField} failed: ${result.stderr}`);
+      assert.equal(result.stderr, "");
+      const dump = JSON.parse(result.stdout) as { body: string; checkSizes: boolean; checkSkus: boolean };
+      const body = JSON.parse(dump.body) as { product: { productFields: Record<string, unknown> } };
+      assert.equal(dump.checkSizes, true, `${sizeField} failed SDK size check`);
+      assert.equal(dump.checkSkus, true, `${sizeField} failed SDK SKU check`);
+      assert.equal(body.product.productFields[sizeField], "M");
+    }
 
     const requiredFields = ["颜色", "尺码", "商家SKU"] as const;
     const invalidValues: Array<{ label: string; missing?: boolean; value?: unknown }> = [

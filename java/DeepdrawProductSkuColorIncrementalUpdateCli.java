@@ -19,7 +19,17 @@ import java.util.Objects;
 import java.util.Set;
 
 public class DeepdrawProductSkuColorIncrementalUpdateCli {
-  private static final String[] SIZE_FIELD_ALIASES = {"尺码", "尺码规格", "规格尺码", "规格"};
+  private static final String[] SIZE_FIELD_ALIASES = {
+    "尺码",
+    "尺码规格",
+    "规格尺码",
+    "规格",
+    "尺寸规格",
+    "商品规格",
+    "尺寸",
+    "规格尺码/含量",
+    "产品规格"
+  };
 
   private static final class IncrementalProduct extends Product {
     @Override
