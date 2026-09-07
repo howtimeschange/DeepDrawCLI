@@ -16,6 +16,8 @@ export interface PhysicalRow {
 
 export interface BalabalaImportInput {
   spu: string;
+  /** The formal source style selected by an explicit test target mapping. */
+  sourceSpu?: string;
   mdmPath: string;
   launchPlanPath: string;
   copywritingPath: string;
@@ -28,6 +30,7 @@ export interface BalabalaImportInput {
 
 export interface ImportedBalabalaSources extends JsonRecord {
   spu: string;
+  sourceSpu?: string;
   sources: SourceReference[];
   skus: JsonRecord[];
   mdm: JsonRecord;
@@ -339,22 +342,27 @@ async function imageManifest(path: string): Promise<JsonRecord[]> {
 export async function importBalabalaSources(input: BalabalaImportInput): Promise<ImportedBalabalaSources> {
   const spu = input.spu.trim();
   if (!/^\d{12,}(?:-test)?$/.test(spu)) throw new Error("balabala import requires a numeric SPU or numeric -test code");
+  // Test source selection is a caller-supplied, auditable policy decision.
+  // Never infer it merely from a `-test` suffix: callers must obtain it from
+  // their exact test target mapping before they reach this importer.
+  const sourceSpu = (input.sourceSpu ?? spu).trim();
+  if (!/^\d{12,}$/.test(sourceSpu)) throw new Error("balabala import sourceSpu must be an explicit formal numeric SPU");
   const mdmBooks = rowsFromWorkbook(input.mdmPath, ["款号", "SKC编码", "SKU编码", "颜色名称", "尺码名称"]);
-  const mdmMatches = mdmBooks.flatMap(({ sheet, rows }) => selectBalabalaRows(rows, spu, ["款号"], ["SKC编码", "款色"]).map((row) => ({ sheet, ...row })));
+  const mdmMatches = mdmBooks.flatMap(({ sheet, rows }) => selectBalabalaRows(rows, sourceSpu, ["款号"], ["SKC编码", "款色"]).map((row) => ({ sheet, ...row })));
   const mdmRefs = await Promise.all(mdmMatches.map(({ sheet, row }) => sourceReference(input.mdmPath, sheet, row)));
   const skus = mdmMatches.map((item, index) => normalizeMdmRow(item.values, mdmRefs[index]));
-  if (skus.length === 0) throw new Error(`MDM SKU table has no rows for ${spu}`);
+  if (skus.length === 0) throw new Error(`MDM SKU table has no rows for ${sourceSpu}`);
 
   const planBooks = rowsFromWorkbook(input.launchPlanPath, ["大货款号", "商品编码", "款色号", "发布类目(官方)", "吊牌价"]);
-  const planMatches = planBooks.flatMap(({ sheet, rows }) => selectBalabalaRows(rows, spu, ["大货款号", "商品编码", "款号"], ["款色号", "款色"]).map((row) => ({ sheet, ...row })));
+  const planMatches = planBooks.flatMap(({ sheet, rows }) => selectBalabalaRows(rows, sourceSpu, ["大货款号", "商品编码", "款号"], ["款色号", "款色"]).map((row) => ({ sheet, ...row })));
   const preferredPlan = planMatches.filter((row) => row.sheet.includes("全域"));
   const selectedPlan = preferredPlan.length > 0 ? preferredPlan : planMatches;
-  if (selectedPlan.length === 0) throw new Error(`launch plan has no rows for ${spu}`);
+  if (selectedPlan.length === 0) throw new Error(`launch plan has no rows for ${sourceSpu}`);
   const planRefs = await Promise.all(selectedPlan.map(({ sheet, row }) => sourceReference(input.launchPlanPath, sheet, row)));
   const launchRows = selectedPlan.map((item, index) => normalizePlanRow(item.values, planRefs[index]));
 
   const copyBooks = rowsFromWorkbook(input.copywritingPath, ["款号", "款色", "搜索标题", "唯品标题"]);
-  const copyMatches = copyBooks.flatMap(({ sheet, rows }) => selectBalabalaRows(rows, spu, ["款号"], ["款色"]).map((row) => ({ sheet, ...row })));
+  const copyMatches = copyBooks.flatMap(({ sheet, rows }) => selectBalabalaRows(rows, sourceSpu, ["款号"], ["款色"]).map((row) => ({ sheet, ...row })));
   const copyRefs = await Promise.all(copyMatches.map(({ sheet, row }) => sourceReference(input.copywritingPath, sheet, row)));
   const copywritingRows = copyMatches.map((item, index) => normalizeCopyRow(item.values, copyRefs[index]));
 
@@ -367,13 +375,14 @@ export async function importBalabalaSources(input: BalabalaImportInput): Promise
   } : undefined;
   const plmSizeChart = input.plmSizeChartPath ? {
     source: "plm_size_chart",
-    rows: await plmSizeRows(input.plmSizeChartPath, spu),
+    rows: await plmSizeRows(input.plmSizeChartPath, sourceSpu),
   } : undefined;
   const importedApparelSizeReference = input.apparelSizeReferencePath ? apparelSizeReference(input.apparelSizeReferencePath) : undefined;
   const configuredMappings = input.fieldMappingsPath ? await fieldMappings(input.fieldMappingsPath) : undefined;
   const images = input.imagesPath ? await imageManifest(input.imagesPath) : [];
   return {
     spu,
+    ...(sourceSpu !== spu ? { sourceSpu } : {}),
     sources,
     skus,
     mdm: { title: text(skus[0]?.title), colors: [...new Set(skus.map((sku) => text(sku.color)).filter(Boolean))], rows: skus.map((sku) => sku.raw && typeof sku.raw === "object" && !Array.isArray(sku.raw) ? sku.raw : {}) },

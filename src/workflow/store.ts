@@ -19,7 +19,7 @@ function redact(value: unknown): unknown {
 
 function snapshotState(value: unknown): WorkflowState {
   const state = typeof value === "string" ? value : "imported";
-  const states: WorkflowState[] = ["imported", "assembled", "template_ready", "review_required", "ready", "planned", "publishing", "post_create_update", "readback_verified", "readback_mismatch", "transport_unknown", "failed"];
+  const states: WorkflowState[] = ["imported", "assembled", "template_ready", "review_required", "ready", "planned", "publishing", "post_create_update", "readback_verified", "readback_mismatch", "needs_ui_verification", "transport_unknown", "failed"];
   return states.includes(state as WorkflowState) ? state as WorkflowState : "failed";
 }
 

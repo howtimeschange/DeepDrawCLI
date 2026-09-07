@@ -206,48 +206,41 @@ deepdraw product payload --input draft.json --stage update --pretty
 新增状态型流程优先于手写 `draft.json`：
 
 ```bash
-deepdraw balabala import --spu SPU --mdm SKU.xlsx --launch-plan PLAN.xlsx --copywriting COPY.xlsx
-deepdraw balabala template --spu SPU --execute
-deepdraw balabala review --spu SPU [--ai-responses AI.json] [--ocr-facts OCR.json]
-deepdraw balabala sync --spu SPU --execute
-deepdraw balabala override --spu SPU --field FIELD --value VALUE
-deepdraw balabala plan create|full-update|incremental --spu SPU --execute --plan
-deepdraw balabala publish create|full-update|incremental --spu 204426140121-test --execute --yes
-deepdraw balabala readback --spu SPU --execute
+deepdraw balabala import --mode test|production --spu SPU --mdm SKU.xlsx --launch-plan PLAN.xlsx --copywriting COPY.xlsx [--test-config TARGETS.json]
+deepdraw balabala template --mode test|production --spu SPU --execute [--test-config TARGETS.json]
+deepdraw balabala review --mode test|production --spu SPU [--test-config TARGETS.json] [--ai-responses AI.json] [--ocr-facts OCR.json]
+deepdraw balabala sync --mode test|production --spu SPU --execute [--test-config TARGETS.json]
+deepdraw balabala override --mode test|production --spu SPU --field FIELD --value VALUE [--test-config TARGETS.json]
+deepdraw balabala plan create|full-update|incremental --mode test|production --spu SPU --execute --plan [--test-config TARGETS.json]
+deepdraw balabala publish create|full-update|incremental --mode test|production --spu SPU --execute --yes [--plan-hash HASH] [--test-config TARGETS.json]
+deepdraw balabala readback --mode test|production --spu SPU --execute [--test-config TARGETS.json]
 ```
 
 - `.deepdraw-workflows/balabala/<spu>/` 是本地且 Git 忽略的审计缓存；绝不写入原始表格/图片、凭据、签名或 token。
 - `import` 不读取凭据、不联网；XLSX 必须扫描真实单元格，不能信任 worksheet dimension。颜色/SKU 永远以 MDM 完整集合为准。
-- `template` 串行调用 `dp.merchant.trades` 与 `dp.trade.fields`。后者是当前字段 ID、枚举、必填、销售属性和子字段激活的唯一权威。
+- 省略 `--mode` 时默认 `test`。测试模式只允许精确配置的 `targetSpu`，默认映射仅 `204426140121 -> 204426140121-test`；不要因为 `-test` 后缀、同前缀或相邻款号而放行。更多测试档案必须经 `--test-config` 中的显式 `sourceSpu -> targetSpu` 映射加入，source 只筛选本地正式资料，target 必须是已经存在的真实 `-test` 档案；测试模式禁止 `publish create`。
+- `production` 模式只允许当前命令显式给出的一个正式数字 `--spu`，绝不补 `-test`、按前缀扩展或推断批量款号；不得使用正式款硬编码白名单。
+- 在读取凭据、调用 Java SDK 或发起任何远端请求之前先解析模式与精确目标。`template` 串行调用 `dp.merchant.trades` 与 `dp.trade.fields`。后者是当前字段 ID、枚举、必填、销售属性和子字段激活的唯一权威。
 - AI/OCR 只审计调用方提供的本地 JSON。AI 必须满足当前枚举、字段激活、证据和 `>=0.7` 置信度；AI 不可填价格、条码、合规、SKU 或真实尺码事实。OCR 必须引用图片 SHA-256 和原文。
 - `sync` 从 `resource=form` 保存原始远端快照，并将远端字段、颜色别名、销售尺码、数值写入 `productId` 与 UUID 回读 `resourceId` 分别保存。`override` 仅本地修改已同步的普通标量字段并记录人工覆盖；不能改颜色、尺码、商家 SKU 或尺码表。
 - `full-update` 先回读并要求商家 SKU 的规范颜色+尺码交集。普通 `incremental` 只可改标量并自动携带颜色与尺码；尺码表、商家 SKU、颜色/SKU 改动禁止走普通增量。
-- 真实 `publish` 在 CLI 内仅允许 `204426140121-test`。所有写入先 `--execute --plan`，再由用户明确 `--execute --yes`；写后必须 `resource=form` 回读。`10200`、HTTP 200 或丢失响应不能跳过回读。
+- 每次计划必须列出目标款号、`productId`、类目、颜色、销售尺码、SKU 数、主/平台尺码表摘要与覆盖更新风险，并持久化非敏感 `planHash`。生产 `publish` 必须带已审阅、且与当前 payload 一致的 `--plan-hash`；所有写入后必须 `resource=form` 回读，状态只能是 `readback_verified`、`readback_mismatch` 或 `needs_ui_verification`。`10200`、HTTP 200 或丢失响应不能跳过回读。
+- 所有远端执行/回读记录必须包含 mode、sourceSpu、targetSpu、用户指定 `--spu`、planHash（如有）、requestId 与回读结果，且不得写入凭据、签名或 token。
 
-优先使用 `deepdraw balabala` 将巴拉巴拉字段组装、查重/回读、创建和全量更新串在同一命令空间。该流程始终通过 `api-registry` 的注册接口执行，并在输出中标记 `workflow: "balabala-listing"`：
+优先使用状态型 `deepdraw balabala` 将巴拉巴拉字段组装、回读、创建和全量更新串在同一命令空间。该流程始终通过 `api-registry` 的注册接口执行，并在输出中标记 `workflow: "balabala-listing"`：
 
 ```bash
 # 纯本地审查当前类目模板、输入证据、AI 候选和尺码表
 deepdraw balabala review --input draft.json
 
-# 以 resource=form 查询款号，先 dry-run；确认后才读取真实资源
-deepdraw balabala query --product-code 204426140121
-deepdraw balabala query --product-code 204426140121 --execute
-
-# 创建：先计划，用户明确批准后才允许 --yes
-deepdraw balabala create --input draft.json --execute --plan
-deepdraw balabala create --input draft.json --execute --yes
-
-# 创建返回 productId 后，完整更新稳定尺码表、颜色与 SKU
-deepdraw balabala full-update --input draft.json --execute --plan
-deepdraw balabala full-update --input draft.json --execute --yes
-
-# 增量更新：指定普通变动字段；颜色与尺码会自动随请求携带
-deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --plan
-deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --yes
+# 旧 query/create/full-update/incremental --input 兼容远端入口已禁用；
+# 只能使用带 --mode 和明确 --spu 的状态型流程。
+deepdraw balabala sync --mode test --spu 204426140121-test --execute
+deepdraw balabala plan incremental --mode test --spu 204426140121-test --fields 商品展示标题 --execute --plan
+deepdraw balabala publish incremental --mode test --spu 204426140121-test --fields 商品展示标题 --execute --yes
 ```
 
-- `create` 使用创建阶段字段：主尺码表和多平台尺码；创建成功后必须以资源回读取得/确认 `productId`，再决定是否执行 `full-update`。
+- `create` 使用创建阶段字段：主尺码表和多平台尺码；创建成功后必须以资源回读取得/确认 `productId`。生产创建不可以在未单独计划的情况下自动继续覆盖式 `full-update`。
 - `full-update` 使用覆盖式完整字段集，包含颜色、销售尺码、商家 SKU、主表和稳定的平台尺码表；不能把小 patch 当作全量 body。
 - 增量更新（`incremental`）只可更新当前模板中的普通字段，必须用 `--fields` 写明本次变动字段；CLI 自动携带完整的 `颜色` 与 `尺码`，不能省略。
 - 已使用 `204426140121-test` 完成“展示标题 → 资源回读 → 恢复 → 资源回读”联调：两次业务码均为 `10200`，恢复后颜色 2、尺码 15、SKU 30，且主表、唯品会、天猫、抖音四张各 15 行尺码表均在。
@@ -321,8 +314,9 @@ Agent 执行高风险接口时必须遵守这个顺序：
 
 - 商品资料拉取优先排队执行，不并发请求同一租户。
 - 常规读取建议至少间隔 3-5 秒；批量商品资料拉取建议从 5 秒间隔起步。
-- 一旦遇到 `10494`，停止当前批次，至少冷却 3-5 分钟，再用单次请求探测恢复。
-- 恢复后使用指数退避：5 秒、10 秒、20 秒；再次出现 `10494` 就重新进入冷却。
+- CLI 对 `riskLevel=read` 的调用会识别 `10494`、HTTP `429`/`503` 和明确的繁忙响应：它会在约 3 分钟（±10% 抖动）后自动做**一次**重签名探测；结果中的 `retry` 记录尝试次数、等待时间、原因与是否耗尽。探测仍繁忙时停止，不作无限重试。
+- `write`、`paid`、`paid_write` 与 `caution` 接口从不自动重放。若写入已收到响应、超时或回读被限流，状态一律视为未知，先用 `resource=form` 或对应只读接口确认，不能因 `10494` 自行重发。
+- 自动探测耗尽后，停止当前批次并等待新的冷却窗口；后续只读探测必须串行发起，不能并发补发。
 
 ## 错误处理
 
@@ -334,7 +328,7 @@ Agent 执行高风险接口时必须遵守这个顺序：
 | `Cannot combine --dry-run and --execute` | 参数冲突 | 移除其中一个参数后重试 |
 | `Invalid JSON` | `--json` 或 stdin JSON 无法解析 | 让用户修正 JSON，或改用 `--json-file` |
 | `Missing required param` | 缺少必填参数 | 查 `docs/reference/deepdraw-openapi.md` 和 `src/core/api-registry.ts` 后补参数 |
-| `10494` / `访问频率过高` | 深绘侧频控 | 停止并发和批量调用，等待 3-5 分钟后单次重试 |
+| `10494` / `访问频率过高` | 深绘侧频控 | 只读调用会在约 3 分钟后自动单次探测；写入保持未知并先回读，绝不重放 |
 | `Failed to compile DeepDraw Java SDK bridge` | JDK 或 SDK jar 配置异常 | 先运行 `deepdraw config doctor --dry-run`，再检查 JDK 和 `vendor/deepdraw-sdk` |
 
 如果返回里包含 `requestId`，需要在反馈给用户时保留它，方便深绘侧排查。

@@ -47,6 +47,8 @@ test("AGENTS.md documents Chinese agent calling workflows", () => {
   assert.match(text, /Windows\/macOS 配置检查/);
   assert.match(text, /10494/);
   assert.match(text, /访问频率过高/);
+  assert.match(text, /自动.*探测|自动做.*探测/);
+  assert.match(text, /从不自动重放|绝不自动重放/);
   assert.match(text, /deepdraw call dp\.colors\.get --dry-run/);
   assert.match(text, /deepdraw call dp\.product\.create --execute --plan/);
   assert.match(text, /deepdraw product content --product-code 208326105214 --summary --assets --dry-run/);
@@ -95,6 +97,8 @@ test("README documents cross-platform auth login", () => {
   assert.match(text, /credentials\.json/);
   assert.match(text, /10494/);
   assert.match(text, /串行队列/);
+  assert.match(text, /retry/);
+  assert.match(text, /绝不自动重放/);
   assert.match(text, /deepdraw product content --product-code 208326105214 --summary --assets --execute/);
 });
 
@@ -112,11 +116,14 @@ test("README documents the local Balabala payload builder", () => {
 test("README and AGENTS.md document the Balabala listing workflow and its safe incremental boundary", () => {
   for (const path of ["README.md", "AGENTS.md"]) {
     const text = readFileSync(path, "utf8");
-    assert.match(text, /deepdraw balabala query --product-code/);
     assert.match(text, /deepdraw balabala review --input draft\.json/);
-    assert.match(text, /deepdraw balabala create --input draft\.json --execute --plan/);
-    assert.match(text, /deepdraw balabala full-update --input draft\.json --execute --plan/);
-    assert.match(text, /deepdraw balabala incremental --input draft\.json --fields/);
+    assert.match(text, /deepdraw balabala plan create\|full-update\|incremental --mode test\|production --spu SPU --execute --plan/);
+    assert.match(text, /deepdraw balabala publish create\|full-update\|incremental --mode test\|production --spu SPU --execute --yes/);
+    assert.match(text, /--mode test/);
+    assert.match(text, /--mode test\|production|--mode production/);
+    assert.match(text, /sourceSpu/);
+    assert.match(text, /targetSpu/);
+    assert.match(text, /planHash/);
     assert.match(text, /颜色.*尺码|尺码.*颜色/);
     assert.match(text, /多平台尺码.*全量更新|全量更新.*多平台尺码/);
     assert.match(text, /templateFields/);

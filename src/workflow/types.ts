@@ -9,6 +9,7 @@ export type WorkflowState =
   | "post_create_update"
   | "readback_verified"
   | "readback_mismatch"
+  | "needs_ui_verification"
   | "transport_unknown"
   | "failed";
 
@@ -56,6 +57,21 @@ export interface ExecutionRecord {
   api?: string;
   inputHash?: string;
   details?: Record<string, unknown>;
+}
+
+/**
+ * Non-secret identity and approval facts attached to every remote workflow
+ * operation.  Keeping this separate from the provider body makes it possible
+ * to audit target selection without storing credentials, signatures or tokens.
+ */
+export interface RemoteOperationContext {
+  mode: "test" | "production";
+  sourceSpu: string;
+  targetSpu: string;
+  userSpecifiedTargetSpu: string;
+  planHash?: string;
+  requestId?: string | null;
+  [key: string]: unknown;
 }
 
 export interface WorkflowSnapshot {

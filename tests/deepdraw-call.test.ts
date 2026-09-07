@@ -81,6 +81,86 @@ test("callDeepdrawApi sends JSON body when provided", async () => {
   assert.equal(requestedBody, JSON.stringify({ pageNo: 1 }));
 });
 
+test("callDeepdrawApi cools down once and retries a read after DeepDraw 10494", async () => {
+  let calls = 0;
+  const delays: number[] = [];
+
+  const result = await callDeepdrawApi({
+    config,
+    apiName: "dp.colors.get",
+    query: {},
+    retryOptions: { maxAttempts: 2, initialDelayMs: 180, maxDelayMs: 180, jitterRatio: 0 },
+    retrySleep: async (milliseconds) => { delays.push(milliseconds); },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(JSON.stringify(calls === 1
+        ? { status: 200, response: { code: 10494, reason: "访问频率过高，请稍后重试", response: "fail", requestId: 1 } }
+        : { status: 200, response: { code: 10200, response: "success", requestId: 2, body: [{ name: "红色" }] } }), { status: 200 });
+    },
+  });
+
+  assert.equal(calls, 2);
+  assert.deepEqual(delays, [180]);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.retry, {
+    eligible: true,
+    attempts: 2,
+    retried: true,
+    exhausted: false,
+    reason: "business_code_10494",
+    delaysMs: [180],
+  });
+});
+
+test("callDeepdrawApi treats HTTP 503 as a retryable busy read", async () => {
+  let calls = 0;
+  const result = await callDeepdrawApi({
+    config,
+    apiName: "dp.colors.get",
+    query: {},
+    retryOptions: { maxAttempts: 2, initialDelayMs: 0, maxDelayMs: 0, jitterRatio: 0 },
+    retrySleep: async () => {},
+    fetchImpl: async () => {
+      calls += 1;
+      return calls === 1
+        ? new Response("service unavailable", { status: 503 })
+        : new Response(JSON.stringify({ status: 200, response: { code: 10200, response: "success", body: [] } }), { status: 200 });
+    },
+  });
+
+  assert.equal(calls, 2);
+  assert.equal(result.ok, true);
+  assert.equal(result.retry?.reason, "http_503");
+  assert.equal(result.retry?.retried, true);
+});
+
+test("callDeepdrawApi never replays a busy write or paid request", async () => {
+  let calls = 0;
+  const result = await callDeepdrawApi({
+    config,
+    apiName: "dp.product.image.update",
+    query: { merchantId: "1162", productId: "7788" },
+    body: { images: [] },
+    retryOptions: { maxAttempts: 2, initialDelayMs: 0, maxDelayMs: 0, jitterRatio: 0 },
+    retrySleep: async () => { throw new Error("write retry must not sleep"); },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ status: 200, response: { code: 10494, reason: "接口繁忙", response: "fail", requestId: 3 } }), { status: 200 });
+    },
+  });
+
+  assert.equal(calls, 1);
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.retry, {
+    eligible: false,
+    attempts: 1,
+    retried: false,
+    exhausted: false,
+    reason: "business_code_10494",
+    delaysMs: [],
+  });
+});
+
 test("callDeepdrawApi rejects GET body before fetch", async () => {
   let fetched = false;
 
@@ -231,6 +311,37 @@ test("deepdraw call --execute runs low-risk HTTP API with injected fetch", async
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.ok, true);
   assert.deepEqual(payload.data, [{ name: "红色" }]);
+});
+
+test("deepdraw CLI exposes the bounded busy retry audit for an executed read", async () => {
+  let calls = 0;
+  const delays: number[] = [];
+  const result = await runCli(["call", "dp.colors.get", "--execute"], {
+    env: {
+      DEEPDRAW_TENANT_NAME: config.tenantName,
+      DEEPDRAW_BASE_URL: config.baseUrl,
+      DEEPDRAW_APP_KEY: config.appKey,
+      DEEPDRAW_APP_SECRET: config.appSecret,
+      DEEPDRAW_DOP_KEY: config.dopKey,
+      DEEPDRAW_MERCHANT_ID: config.merchantId,
+    },
+    stdin: "",
+    deepdrawBusyRetryOptions: { maxAttempts: 2, initialDelayMs: 25, maxDelayMs: 25, jitterRatio: 0 },
+    deepdrawBusyRetrySleep: async (milliseconds) => { delays.push(milliseconds); },
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(JSON.stringify(calls === 1
+        ? { status: 200, response: { code: 10494, reason: "访问频率过高", response: "fail" } }
+        : { status: 200, response: { code: 10200, response: "success", body: [{ name: "红色" }] } }), { status: 200 });
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(calls, 2);
+  assert.deepEqual(delays, [25]);
+  const payload = JSON.parse(result.stdout) as { retry: Record<string, unknown> };
+  assert.equal(payload.retry.retried, true);
+  assert.equal(payload.retry.attempts, 2);
 });
 
 test("deepdraw call --execute routes product resource through Java SDK with full query", async () => {

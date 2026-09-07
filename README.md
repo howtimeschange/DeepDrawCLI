@@ -6,6 +6,13 @@
 
 当前接口事实以源文件《深绘开放平台API接口文档20260827.pdf》的 96 页内容为准，仓库机器可读镜像见 [`docs/reference/deepdraw-openapi.md`](docs/reference/deepdraw-openapi.md)；该快照已纳入 SDK 1.6.24 的修改历史和字段增量。PDF 中的示例只说明请求形状，不是执行授权。
 
+## 阅读路径
+
+- 只想调用某个 OpenAPI：从[快速上手](#快速上手)和[常用命令](#常用命令)开始；所有 `dp.*` 接口都受 registry、dry-run 和风险授权约束。
+- 要走巴拉巴拉上新：直接阅读[巴拉上新流程](#巴拉上新流程)。这里解释本地资料导入、测试/正式款号授权、类目模板、AI/OCR 审计、全量/增量更新和回读。
+- 要排查频控：阅读[调用频率与退避](#调用频率与退避)。只读请求会有限重试；任何可能写入的请求都不会自动重放。
+- 要接入新的品牌：阅读[项目架构](#项目架构)；品牌规则位于独立插件，工作流和 transport 不依赖巴拉规则。
+
 ## 项目背景
 
 深绘开放平台的接口有几类现实问题：
@@ -34,6 +41,7 @@
 - 只有加上 `--execute --yes` 后才真正执行写入、付费或慎用接口。
 - 通过 `deepdraw product content` 直接拿到商品摘要、SKU 摘要、商品图片 URL、详情页 URL 和详情模块 URL。
 - 通过 `deepdraw product payload` 在本地构建电商巴拉巴拉的商品发布 payload，并同时输出 `sizes.optionAliases`、`sizes.texts` 和 Java SDK 实际消费的商品实体。
+- 通过状态型 `deepdraw balabala` 从本地 MDM/上市计划/文案/尺码表/图片资料重建可审计草稿，再按测试或正式授权目标进行同步、计划、发布与资源回读。
 - 在 macOS / Windows 上通过同一套 SDK bundle 运行 Java bridge，无需 Maven 下载。
 - 避免把真实 `appSecret`、`dopKey`、签名和租户凭据写入 tracked files。
 
@@ -139,6 +147,7 @@ npm run build
 
 - `dp.product.create`
 - `dp.product.update`
+- `dp.product.incremental.update`
 - `dp.product.sku.color.incremental.update`
 - `dp.product.resource`
 
@@ -305,9 +314,24 @@ deepdraw product payload \
 
 新版状态型流程把业务资料保存在当前目录的 `.deepdraw-workflows/balabala/<款号>/`：其中有原子状态、来源哈希、标准化资料、当前类目模板、草稿、AI/OCR 审计、计划、执行和回读。该目录已被 Git 忽略，不保存原始表格/图片、凭据、签名或 token。工作流核心只管理状态与已注册的 DeepDraw 调用；巴拉插件独立管理资料列别名、类目评分、字段、颜色、SKU 和尺码规则，因此其他品牌可接入自己的插件而不用复制巴拉规则。
 
+完整链路如下。除标记为“本地”的步骤外，每个远端步骤都会先按模式和精确款号授权，再经 `api-registry` 调用对应的 `dp.*` 接口。
+
+| 顺序 | 命令 | 结果与边界 |
+| --- | --- | --- |
+| 1 | `import` | 本地导入 MDM、上市计划、文案、尺码表和图片；仅按 `sourceSpu` 筛选正式资料，不读取凭据、不联网。 |
+| 2 | `template` | 读取 `dp.merchant.trades` 和当前 `dp.trade.fields`，选择叶子类目并重建当前模板草稿。 |
+| 3 | `review` | 本地审查来源、必填字段、AI/OCR 候选、SKU、颜色和尺码表；阻断项未消除时不能计划。 |
+| 4 | `sync` | 以 `resource=form` 读取既有档案，保存数值 `productId` 与资源 UUID，并验证返回款号正好等于目标。 |
+| 5 | `plan` | 生成不写入的执行计划与 `planHash`；全量更新会先读取远端并检查 SKU 交集。 |
+| 6 | `publish` | 仅在 `--execute --yes` 后写入；随后自动 `resource=form` 回读。 |
+| 7 | `readback` | 将结果标记为 `readback_verified`、`readback_mismatch` 或 `needs_ui_verification`。 |
+
+#### 本地资料与字段重建
+
 ```bash
-# 本地导入会保留 MDM 的全部颜色和 SKU；上市计划或文案只命中一个颜色不会缩减 SKU 集合
-deepdraw balabala import --spu 204426140121 \
+# 测试模式默认启用。--spu 是唯一可写的测试档案；默认仅允许这一条映射。
+# 本地 MDM、上市计划、文案和尺码表仍按 sourceSpu=204426140121 筛选。
+deepdraw balabala import --mode test --spu 204426140121-test \
   --mdm '/path/商品SKU表.xlsx' \
   --launch-plan '/path/上市计划表.xlsx' \
   --copywriting '/path/标准文案表.xlsx' \
@@ -315,8 +339,8 @@ deepdraw balabala import --spu 204426140121 \
   --images '/path/204426140121'
 
 # 类目树和 dp.trade.fields 是当前字段 ID、枚举、必填、销售属性和子字段激活的唯一权威
-deepdraw balabala template --spu 204426140121 --execute
-deepdraw balabala review --spu 204426140121
+deepdraw balabala template --mode test --spu 204426140121-test --execute
+deepdraw balabala review --mode test --spu 204426140121-test
 ```
 
 XLSX 导入扫描工作表真实单元格，不信任错误的 worksheet dimension，因此 `期货`/`O2O` 即使被标成 `A1` 仍能解析实际数据行。图片包会生成路径、角色和 SHA-256 审计；除 `jpg/jpeg/png/webp` 外，也会保留合格证、吊牌、洗标等 `PDF` 原件（`hangtag`/`washlabel`），只能作为 OCR/视觉证据，不能生成 MDM 颜色、SKU 或尺码事实。
@@ -324,25 +348,89 @@ XLSX 导入扫描工作表真实单元格，不信任错误的 worksheet dimensi
 AI/OCR provider 由业务或 agent 输出本地 JSON 后再交给 CLI 审计，CLI 不自行调用付费模型。AI 仅接受当前模板的激活枚举、具备证据且置信度至少 `0.7` 的建议；价格、条码、生产/合规、SKU、销售尺码、尺码量点和充绒量永远不可由 AI 填写。OCR 必须引用导入图片或 PDF 的 SHA-256 和原始文本，且字段 ID/名称必须命中当前深绘模板；采纳后字段会回链原始文件路径、哈希和角色。
 
 ```bash
-deepdraw balabala review --spu 204426140121 \
+deepdraw balabala review --mode test --spu 204426140121-test \
   --ai-responses /path/ai-responses.json \
   --ocr-facts /path/ocr-facts.json
 ```
 
-`plan` 仍会按已有审批机制生成 DeepDraw 计划；远端商品动作 `sync`、`readback` 和 `publish` 都只允许测试款 `204426140121-test`，正式款只能本地导入、组装和审查。创建成功后会自动提取数值 `productId`、继续全量更新并回读。全量更新先读取 `resource=form`，要求本地/远端商家 SKU 至少一个规范颜色+尺码键交集，并以合并后的完整档案重新生成请求体；普通增量只可改标量并自动携带颜色与尺码。尺码表、商家 SKU、颜色/SKU 变化不能走普通增量。回读缺少结构化表时会标记 `needs_ui_verification`，不会误报为成功。
+#### 运行模式与款号授权
+
+远端流程有两个显式运行模式，未传 `--mode` 时默认 `test`：
+
+- `--mode test` 只允许配置中**精确**列出的 `targetSpu` 执行远端 `sync`、`readback` 和 `publish`（以及相同工作流的模板读取）。默认白名单仅有 `204426140121 -> 204426140121-test`；款号带 `-test` 后缀、同前缀或相邻款号都不会自动获准。更多测试款必须由本地、非敏感的配置显式映射，例如 `{"targets":[{"sourceSpu":"202426107128","targetSpu":"202426107128-test"}]}`，并通过 `--test-config targets.json` 传入。`targetSpu` 必须是已经存在的真实 `-test` 深绘档案，因此测试模式禁止 `publish create`；`sourceSpu` 只用于筛选正式资料，`targetSpu` 才是唯一远端目标。
+- `--mode production` 不存在硬编码正式款白名单：只操作当前命令逐字传入的一个正式数字 `--spu`。CLI 不会补 `-test`、按前缀扩展或推断其他款号。正式模式的 `publish` 必须带上前一次 `plan` 输出的 `planHash`。
+
+测试档案配置仅包含业务资料款号与允许写入的测试档案款号，不能包含凭据；每个 `targetSpu` 必须唯一。用文件而不是“所有 `-test` 都允许”的规则，才能避免同前缀或相邻款号被误写：
+
+```json
+{
+  "targets": [
+    { "sourceSpu": "202426107128", "targetSpu": "202426107128-test" },
+    { "sourceSpu": "202426107033", "targetSpu": "202426107033-test" }
+  ]
+}
+```
+
+将其保存为 `targets.json` 后，对上述两个测试档案的每条 `import`、`template`、`sync`、`plan`、`publish` 或 `readback` 命令都加 `--test-config targets.json`。`--test-config` 不能用于 `production`。
+
+#### 计划、发布与回读
+
+每个计划都会展示目标款号、数值 `productId`、类目、颜色、销售尺码、SKU 数、主/平台尺码表摘要及全量覆盖风险，并将稳定的 `planHash` 写入工作流。全量更新先读取 `resource=form`，要求本地/远端商家 SKU 至少一个规范颜色+尺码键交集，并以合并后的完整档案重新生成请求体；普通增量只可改标量并自动携带颜色与尺码。尺码表、商家 SKU、颜色/SKU 变化不能走普通增量。写入后的 `resource=form` 回读是唯一完成依据：状态只能是 `readback_verified`、`readback_mismatch` 或 `needs_ui_verification`，HTTP 200/`10200` 不代替回读。
+
+```bash
+deepdraw balabala plan create|full-update|incremental --mode test|production --spu SPU --execute --plan
+deepdraw balabala publish create|full-update|incremental --mode test|production --spu SPU --execute --yes [--plan-hash HASH]
+```
 
 ```bash
 # 已有深绘档案：先把 resource=form 的真实字段、颜色别名、销售尺码、写入 productId 和回读 UUID 同步进本地状态
-deepdraw balabala sync --spu 204426140121-test --execute
+deepdraw balabala sync --mode test --spu 204426140121-test --execute
 
 # 本地只覆盖一个已同步的标量字段；颜色、尺码、SKU 和尺码表不能通过 override 改动
-deepdraw balabala override --spu 204426140121-test --field 商品展示标题 --value '巴拉巴拉男中童运动鞋'
-deepdraw balabala plan incremental --spu 204426140121-test --fields 商品展示标题 --execute --plan
-deepdraw balabala publish incremental --spu 204426140121-test --fields 商品展示标题 --execute --yes
-deepdraw balabala readback --spu 204426140121-test --execute
+deepdraw balabala override --mode test --spu 204426140121-test --field 商品展示标题 --value '巴拉巴拉男中童运动鞋'
+deepdraw balabala plan incremental --mode test --spu 204426140121-test --fields 商品展示标题 --execute --plan
+deepdraw balabala publish incremental --mode test --spu 204426140121-test --fields 商品展示标题 --execute --yes
+deepdraw balabala readback --mode test --spu 204426140121-test --execute
 ```
 
-`sync` 将原始 `resource=form` 作为审计回读保存，同时投影出可编辑草稿：通用增量写入使用数值 `productId`，资源回读使用同一档案的 UUID `id`。两者会分别保存，避免把写入 ID 误传给回读接口。`override` 只修改本地状态，并记录原值、人工覆盖和时间；之后仍需先生成计划。普通增量请求始终带上从同步档案读取的完整 `颜色` 与 `尺码`，但不会带商家 SKU 或任何尺码表。
+正式既有款全量更新示例。`--spu` 在每一条命令中都必须是同一个、用户明确指定的正式款号；CLI 不会把它改成测试款，也不会顺带操作其他款：
+
+```bash
+# 1. 本地资料按正式款号筛选；导入本身不会联网。
+deepdraw balabala import --mode production --spu 202426107128 \
+  --mdm '/path/商品SKU表.xlsx' \
+  --launch-plan '/path/上市计划表.xlsx' \
+  --copywriting '/path/标准文案表.xlsx' \
+  --plm-size-chart '/path/尺码数据模板.xlsx' \
+  --images '/path/202426107128'
+
+# 2. 读取当前类目模板并完成本地审查。
+deepdraw balabala template --mode production --spu 202426107128 --execute
+deepdraw balabala review --mode production --spu 202426107128
+
+# 3. 同步既有档案，才能取得正确的 productId、resourceId 和远端可保留字段。
+deepdraw balabala sync --mode production --spu 202426107128 --execute
+
+# 4. 计划会回读并合并远端完整资料；不写入。
+deepdraw balabala plan full-update --mode production --spu 202426107128 --execute --plan
+# 审阅 plan.planHash、字段和覆盖风险后：
+deepdraw balabala publish full-update --mode production --spu 202426107128 \
+  --execute --yes --plan-hash PLAN_HASH_FROM_PREVIOUS_COMMAND
+```
+
+正式创建使用相同的 `import → template → review → plan create` 前置步骤，然后执行：
+
+```bash
+deepdraw balabala plan create --mode production --spu 202426107128 --execute --plan
+deepdraw balabala publish create --mode production --spu 202426107128 \
+  --execute --yes --plan-hash PLAN_HASH_FROM_PREVIOUS_COMMAND
+```
+
+创建成功只会自动回读新档案；为了避免未经审查的覆盖式请求，CLI **不会**在正式模式自动继续全量更新。若需要补齐更新阶段的平台尺码表，必须重新生成并审阅一份 `full-update` 计划。测试模式不允许 `publish create`，只能更新已存在且精确配置的 `-test` 档案。
+
+`sync` 将原始 `resource=form` 作为审计回读保存，同时投影出可编辑草稿：通用增量写入使用数值 `productId`，资源回读使用同一档案的 UUID `id`。两者会分别保存，避免把写入 ID 误传给回读接口。每条远端执行记录都会保存模式、source/target/用户指定款号、计划哈希（如有）、request ID 与回读状态；工作流存储会脱敏并拒绝凭据、签名和 token。`override` 只修改本地状态，并记录原值、人工覆盖和时间；之后仍需先生成计划。普通增量请求始终带上从同步档案读取的完整 `颜色` 与 `尺码`，但不会带商家 SKU 或任何尺码表。
+
+#### 兼容的本地 JSON 审查
 
 先运行纯本地审查。`review` 不读取凭据、不联网、不调用 Java 或 AI；它输出当前类目的有效字段、阻断项、可接受的 AI 候选和最终会交给 payload 组装器的字段。创建、全量更新和增量计划都会先执行同一套审查；审查未通过时不会生成深绘执行计划。
 
@@ -376,36 +464,17 @@ deepdraw call dp.trade.fields --execute --param merchantId=1162 --param tradeId=
 
 AI 只处理 `review.aiCandidates` 中的当前模板枚举字段。上游 agent 若要提交建议，传入 `aiResponses` 的 `fieldName/value/confidence/evidence`；CLI 仅接受置信度 `>= 0.7`、命中当前枚举、有证据且未覆盖人工字段的结果。至多使用 4 张 jpeg/png/webp、每张不超过 4MB 的参考图，按平铺图、主图、模特图、参考图、吊牌、洗唛排序。价格、产地、条码、生产/合规事实、SKU、销售尺码和真实尺码表永远不能由 AI 填充。
 
-先以 `resource=form` 查询款号，供查重和后续资源回读使用：
+旧的 `balabala query/create/full-update/incremental --input ...` 兼容远端入口已禁用，避免绕过 `--mode`、精确 `--spu`、计划哈希和工作流回读。纯本地 `deepdraw balabala review --input draft.json` 保持可用；远端操作统一使用上面的状态型流程。`publish create` 在正式模式会回读新建档案，但不会未经另一份全量更新计划就自动执行覆盖式更新；请审阅并单独计划 `full-update`。
 
-```bash
-deepdraw balabala query --product-code 204426140121
-deepdraw balabala query --product-code 204426140121 --execute
-```
-
-创建会使用 create 阶段的主尺码表和多平台尺码。先生成计划；只有用户明确批准后才可执行：
-
-```bash
-deepdraw balabala create --input draft.json --execute --plan
-deepdraw balabala create --input draft.json --execute --yes
-```
-
-旧 `--input draft.json` 兼容命令需要将创建返回数值 `productId` 写回草稿，再以全量更新补齐唯品会、天猫、抖音等稳定尺码表；新版状态型 `balabala publish create` 自动完成这一动作。全量更新是覆盖语义，不能用小 patch 代替：
-
-```bash
-deepdraw balabala full-update --input draft.json --execute --plan
-deepdraw balabala full-update --input draft.json --execute --yes
-```
-
-#### 增量更新：按变更对象选择接口
+#### 全量更新与增量更新：按变更对象选择接口
 
 CLI 提供两个增量接口；它们使用的产品 ID 和字段约束不同，不能互换：
 
 | 场景 | 接口与产品 ID | 必带字段 / 使用边界 |
 | --- | --- | --- |
-| 普通字段小范围修改 | `dp.product.incremental.update`；使用 `resource=form` 返回的数值 `productId` | 如果提交 `商家SKU`，必须同时带颜色和尺码；如果提交任一尺码表，必须同时带尺码。资源回读则使用同一返回中的 UUID `id`。空 `places` 不会发送，避免意外清空平台。 |
+| 普通字段小范围修改 | `dp.product.incremental.update`；使用 `resource=form` 投影出的数值 `productId` | 如果提交 `商家SKU`，必须同时带颜色和尺码；如果提交任一尺码表，必须同时带尺码。资源回读使用同一档案的 UUID `resourceId`。空 `places` 不会发送，避免意外清空平台。 |
 | 新增或变更颜色、SKU | `dp.product.sku.color.incremental.update`；使用数值 `productId` | 强制同时带完整的颜色、尺码和商家 SKU，且 SKU 的颜色别名、尺码必须命中对应字段。 |
-| 巴拉普通字段修改 | `deepdraw balabala incremental`；草稿中的数值 `productId` 由 `sync` 保存 | 必须以 `--fields` 明确选择当前模板中的普通字段；CLI 自动附带完整颜色与销售尺码，并用单独保存的 UUID `resourceId` 回读。 |
+| 巴拉普通字段修改 | `deepdraw balabala plan/publish incremental`；草稿中的数值 `productId` 由 `sync` 保存 | 必须以 `--fields` 明确选择当前模板中的普通字段；CLI 自动附带完整颜色与销售尺码，并用单独保存的 UUID `resourceId` 回读。 |
 
 巴拉增量会先完成本地模板/证据审查，再生成写入计划。真实执行后必须用 `resource=form` 回读，不以 HTTP 200 或 `10200` 代替持久化证明。`204426140121-test` 已完成“展示标题 → 回读 → 恢复 → 回读”联调：两次业务码均为 `10200`，恢复后颜色 2、尺码 15、SKU 30，以及主表、唯品会、天猫、抖音四张各 15 行尺码表均保留。
 
@@ -413,11 +482,11 @@ CLI 提供两个增量接口；它们使用的产品 ID 和字段约束不同，
 
 ```bash
 # 巴拉普通字段增量：--fields 可用英文逗号列出多个当前模板字段
-deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --plan
-deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --yes
+deepdraw balabala plan incremental --mode test --spu 204426140121-test --fields 商品展示标题 --execute --plan
+deepdraw balabala publish incremental --mode test --spu 204426140121-test --fields 商品展示标题 --execute --yes
 ```
 
-直接调用通用增量接口时，先从 `resource=form` 取得内部 UUID，并用完整颜色/尺码值构建小 patch：
+直接调用通用增量接口时，用已同步档案的数值 `productId` 构建小 patch；如果该 patch 涉及颜色、尺码、SKU 或尺码表，必须遵守上表关系约束：
 
 ```bash
 deepdraw call dp.product.incremental.update \
@@ -515,6 +584,7 @@ transport 策略：
 │   │   ├── approval.ts          # 风险分级、执行计划和授权判断
 │   │   ├── config.ts            # 配置和租户解析
 │   │   ├── credentials.ts       # 凭据存取抽象
+│   │   ├── deepdraw-busy-retry.ts # 只读接口繁忙识别、退避与审计元数据
 │   │   ├── deepdraw-client.ts   # HTTP transport 调用
 │   │   ├── signer.ts            # DeepDraw HTTP 签名
 │   │   ├── result.ts            # 响应归一化
@@ -523,11 +593,15 @@ transport 策略：
 │   │   ├── product-payload.ts   # 巴拉巴拉商品 payload 本地构建
 │   │   ├── redact.ts            # 敏感字段脱敏
 │   │   └── reference-parser.ts  # 文档接口索引解析
+│   ├── brands/balabala/          # 巴拉资料导入、类目选择、字段/颜色/SKU/尺码规则与读回
+│   ├── workflow/                 # 原子本地状态、计划、执行审计与回读状态机
 │   └── sdk/
 │       └── java-adapter.ts      # Java SDK bridge 编译与调用
 ├── java/
 │   ├── DeepdrawProductCreateCli.java
 │   ├── DeepdrawProductUpdateCli.java
+│   ├── DeepdrawProductIncrementalUpdateCli.java
+│   ├── DeepdrawProductSkuColorIncrementalUpdateCli.java
 │   └── DeepdrawProductResourceCli.java
 ├── vendor/deepdraw-sdk/         # SDK jar 和 Java 运行依赖
 ├── docs/reference/
@@ -581,7 +655,17 @@ CLI 根据注册表统一处理 dry-run、参数校验、风险授权和 transpo
 - `DeepdrawProductSkuColorIncrementalUpdateCli`: 调用 `ProductPostIncrementalUpdateProductSkuColorByIdRequest`，执行颜色/SKU 增量更新。
 - `DeepdrawProductResourceCli`: 调用 `ProductGetByIdRequest`，并额外保留 SDK 没有显式 setter 的新版 query 参数。
 
-### 4. 授权和计划
+### 4. 接口繁忙退避
+
+`src/core/deepdraw-busy-retry.ts` 是 HTTP 和 Java SDK transport 共用的重试边界：
+
+- 仅 `riskLevel=read` 可以被自动重放；它识别业务码 `10494`、HTTP `429/503` 与明确的繁忙文本。
+- 默认尝试总数为两次：首个繁忙响应后等待约 3 分钟（±10% 抖动），再做一次探测；不是无限重试。
+- HTTP 探测会重新构建签名；Java SDK 探测会重新运行 bridge。
+- 成功或耗尽时，结果 JSON 都会包含 `retry.eligible`、`retry.attempts`、`retry.retried`、`retry.exhausted`、`retry.reason` 和 `retry.delaysMs`。
+- 一切写入、付费和慎用接口不会自动重放。超时、连接中断或繁忙写入均是未知状态，必须先回读或查证再决定下一步。
+
+### 5. 授权和计划
 
 `src/core/approval.ts` 根据 `apiRegistry` 的风险级别判断是否允许执行：
 
@@ -590,7 +674,7 @@ CLI 根据注册表统一处理 dry-run、参数校验、风险授权和 transpo
 - `--plan` 会生成计划，但不会执行真实调用。
 - 计划中的敏感字段会通过 `redactSensitive` 脱敏。
 
-### 5. 商品内容包抽取
+### 6. 商品内容包抽取
 
 `src/core/product-content.ts` 把 `dp.product.resource` 的大 JSON 抽成 agent 更容易处理的结构：
 
@@ -631,8 +715,9 @@ Agent 调用本项目时应遵守：
 - 商品资料拉取放进串行队列。
 - 常规读取至少间隔 3-5 秒。
 - 批量拉取 `dp.product.resource` 从 5 秒间隔起步。
-- 遇到 `10494` 后停止当前批次，冷却 3-5 分钟。
-- 恢复后使用指数退避：5 秒、10 秒、20 秒。
+- CLI 对 registry 标记为 `read` 的调用内置有界退避：识别到 `10494`、HTTP `429`/`503` 或明确的“接口繁忙”响应后，默认等待约 3 分钟（±10% 抖动）并仅做一次自动探测重试。每次重试都会重新签名，最终 JSON 的 `retry` 会给出 `attempts`、`delaysMs`、`reason` 和是否已耗尽。
+- `write`、`paid`、`paid_write` 与 `caution` 接口绝不自动重放；即使收到繁忙响应，也必须先读取/回读或重新生成计划，不能把未知写入当作失败重发。
+- 自动探测仍繁忙时，CLI 会返回原始失败及 `retry.exhausted=true`。停止当前批次，等待新的冷却窗口后再由用户或编排器发起一次独立的只读探测；不要并发补发。
 
 ## 常见错误
 
@@ -642,7 +727,7 @@ Agent 调用本项目时应遵守：
 | `Cannot combine --dry-run and --execute` | 参数冲突 | 移除其中一个参数 |
 | `Invalid JSON` | `--json` 或 stdin JSON 格式错误 | 修正 JSON，或改用 `--json-file` |
 | `Missing required parameters` | 缺少必填参数 | 查看 `docs/reference/deepdraw-openapi.md` 和 `src/core/api-registry.ts` |
-| `10494` / `访问频率过高` | 深绘侧频控 | 停止并发，冷却后单次探测 |
+| `10494` / `访问频率过高` | 深绘侧频控 | 只读调用会在约 3 分钟后自动单次探测；写入不重试，先回读确认 |
 | `Failed to compile DeepDraw Java SDK bridge` | JDK 或 SDK jar 配置异常 | 先跑 `deepdraw config doctor --dry-run` |
 
 如果返回包含 `requestId`，反馈给用户或深绘侧排查时要保留。

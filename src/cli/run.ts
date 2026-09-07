@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { spawn as spawnChild } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -5,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { apiRegistry, findApiDefinition } from "../core/api-registry.js";
 import { createExecutionPlan, enforceApproval } from "../core/approval.js";
 import { callDeepdrawApi, type DeepdrawFetch } from "../core/deepdraw-client.js";
+import type { DeepdrawBusyRetryOptions, DeepdrawRetrySleep } from "../core/deepdraw-busy-retry.js";
 import { configPathForPlatform, resolveDeepdrawConfig, type ConfigPlatform, type DeepdrawConfig, type StoredConfigFile } from "../core/config.js";
 import { type CredentialStore, FileCredentialStore } from "../core/credentials.js";
 import { extractDeepdrawProductContent } from "../core/product-content.js";
@@ -12,6 +14,13 @@ import { buildProductPayload, type ProductPayloadStage } from "../core/product-p
 import { reviewBalabalaFields } from "../core/balabala-field-rules.js";
 import { redactSensitive } from "../core/redact.js";
 import { importBalabalaSources } from "../brands/balabala/importers.js";
+import {
+  DEFAULT_BALABALA_TEST_TARGETS,
+  parseBalabalaTestTargets,
+  resolveBalabalaRemoteTarget,
+  type BalabalaRemoteTarget,
+  type BalabalaWorkflowMode,
+} from "../brands/balabala/remote-targets.js";
 import { selectBalabalaTrade } from "../brands/balabala/trade-selection.js";
 import { BalabalaWorkflowEngine } from "../workflow/engine.js";
 import { WorkflowStore } from "../workflow/store.js";
@@ -31,6 +40,10 @@ export interface CliRunOptions {
   platform?: ConfigPlatform;
   cwd?: string;
   javaSpawnImpl?: JavaSdkSpawn;
+  /** Test/embedding hooks for the bounded provider-busy retry policy. */
+  deepdrawBusyRetryOptions?: DeepdrawBusyRetryOptions;
+  deepdrawBusyRetrySleep?: DeepdrawRetrySleep;
+  deepdrawBusyRetryRandom?: () => number;
 }
 
 export interface CliRunResult {
@@ -432,17 +445,18 @@ type BalabalaWorkflowArgs = {
 
 function balabalaWorkflowHelpText(): string {
   return [
-    "Usage: deepdraw balabala query --product-code CODE [--resource form] [--execute]",
     "       deepdraw balabala review --input draft.json",
-    "       deepdraw balabala create --input draft.json --execute --plan",
-    "       deepdraw balabala full-update --input draft.json --execute --plan",
-    "       deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --plan",
     "",
     "Review validates the current class template, source evidence, AI candidates, and size-chart inputs locally.",
-    "Balabala listing assembles only active current-template fields before calling registered APIs.",
-    "Create, full-update, and incremental update require --execute --plan, then explicit --execute --yes.",
-    "Incremental update requires --fields and always carries 颜色 and 尺码; 尺码表、商家SKU and 多平台尺码 require full-update.",
+    "Remote query/create/full-update/incremental compatibility commands are disabled to prevent bypassing the stateful --mode/--spu target policy.",
+    "Use `deepdraw balabala <sync|plan|publish|readback> --mode test|production --spu ...` instead; those commands remain thin wrappers over registered dp.* APIs.",
   ].join("\n") + "\n";
+}
+
+// Kept as a function (rather than a narrowing guard) while the old local
+// review parser remains in this file for backwards-compatible review input.
+function legacyBalabalaRemoteCommandDisabled(action: BalabalaWorkflowAction): boolean {
+  return action !== "review";
 }
 
 function parseBalabalaWorkflowArgs(argv: string[]): BalabalaWorkflowArgs {
@@ -641,7 +655,6 @@ function withBalabalaWorkflowMetadata(
 
 type StatefulBalabalaAction = "import" | "assemble" | "template" | "review" | "plan" | "publish" | "sync" | "readback" | "override";
 type StatefulBalabalaStage = "create" | "full-update" | "incremental";
-const BALABALA_REMOTE_PRODUCT_TEST_CODE = "204426140121-test";
 
 function text(value: unknown): string {
   if (value === undefined || value === null) return "";
@@ -657,6 +670,9 @@ type StatefulBalabalaArgs = {
   action: StatefulBalabalaAction;
   stage?: StatefulBalabalaStage;
   spu: string;
+  mode: BalabalaWorkflowMode;
+  testConfigPath?: string;
+  planHash?: string;
   merchantId: string;
   tenantName?: string;
   workflowRoot: string;
@@ -687,18 +703,19 @@ function waitForDeepdrawReadInterval(): Promise<void> {
 
 function statefulBalabalaHelpText(): string {
   return [
-    "Usage: deepdraw balabala import --spu SPU --mdm SKU.xlsx --launch-plan PLAN.xlsx --copywriting COPY.xlsx [--shoe-size-chart SIZE.xlsx] [--plm-size-chart PLM.xlsx] [--apparel-size-reference 尺码数据模板.xlsx] [--field-mappings MAPPINGS.json] [--images DIR]",
-    "       deepdraw balabala assemble --spu SPU",
-    "       deepdraw balabala template --spu SPU --execute",
-    "       deepdraw balabala review --spu SPU [--ai-responses AI.json] [--ocr-facts OCR.json]",
-    "       deepdraw balabala sync --spu SPU --execute",
-    "       deepdraw balabala override --spu SPU --field FIELD --value VALUE",
-    "       deepdraw balabala plan create|full-update|incremental --spu SPU --execute --plan [--fields FIELD,...]",
-    "       deepdraw balabala publish create|full-update|incremental --spu 204426140121-test --execute --yes [--fields FIELD,...]",
-    "       deepdraw balabala readback --spu SPU --execute",
+    "Usage: deepdraw balabala import --mode test|production --spu SPU --mdm SKU.xlsx --launch-plan PLAN.xlsx --copywriting COPY.xlsx [--test-config TARGETS.json] [--shoe-size-chart SIZE.xlsx] [--plm-size-chart PLM.xlsx] [--apparel-size-reference 尺码数据模板.xlsx] [--field-mappings MAPPINGS.json] [--images DIR]",
+    "       deepdraw balabala assemble --mode test|production --spu SPU [--test-config TARGETS.json]",
+    "       deepdraw balabala template --mode test|production --spu SPU --execute [--test-config TARGETS.json]",
+    "       deepdraw balabala review --mode test|production --spu SPU [--test-config TARGETS.json] [--ai-responses AI.json] [--ocr-facts OCR.json]",
+    "       deepdraw balabala sync --mode test|production --spu SPU --execute [--test-config TARGETS.json]",
+    "       deepdraw balabala override --mode test|production --spu SPU --field FIELD --value VALUE [--test-config TARGETS.json]",
+    "       deepdraw balabala plan create|full-update|incremental --mode test|production --spu SPU --execute --plan [--test-config TARGETS.json] [--fields FIELD,...]",
+    "       deepdraw balabala publish create|full-update|incremental --mode test|production --spu SPU --execute --yes [--plan-hash HASH] [--test-config TARGETS.json] [--fields FIELD,...]",
+    "       deepdraw balabala readback --mode test|production --spu SPU --execute [--test-config TARGETS.json]",
     "",
-    "Import, assemble, review, and override are local only. Template, sync, and readback are read-only DeepDraw calls.",
-    "Publish is restricted to the configured test code and automatically records resource=form readback; create continues with full-update.",
+    "Mode defaults to test. Test mode permits only an exact targetSpu in the built-in or --test-config mapping; sourceSpu is used only for local business data.",
+    "Production accepts exactly the formal --spu given in this command. It never appends -test or expands a prefix. Production publish requires the exact --plan-hash returned by plan.",
+    "Template, sync, readback and publish use registered dp.* APIs. Every write ends with resource=form readback; HTTP 200/10200 alone is not success.",
   ].join("\n") + "\n";
 }
 
@@ -714,6 +731,9 @@ function parseStatefulBalabalaArgs(argv: string[], cwd: string): StatefulBalabal
     index += 1;
   }
   let spu = "";
+  let mode: BalabalaWorkflowMode = "test";
+  let testConfigPath: string | undefined;
+  let planHash: string | undefined;
   let merchantId = "1162";
   let tenantName: string | undefined;
   let workflowRoot = cwd;
@@ -742,6 +762,14 @@ function parseStatefulBalabalaArgs(argv: string[], cwd: string): StatefulBalabal
       return value;
     };
     if (arg === "--spu") { spu = next(); continue; }
+    if (arg === "--mode") {
+      const value = next();
+      if (value !== "test" && value !== "production") throw new Error("--mode must be test or production");
+      mode = value;
+      continue;
+    }
+    if (arg === "--test-config") { testConfigPath = resolve(cwd, next()); continue; }
+    if (arg === "--plan-hash") { planHash = next(); continue; }
     if (arg === "--merchant-id") { merchantId = next(); continue; }
     if (arg === "--tenant") { tenantName = next(); continue; }
     if (arg === "--workflow-root") { workflowRoot = resolve(cwd, next()); continue; }
@@ -769,10 +797,13 @@ function parseStatefulBalabalaArgs(argv: string[], cwd: string): StatefulBalabal
   if (stage !== "incremental" && fields.length > 0) throw new Error("--fields is only supported by incremental");
   if (action === "plan" && (!execute || !plan)) throw new Error("balabala plan requires --execute --plan");
   if (action === "publish" && (!execute || !yes)) throw new Error("balabala publish requires --execute --yes after a reviewed plan");
+  if (action !== "publish" && action !== "readback" && planHash) throw new Error("--plan-hash is only supported by balabala publish or its readback");
+  if (mode === "production" && testConfigPath) throw new Error("--test-config is only valid in test mode");
+  if (mode === "production" && action === "publish" && !planHash) throw new Error("balabala production publish requires --plan-hash from a reviewed plan");
   if ((aiResponsesPath || ocrFactsPath) && action !== "review") throw new Error("--ai-responses and --ocr-facts are only supported by balabala review");
   if ((overrideField || overrideValue) && action !== "override") throw new Error("--field and --value are only supported by balabala override");
   if (action === "override" && (!overrideField || overrideValue === undefined)) throw new Error("balabala override requires --field and --value");
-  return { action, stage, spu, merchantId, tenantName, workflowRoot, fields, execute, yes, plan, mdmPath, launchPlanPath, copywritingPath, shoeSizeChartPath, plmSizeChartPath, apparelSizeReferencePath, fieldMappingsPath, imagesPath, aiResponsesPath, ocrFactsPath, overrideField, overrideValue };
+  return { action, stage, spu, mode, testConfigPath, planHash, merchantId, tenantName, workflowRoot, fields, execute, yes, plan, mdmPath, launchPlanPath, copywritingPath, shoeSizeChartPath, plmSizeChartPath, apparelSizeReferencePath, fieldMappingsPath, imagesPath, aiResponsesPath, ocrFactsPath, overrideField, overrideValue };
 }
 
 function resultRecord(stdout: string): Record<string, unknown> {
@@ -854,47 +885,177 @@ function productIdFrom(value: unknown): string {
   return "";
 }
 
+function resourceFormCode(value: unknown): string {
+  const root = record(value);
+  return text(root.code ?? record(root.form).code ?? record(root.product).code ?? record(root.data).code);
+}
+
+function assertResourceFormTarget(value: unknown, target: BalabalaRemoteTarget): void {
+  const returned = resourceFormCode(value);
+  if (!returned) throw new Error("resource=form did not return product code; cannot verify the configured remote target");
+  if (returned !== target.targetSpu) throw new Error(`resource=form returned ${returned}, not configured targetSpu ${target.targetSpu}`);
+}
+
 function workflowPayload(snapshot: Awaited<ReturnType<BalabalaWorkflowEngine["snapshot"]>>, stage: StatefulBalabalaStage) {
   const result = buildProductPayload(snapshot.draft, { stage: stage === "create" ? "create" : "update" });
   if (!result.ok) throw new Error(result.diagnostics.errors.join("；"));
   return result;
 }
 
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right, "en"))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function resolveStatefulBalabalaTarget(args: StatefulBalabalaArgs): BalabalaRemoteTarget {
+  const testTargets = args.testConfigPath
+    ? parseBalabalaTestTargets(JSON.parse(readFileSync(args.testConfigPath, "utf8")) as unknown)
+    : DEFAULT_BALABALA_TEST_TARGETS;
+  return resolveBalabalaRemoteTarget({
+    mode: args.mode,
+    userSpecifiedTargetSpu: args.spu,
+    ...(args.mode === "test" ? { testTargets } : {}),
+  });
+}
+
+function remoteOperationContext(target: BalabalaRemoteTarget, planHash?: string, requestId?: string | null) {
+  return {
+    mode: target.mode,
+    sourceSpu: target.sourceSpu,
+    targetSpu: target.targetSpu,
+    userSpecifiedTargetSpu: target.userSpecifiedTargetSpu,
+    ...(planHash ? { planHash } : {}),
+    ...(requestId ? { requestId } : {}),
+  } as const;
+}
+
+function fieldValueFromPayload(body: Record<string, unknown>, name: string): unknown {
+  const fields = record(body.fields);
+  const found = Object.entries(fields).find(([key]) => key.replace(/[\s()（）:：]/g, "").toLowerCase() === name.replace(/[\s()（）:：]/g, "").toLowerCase());
+  return found?.[1];
+}
+
+function tableRowCount(value: unknown): number {
+  const root = record(value);
+  const entries = Object.entries(root).filter(([key]) => key !== "title");
+  if (entries.length === 0) return 0;
+  return entries.reduce((total, [, item]) => {
+    const nested = record(item);
+    return total + (Object.keys(nested).length ? Object.keys(nested).length : 1);
+  }, 0);
+}
+
+function tableSummary(body: Record<string, unknown>): Array<{ field: string; columns: string[]; rows: number }> {
+  return Object.entries(record(body.fields))
+    .filter(([name]) => name.includes("尺码表") || name === "多平台尺码")
+    .map(([field, value]) => ({
+      field,
+      columns: text(record(value).title).split(/[,，]/).map((item) => item.trim()).filter(Boolean),
+      rows: tableRowCount(value),
+    }));
+}
+
+function writePlanSummary(input: {
+  snapshot: Awaited<ReturnType<BalabalaWorkflowEngine["snapshot"]>>;
+  target: BalabalaRemoteTarget;
+  stage: StatefulBalabalaStage;
+  api: string;
+  query: Record<string, string>;
+  body: Record<string, unknown>;
+}): Record<string, unknown> {
+  const selectedTrade = record(record(input.snapshot.template).tradeDecision).selected;
+  const trade = record(selectedTrade);
+  const skuRows = Array.isArray(input.snapshot.draft.skus) ? input.snapshot.draft.skus : [];
+  const mainAndPlatformTables = tableSummary(input.body);
+  return {
+    mode: input.target.mode,
+    sourceSpu: input.target.sourceSpu,
+    targetSpu: input.target.targetSpu,
+    userSpecifiedTargetSpu: input.target.userSpecifiedTargetSpu,
+    productId: text(input.query.productId ?? input.snapshot.draft.productId) || null,
+    trade: {
+      tradeId: text(input.snapshot.draft.tradeId ?? record(input.snapshot.template).tradeId) || null,
+      path: text(trade.tradePath ?? trade.path ?? trade.name) || null,
+    },
+    colors: text(fieldValueFromPayload(input.body, "颜色")),
+    saleSizes: text(fieldValueFromPayload(input.body, "尺码")),
+    skuCount: skuRows.length,
+    sizeTables: mainAndPlatformTables,
+    coveringFullUpdateRisk: input.stage === "full-update"
+      ? "dp.product.update is covering: omitted fields, colors, SKUs, sales sizes or platform size tables can be erased."
+      : null,
+  };
+}
+
+function planHashFor(input: {
+  target: BalabalaRemoteTarget;
+  stage: StatefulBalabalaStage;
+  api: string;
+  query: Record<string, string>;
+  body: Record<string, unknown>;
+}): string {
+  return createHash("sha256").update(canonicalJson({
+    mode: input.target.mode,
+    sourceSpu: input.target.sourceSpu,
+    targetSpu: input.target.targetSpu,
+    userSpecifiedTargetSpu: input.target.userSpecifiedTargetSpu,
+    stage: input.stage,
+    api: input.api,
+    query: input.query,
+    body: input.body,
+  })).digest("hex");
+}
+
 async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: string): Promise<CliRunResult> {
   let args: StatefulBalabalaArgs;
   try { args = parseStatefulBalabalaArgs(argv, cwd); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
-  if (["sync", "readback", "publish"].includes(args.action) && args.spu !== BALABALA_REMOTE_PRODUCT_TEST_CODE) {
-    return { exitCode: 1, stdout: "", stderr: `balabala ${args.action} is only permitted for configured test code ${BALABALA_REMOTE_PRODUCT_TEST_CODE}\n` };
+  // This is intentionally the first action after argument parsing.  It runs
+  // before the workflow store, credentials, SDK bridge and every dp.* request.
+  // A suffix alone never grants test access, and production never rewrites the
+  // explicitly supplied target code.
+  let target: BalabalaRemoteTarget;
+  try { target = resolveStatefulBalabalaTarget(args); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  if (target.mode === "test" && args.action === "publish" && args.stage === "create") {
+    return { exitCode: 1, stdout: "", stderr: "balabala test mode cannot create a target archive; sync the configured existing -test archive and use full-update or incremental instead\n" };
   }
-  const store = WorkflowStore.open("balabala", args.spu, args.workflowRoot);
+  const store = WorkflowStore.open("balabala", target.targetSpu, args.workflowRoot);
   const engine = new BalabalaWorkflowEngine(store);
   if (args.action === "import") {
     try {
-      const imported = await importBalabalaSources({ spu: args.spu, mdmPath: args.mdmPath!, launchPlanPath: args.launchPlanPath!, copywritingPath: args.copywritingPath!, ...(args.shoeSizeChartPath ? { shoeSizeChartPath: args.shoeSizeChartPath } : {}), ...(args.plmSizeChartPath ? { plmSizeChartPath: args.plmSizeChartPath } : {}), ...(args.apparelSizeReferencePath ? { apparelSizeReferencePath: args.apparelSizeReferencePath } : {}), ...(args.fieldMappingsPath ? { fieldMappingsPath: args.fieldMappingsPath } : {}), ...(args.imagesPath ? { imagesPath: args.imagesPath } : {}) });
+      const imported = await importBalabalaSources({ spu: target.targetSpu, sourceSpu: target.sourceSpu, mdmPath: args.mdmPath!, launchPlanPath: args.launchPlanPath!, copywritingPath: args.copywritingPath!, ...(args.shoeSizeChartPath ? { shoeSizeChartPath: args.shoeSizeChartPath } : {}), ...(args.plmSizeChartPath ? { plmSizeChartPath: args.plmSizeChartPath } : {}), ...(args.apparelSizeReferencePath ? { apparelSizeReferencePath: args.apparelSizeReferencePath } : {}), ...(args.fieldMappingsPath ? { fieldMappingsPath: args.fieldMappingsPath } : {}), ...(args.imagesPath ? { imagesPath: args.imagesPath } : {}) });
       const snapshot = await engine.importNormalized(imported, imported.sources);
-      return resultMetadata("import", args.spu, snapshot);
+      return resultMetadata("import", target.targetSpu, snapshot, remoteOperationContext(target));
     } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
   if (args.action === "assemble") {
-    try { return resultMetadata("assemble", args.spu, await engine.assemble()); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+    try { return resultMetadata("assemble", target.targetSpu, await engine.assemble(), remoteOperationContext(target)); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
   if (args.action === "template") {
-    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "template", spu: args.spu, dryRun: true, apis: ["dp.merchant.trades", "dp.trade.fields"] }), stderr: "" };
+    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "template", spu: target.targetSpu, dryRun: true, apis: ["dp.merchant.trades", "dp.trade.fields"], ...remoteOperationContext(target) }), stderr: "" };
     const apiOptions: CliRunOptions = { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } };
     const tradesResult = await runCli(["call", "dp.merchant.trades", "--execute", "--param", `merchantId=${args.merchantId}`], apiOptions);
     if (tradesResult.exitCode !== 0) return withBalabalaWorkflowMetadata(tradesResult, "template");
     try {
+      const tradeRequestId = text(resultRecord(tradesResult.stdout).requestId) || null;
+      await store.recordExecution({ operation: "template-trades-read", status: "verified", api: "dp.merchant.trades", requestId: tradeRequestId, details: { ...remoteOperationContext(target, undefined, tradeRequestId) } });
       const snapshot = await engine.snapshot();
       const trades = flattenTradeLeaves(resultRecord(tradesResult.stdout).data);
       const decision = selectBalabalaTrade(snapshot.normalized, trades);
-      if (decision.manualSelectionRequired || !decision.selected) return resultMetadata("template", args.spu, await engine.syncTemplate(trades, []));
+      if (decision.manualSelectionRequired || !decision.selected) return resultMetadata("template", target.targetSpu, await engine.syncTemplate(trades, []), remoteOperationContext(target));
       await waitForDeepdrawReadInterval();
       const fieldsResult = await runCli(["call", "dp.trade.fields", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", `tradeId=${decision.selected.tradeId}`], apiOptions);
       if (fieldsResult.exitCode !== 0) return withBalabalaWorkflowMetadata(fieldsResult, "template");
       const fields = apiRows(resultRecord(fieldsResult.stdout).data);
       const synced = await engine.syncTemplate(trades, fields);
-      await store.recordExecution({ operation: "template-sync", status: "verified", api: "dp.trade.fields", requestId: text(resultRecord(fieldsResult.stdout).requestId) || null, details: { tradeId: decision.selected.tradeId, fieldCount: fields.length } });
-      return resultMetadata("template", args.spu, synced);
+      const requestId = text(resultRecord(fieldsResult.stdout).requestId) || null;
+      await store.recordExecution({ operation: "template-sync", status: "verified", api: "dp.trade.fields", requestId, details: { ...remoteOperationContext(target, undefined, requestId), tradeId: decision.selected.tradeId, fieldCount: fields.length } });
+      return resultMetadata("template", target.targetSpu, synced, remoteOperationContext(target, undefined, requestId));
     } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
   if (args.action === "review") {
@@ -909,43 +1070,49 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
         if (!Array.isArray(payload)) throw new Error("--ocr-facts must contain a JSON array");
         await engine.auditOcr(payload);
       }
-      return resultMetadata("review", args.spu, await engine.snapshot());
+      return resultMetadata("review", target.targetSpu, await engine.snapshot(), remoteOperationContext(target));
     } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
   if (args.action === "sync") {
-    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "sync", spu: args.spu, dryRun: true, api: "dp.product.resource" }), stderr: "" };
+    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "sync", spu: target.targetSpu, dryRun: true, api: "dp.product.resource", ...remoteOperationContext(target) }), stderr: "" };
     try {
-      const resource = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", `productCode=${args.spu}`, "--param", "resource=form"], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      const resource = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", `productCode=${target.targetSpu}`, "--param", "resource=form"], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
       if (resource.exitCode !== 0) return withBalabalaWorkflowMetadata(resource, "sync");
       const result = resultRecord(resource.stdout);
-      const synced = await engine.syncRemote(record(result.data));
-      await store.recordExecution({ operation: "resource-form-sync", status: "verified", api: "dp.product.resource", requestId: text(result.requestId) || null, details: { productId: text(synced.draft.productId), fieldCount: Array.isArray(synced.draft.fields) ? synced.draft.fields.length : 0 } });
-      return resultMetadata("sync", args.spu, synced, { requestId: result.requestId, provider: { httpStatus: result.httpStatus, businessCode: result.businessCode }, productId: text(synced.draft.productId), fieldCount: Array.isArray(synced.draft.fields) ? synced.draft.fields.length : 0 });
+      assertResourceFormTarget(result.data, target);
+      const requestId = text(result.requestId) || null;
+      const context = remoteOperationContext(target, undefined, requestId);
+      const synced = await engine.syncRemote(record(result.data), context);
+      await store.recordExecution({ operation: "resource-form-sync", status: "verified", api: "dp.product.resource", requestId, details: { ...context, productId: text(synced.draft.productId), fieldCount: Array.isArray(synced.draft.fields) ? synced.draft.fields.length : 0, readbackStatus: "synced" } });
+      return resultMetadata("sync", target.targetSpu, synced, { ...context, provider: { httpStatus: result.httpStatus, businessCode: result.businessCode }, productId: text(synced.draft.productId), fieldCount: Array.isArray(synced.draft.fields) ? synced.draft.fields.length : 0 });
     } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
   if (args.action === "override") {
-    try { return resultMetadata("override", args.spu, await engine.overrideDraftField(args.overrideField!, args.overrideValue!)); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+    try { return resultMetadata("override", target.targetSpu, await engine.overrideDraftField(args.overrideField!, args.overrideValue!), remoteOperationContext(target)); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
   if (args.action === "readback") {
-    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "readback", spu: args.spu, dryRun: true, api: "dp.product.resource" }), stderr: "" };
+    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "readback", spu: target.targetSpu, dryRun: true, api: "dp.product.resource", ...remoteOperationContext(target, args.planHash) }), stderr: "" };
     try {
       const snapshot = await engine.snapshot();
       const productId = text(snapshot.draft.productId);
       const resourceId = text(snapshot.draft.resourceId ?? snapshot.normalized.resourceId);
-      const resource = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", resourceId ? `productId=${resourceId}` : `productCode=${args.spu}`, "--param", "resource=form"], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      const resource = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", resourceId ? `productId=${resourceId}` : `productCode=${target.targetSpu}`, "--param", "resource=form"], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
       if (resource.exitCode !== 0) return withBalabalaWorkflowMetadata(resource, "readback");
       const result = resultRecord(resource.stdout);
+      assertResourceFormTarget(result.data, target);
       const productIdFromReadback = productIdFrom(result.data);
       const saved = await engine.replace({ ...(await engine.snapshot()), draft: { ...snapshot.draft, ...(productIdFromReadback ? { productId: productIdFromReadback } : {}) } });
-      const compared = await engine.compareReadback(record(result.data));
-      await store.recordExecution({ operation: "resource-form-readback", status: compared.state === "readback_mismatch" ? "failed" : "verified", api: "dp.product.resource", requestId: text(result.requestId) || null });
-      return resultMetadata("readback", args.spu, compared, { requestId: result.requestId, provider: { httpStatus: result.httpStatus, businessCode: result.businessCode }, productId: text(saved.draft.productId) || undefined });
+      const requestId = text(result.requestId) || null;
+      const context = remoteOperationContext(target, args.planHash, requestId);
+      const compared = await engine.compareReadback(record(result.data), context);
+      await store.recordExecution({ operation: "resource-form-readback", status: compared.state === "readback_verified" ? "verified" : compared.state === "needs_ui_verification" ? "unknown" : "failed", api: "dp.product.resource", requestId, details: { ...context, productId: text(saved.draft.productId) || null, readbackStatus: compared.state } });
+      return resultMetadata("readback", target.targetSpu, compared, { ...context, provider: { httpStatus: result.httpStatus, businessCode: result.businessCode }, productId: text(saved.draft.productId) || undefined, readbackStatus: compared.state });
     } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
   try {
     let snapshot = await engine.snapshot();
     const stage = args.stage!;
-    let apiName = stage === "create" ? "dp.product.create" : stage === "full-update" ? "dp.product.update" : "dp.product.incremental.update";
+    const apiName = stage === "create" ? "dp.product.create" : stage === "full-update" ? "dp.product.update" : "dp.product.incremental.update";
     let query: Record<string, string>;
     let body: Record<string, unknown>;
     if (stage === "incremental") {
@@ -958,39 +1125,78 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
       query = stage === "create" ? payload.sdkInput.query : { productId: text(snapshot.draft.productId) };
     }
     if (!Object.values(query).every(Boolean)) throw new Error(`${stage} lacks required DeepDraw identifier`);
-    if (args.action === "plan") {
-      const command = ["call", apiName, "--execute", "--plan", ...Object.entries(query).flatMap(([key, value]) => ["--param", `${key}=${value}`]), "--json", JSON.stringify(body)];
-      const planned = await runCli(command, { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
-      const payload = resultRecord(planned.stdout);
-      await store.recordExecution({ operation: `${stage}-plan`, status: "planned", api: apiName, details: { fields: stage === "incremental" ? Object.keys(body.fields as Record<string, unknown>) : undefined } });
-      snapshot = await engine.replace({ ...snapshot, state: "planned", plans: [...snapshot.plans, record(payload.plan)] });
-      return { ...planned, stdout: jsonLine({ workflow: "balabala-listing", action: "plan", stage, spu: args.spu, state: snapshot.state, ...payload }) };
-    }
+    // A covering update must be planned from the merged remote snapshot, not
+    // from a stale local approximation. This is still a read-only operation.
     if (stage === "full-update") {
       const resourceId = text(snapshot.draft.resourceId ?? snapshot.normalized.resourceId);
-      const preRead = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", resourceId ? `productId=${resourceId}` : `productCode=${args.spu}`, "--param", "resource=form"], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
-      if (preRead.exitCode !== 0) return withBalabalaWorkflowMetadata(preRead, "publish");
-      const prepared = await engine.prepareExistingUpdate(record(resultRecord(preRead.stdout).data));
-      if (prepared.blocking.length) return resultMetadata("publish", args.spu, await engine.snapshot(), { stage });
+      const preRead = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", resourceId ? `productId=${resourceId}` : `productCode=${target.targetSpu}`, "--param", "resource=form"], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      if (preRead.exitCode !== 0) return withBalabalaWorkflowMetadata(preRead, args.action === "plan" ? "plan" : "publish");
+      const preReadPayload = resultRecord(preRead.stdout);
+      assertResourceFormTarget(preReadPayload.data, target);
+      const preReadRequestId = text(preReadPayload.requestId) || null;
+      await store.recordExecution({ operation: "full-update-pre-read", status: "verified", api: "dp.product.resource", requestId: preReadRequestId, details: { ...remoteOperationContext(target, undefined, preReadRequestId), productId: text(snapshot.draft.productId) || null } });
+      const prepared = await engine.prepareExistingUpdate(record(preReadPayload.data));
+      if (prepared.blocking.length) return resultMetadata(args.action === "plan" ? "plan" : "publish", target.targetSpu, await engine.snapshot(), { ...remoteOperationContext(target), stage });
       snapshot = await engine.snapshot();
       body = workflowPayload(snapshot, stage).sdkInput.product;
       query = { productId: text(snapshot.draft.productId) };
     }
+    const planHash = planHashFor({ target, stage, api: apiName, query, body });
+    const summary = writePlanSummary({ snapshot, target, stage, api: apiName, query, body });
+    if (args.action === "plan") {
+      const command = ["call", apiName, "--execute", "--plan", ...Object.entries(query).flatMap(([key, value]) => ["--param", `${key}=${value}`]), "--json", JSON.stringify(body)];
+      const planned = await runCli(command, { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      const payload = resultRecord(planned.stdout);
+      const providerPlan = record(payload.plan);
+      const workflowPlan = { ...providerPlan, planHash, stage, api: apiName, ...summary };
+      await store.recordExecution({ operation: `${stage}-plan`, status: "planned", api: apiName, inputHash: planHash, details: { ...remoteOperationContext(target, planHash), ...summary, fields: stage === "incremental" ? Object.keys(body.fields as Record<string, unknown>) : undefined } });
+      snapshot = await engine.replace({ ...snapshot, state: "planned", plans: [...snapshot.plans, workflowPlan] });
+      return { ...planned, stdout: jsonLine({ workflow: "balabala-listing", action: "plan", stage, spu: target.targetSpu, state: snapshot.state, ...remoteOperationContext(target, planHash), ...payload, plan: workflowPlan }) };
+    }
+    if (args.mode === "production") {
+      const reviewed = snapshot.plans.some((plan) => text(plan.planHash) === args.planHash
+        && text(plan.stage) === stage
+        && text(plan.targetSpu) === target.targetSpu
+        && text(plan.api) === apiName);
+      if (!reviewed) throw new Error("balabala production publish requires a matching reviewed plan in this workflow state");
+      if (args.planHash !== planHash) throw new Error("balabala production publish plan hash does not match the current payload; generate and review a new plan");
+    }
+    // Incremental writes do not otherwise need a full merge.  Still verify the
+    // saved numeric productId resolves to this exact configured code before
+    // sending a write, so a stale or manually edited workflow cannot target a
+    // neighbouring test archive (or a different formal product).
+    if (stage === "incremental") {
+      const resourceId = text(snapshot.draft.resourceId ?? snapshot.normalized.resourceId);
+      const verify = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", resourceId ? `productId=${resourceId}` : `productCode=${target.targetSpu}`, "--param", "resource=form"], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      if (verify.exitCode !== 0) return withBalabalaWorkflowMetadata(verify, "publish");
+      const verifyPayload = resultRecord(verify.stdout);
+      assertResourceFormTarget(verifyPayload.data, target);
+      const returnedProductId = productIdFrom(verifyPayload.data);
+      if (returnedProductId && returnedProductId !== query.productId) throw new Error(`resource=form returned productId ${returnedProductId}, not planned ${query.productId}`);
+      const verifyRequestId = text(verifyPayload.requestId) || null;
+      await store.recordExecution({ operation: "incremental-target-verify", status: "verified", api: "dp.product.resource", requestId: verifyRequestId, details: { ...remoteOperationContext(target, planHash, verifyRequestId), productId: query.productId } });
+    }
     const command = ["call", apiName, "--execute", "--yes", ...Object.entries(query).flatMap(([key, value]) => ["--param", `${key}=${value}`]), "--json", JSON.stringify(body)];
     const write = await runCli(command, { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
     const writePayload = resultRecord(write.stdout);
-    await store.recordExecution({ operation: stage, status: write.exitCode === 0 ? "in_progress" : "failed", api: apiName, requestId: text(writePayload.requestId) || null });
+    const writeRequestId = text(writePayload.requestId) || null;
+    await store.recordExecution({ operation: stage, status: write.exitCode === 0 ? "in_progress" : "failed", api: apiName, requestId: writeRequestId, inputHash: planHash, details: { ...remoteOperationContext(target, planHash, writeRequestId), ...summary } });
     if (write.exitCode !== 0) return withBalabalaWorkflowMetadata(write, "publish");
     if (stage === "create") {
       const productId = productIdFrom(writePayload.data);
-      if (!productId) return { exitCode: 1, stdout: jsonLine({ ok: false, workflow: "balabala-listing", action: "publish", stage, spu: args.spu, state: "transport_unknown", message: "create accepted but productId is absent; query resource before retrying" }), stderr: "" };
+      if (!productId) return { exitCode: 1, stdout: jsonLine({ ok: false, workflow: "balabala-listing", action: "publish", stage, spu: target.targetSpu, state: "transport_unknown", ...remoteOperationContext(target, planHash, writeRequestId), message: "create accepted but productId is absent; query resource before retrying" }), stderr: "" };
       snapshot = await engine.replace({ ...snapshot, state: "post_create_update", draft: { ...snapshot.draft, productId } });
-      const full = await runCli(["balabala", "publish", "full-update", "--spu", args.spu, "--merchant-id", args.merchantId, ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--execute", "--yes"], options);
-      return full;
+      if (args.mode === "test") {
+        const full = await runCli(["balabala", "publish", "full-update", "--mode", "test", "--spu", target.targetSpu, "--merchant-id", args.merchantId, ...(args.testConfigPath ? ["--test-config", args.testConfigPath] : []), ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--execute", "--yes"], options);
+        return { ...full, stdout: jsonLine({ workflow: "balabala-listing", action: "publish", stage, spu: target.targetSpu, ...remoteOperationContext(target, planHash, writeRequestId), write: { requestId: writePayload.requestId, data: writePayload.data }, postCreateFullUpdate: resultRecord(full.stdout) }) };
+      }
+      await waitForDeepdrawReadInterval();
+      const read = await runCli(["balabala", "readback", "--mode", "production", "--spu", target.targetSpu, "--merchant-id", args.merchantId, ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--plan-hash", planHash, "--execute"], options);
+      return { ...read, stdout: jsonLine({ workflow: "balabala-listing", action: "publish", stage, spu: target.targetSpu, ...remoteOperationContext(target, planHash, writeRequestId), write: { requestId: writePayload.requestId, data: writePayload.data }, readback: resultRecord(read.stdout), nextAction: "review and run a separately planned full-update before declaring the created product complete" }) };
     }
     await waitForDeepdrawReadInterval();
-    const read = await runCli(["balabala", "readback", "--spu", args.spu, "--merchant-id", args.merchantId, ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--execute"], options);
-    return { ...read, stdout: jsonLine({ workflow: "balabala-listing", action: "publish", stage, spu: args.spu, write: { requestId: writePayload.requestId, data: writePayload.data }, readback: resultRecord(read.stdout) }) };
+    const read = await runCli(["balabala", "readback", "--mode", args.mode, "--spu", target.targetSpu, "--merchant-id", args.merchantId, ...(args.testConfigPath ? ["--test-config", args.testConfigPath] : []), ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--plan-hash", planHash, "--execute"], options);
+    return { ...read, stdout: jsonLine({ workflow: "balabala-listing", action: "publish", stage, spu: target.targetSpu, ...remoteOperationContext(target, planHash, writeRequestId), write: { requestId: writePayload.requestId, data: writePayload.data }, readback: resultRecord(read.stdout) }) };
   } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
 }
 
@@ -1097,6 +1303,14 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
       workflowArgs = parseBalabalaWorkflowArgs(argv);
     } catch (error) {
       return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` };
+    }
+
+    if (legacyBalabalaRemoteCommandDisabled(workflowArgs.action)) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: "Remote balabala compatibility commands are disabled; use the stateful balabala flow with --mode and an explicit --spu.\n",
+      };
     }
 
     const query: Record<string, string> = {
@@ -1305,6 +1519,9 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
             env: options.env,
             cwd,
             spawnImpl: options.javaSpawnImpl,
+            retryOptions: options.deepdrawBusyRetryOptions,
+            retrySleep: options.deepdrawBusyRetrySleep,
+            retryRandom: options.deepdrawBusyRetryRandom,
           })
           : await callDeepdrawApi({
             config,
@@ -1312,6 +1529,9 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
             query,
             body: callArgs.body,
             fetchImpl: options.fetchImpl,
+            retryOptions: options.deepdrawBusyRetryOptions,
+            retrySleep: options.deepdrawBusyRetrySleep,
+            retryRandom: options.deepdrawBusyRetryRandom,
           });
         return {
           exitCode: result.ok ? 0 : 1,
@@ -1382,6 +1602,9 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
         env: options.env,
         cwd,
         spawnImpl: options.javaSpawnImpl,
+        retryOptions: options.deepdrawBusyRetryOptions,
+        retrySleep: options.deepdrawBusyRetrySleep,
+        retryRandom: options.deepdrawBusyRetryRandom,
       });
       if (!result.ok) {
         return {
@@ -1395,6 +1618,7 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
             httpStatus: result.httpStatus,
             businessCode: result.businessCode,
             businessState: result.businessState,
+            ...(result.retry ? { retry: result.retry } : {}),
             data: result.data,
           }),
           stderr: "",
@@ -1413,6 +1637,7 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
           httpStatus: result.httpStatus,
           businessCode: result.businessCode,
           businessState: result.businessState,
+          ...(result.retry ? { retry: result.retry } : {}),
           ...(contentArgs.summary ? { summary: content.summary, skus: content.skus } : {}),
           ...(contentArgs.assets ? { assets: content.assets } : {}),
         }),

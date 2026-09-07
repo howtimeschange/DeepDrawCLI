@@ -1,4 +1,5 @@
 import type { CliError } from "./errors.js";
+import type { DeepdrawBusyRetryMetadata } from "./deepdraw-busy-retry.js";
 
 export interface DeepdrawResult {
   ok: boolean;
@@ -10,6 +11,8 @@ export interface DeepdrawResult {
   businessState: string | null;
   data: unknown;
   raw: unknown;
+  /** Present only when DeepDraw returned a recognised busy/rate-limit response. */
+  retry?: DeepdrawBusyRetryMetadata;
   error?: CliError;
 }
 

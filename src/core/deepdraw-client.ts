@@ -1,4 +1,5 @@
 import { findApiDefinition } from "./api-registry.js";
+import { callWithDeepdrawBusyRetry, type DeepdrawBusyRetryOptions, type DeepdrawRetrySleep } from "./deepdraw-busy-retry.js";
 import type { DeepdrawConfig } from "./config.js";
 import { normalizeDeepdrawPayload, type DeepdrawResult } from "./result.js";
 import { buildSignedRequest } from "./signer.js";
@@ -12,6 +13,9 @@ export interface CallDeepdrawInput {
   query: Record<string, unknown>;
   body?: unknown;
   fetchImpl?: DeepdrawFetch;
+  retryOptions?: DeepdrawBusyRetryOptions;
+  retrySleep?: DeepdrawRetrySleep;
+  retryRandom?: () => number;
 }
 
 function serializeBody(body: unknown): FetchBody | undefined {
@@ -49,21 +53,30 @@ export async function callDeepdrawApi(input: CallDeepdrawInput): Promise<Deepdra
     throw new Error(`API ${api.apiName} uses ${api.method} and cannot send a request body`);
   }
 
-  const request = buildSignedRequest({
-    config: input.config,
-    apiName: api.apiName,
-    method: api.method,
-    path: api.path,
-    query: input.query,
-  });
   const fetchImpl = input.fetchImpl ?? fetch;
-  const response = await fetchImpl(request.url, {
-    method: api.method,
-    headers: request.headers,
-    body: serializeBody(input.body),
-    signal: AbortSignal.timeout(input.config.timeoutMs),
+  return callWithDeepdrawBusyRetry({
+    api,
+    options: input.retryOptions,
+    sleep: input.retrySleep,
+    random: input.retryRandom,
+    execute: async () => {
+      // Sign each provider attempt afresh: a 10494 cooldown can outlive the
+      // timestamp and nonce embedded in the original request signature.
+      const request = buildSignedRequest({
+        config: input.config,
+        apiName: api.apiName,
+        method: api.method,
+        path: api.path,
+        query: input.query,
+      });
+      const response = await fetchImpl(request.url, {
+        method: api.method,
+        headers: request.headers,
+        body: serializeBody(input.body),
+        signal: AbortSignal.timeout(input.config.timeoutMs),
+      });
+      const payload = await parseResponsePayload(response);
+      return normalizeDeepdrawPayload(api.apiName, input.config.tenantName, response.status, payload);
+    },
   });
-  const payload = await parseResponsePayload(response);
-
-  return normalizeDeepdrawPayload(api.apiName, input.config.tenantName, response.status, payload);
 }

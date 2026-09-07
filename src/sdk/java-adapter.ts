@@ -2,7 +2,9 @@ import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
 import { spawn as spawnChild } from "node:child_process";
+import { findApiDefinition } from "../core/api-registry.js";
 import type { DeepdrawConfig } from "../core/config.js";
+import { callWithDeepdrawBusyRetry, type DeepdrawBusyRetryOptions, type DeepdrawRetrySleep } from "../core/deepdraw-busy-retry.js";
 import { normalizeDeepdrawPayload, type DeepdrawResult } from "../core/result.js";
 
 type SdkConfig = Pick<DeepdrawConfig, "appKey" | "appSecret" | "dopKey" | "baseUrl" | "merchantId">;
@@ -16,6 +18,9 @@ export interface CallJavaSdkInput {
   env?: NodeJS.ProcessEnv;
   cwd?: string;
   spawnImpl?: JavaSdkSpawn;
+  retryOptions?: DeepdrawBusyRetryOptions;
+  retrySleep?: DeepdrawRetrySleep;
+  retryRandom?: () => number;
 }
 
 const sdkClasses: Record<string, string> = {
@@ -76,6 +81,8 @@ export async function callJavaSdkApi(input: CallJavaSdkInput): Promise<DeepdrawR
   if (!className) {
     throw new Error(`API ${input.apiName} is not supported by the Java SDK runner`);
   }
+  const api = findApiDefinition(input.apiName);
+  if (!api) throw new Error(`Unknown DeepDraw API: ${input.apiName}`);
 
   const cwd = input.cwd ?? process.cwd();
   const env = input.env ?? process.env;
@@ -87,11 +94,19 @@ export async function callJavaSdkApi(input: CallJavaSdkInput): Promise<DeepdrawR
     body: input.body,
   });
   const spawnImpl = input.spawnImpl ?? defaultJavaSpawn;
-  const run = await spawnImpl("java", ["-cp", classpath, className], JSON.stringify(sdkInput));
-  if (run.exitCode !== 0) {
-    throw new Error(`Java SDK runner failed for ${input.apiName}: ${run.stderr || `exit code ${run.exitCode}`}`);
-  }
-  return parseSdkOutput(input.apiName, input.config.tenantName, run.stdout);
+  return callWithDeepdrawBusyRetry({
+    api,
+    options: input.retryOptions,
+    sleep: input.retrySleep,
+    random: input.retryRandom,
+    execute: async () => {
+      const run = await spawnImpl("java", ["-cp", classpath, className], JSON.stringify(sdkInput));
+      if (run.exitCode !== 0) {
+        throw new Error(`Java SDK runner failed for ${input.apiName}: ${run.stderr || `exit code ${run.exitCode}`}`);
+      }
+      return parseSdkOutput(input.apiName, input.config.tenantName, run.stdout);
+    },
+  });
 }
 
 async function resolveJavaClasspath(cwd: string, env: NodeJS.ProcessEnv, spawnImpl?: JavaSdkSpawn): Promise<string> {

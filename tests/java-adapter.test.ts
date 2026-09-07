@@ -190,6 +190,76 @@ test("callJavaSdkApi writes SDK input to Java stdin and parses normalized output
   assert.deepEqual(result.data, { productId: 7788 });
 });
 
+test("callJavaSdkApi retries an SDK read after a 10494 busy response", async () => {
+  let calls = 0;
+  const delays: number[] = [];
+  const result = await callJavaSdkApi({
+    config,
+    apiName: "dp.product.resource",
+    query: { productCode: "208226102001", resource: "form" },
+    env: { DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" },
+    cwd: "/tmp/deepdraw-cli",
+    retryOptions: { maxAttempts: 2, initialDelayMs: 75, maxDelayMs: 75, jitterRatio: 0 },
+    retrySleep: async (milliseconds) => { delays.push(milliseconds); },
+    spawnImpl: async (command) => {
+      assert.equal(command, "java");
+      calls += 1;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: calls === 1
+          ? '{"status":200,"response":{"code":10494,"reason":"访问频率过高，请稍后重试","response":"fail","requestId":1}}'
+          : '{"status":200,"response":{"code":10200,"response":"success","requestId":2,"body":{"productId":7788}}}',
+      };
+    },
+  });
+
+  assert.equal(calls, 2);
+  assert.deepEqual(delays, [75]);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.retry, {
+    eligible: true,
+    attempts: 2,
+    retried: true,
+    exhausted: false,
+    reason: "business_code_10494",
+    delaysMs: [75],
+  });
+});
+
+test("callJavaSdkApi does not replay a busy write", async () => {
+  let calls = 0;
+  const result = await callJavaSdkApi({
+    config,
+    apiName: "dp.product.incremental.update",
+    query: { productId: "7788" },
+    body: { fields: { 商品展示标题: "测试" } },
+    env: { DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" },
+    cwd: "/tmp/deepdraw-cli",
+    retryOptions: { maxAttempts: 2, initialDelayMs: 0, maxDelayMs: 0, jitterRatio: 0 },
+    retrySleep: async () => { throw new Error("write retry must not sleep"); },
+    spawnImpl: async () => {
+      calls += 1;
+      return {
+        exitCode: 0,
+        stderr: "",
+        stdout: '{"status":200,"response":{"code":10494,"reason":"接口繁忙","response":"fail","requestId":3}}',
+      };
+    },
+  });
+
+  assert.equal(calls, 1);
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.retry, {
+    eligible: false,
+    attempts: 1,
+    retried: false,
+    exhausted: false,
+    reason: "business_code_10494",
+    delaysMs: [],
+  });
+});
+
 test("callJavaSdkApi loads bundled SDK jars and dependency jars from vendor directory", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "deepdraw-sdk-vendor-"));
   await mkdir(join(cwd, "java"), { recursive: true });

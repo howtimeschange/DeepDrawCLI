@@ -55,6 +55,28 @@ test("imports complete source rows and an apparel PLM long table for the request
   }
 });
 
+test("imports a test workflow from an explicitly supplied formal source style without changing its remote target code", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "deepdraw-balabala-test-import-"));
+  const write = (name: string, rows: Record<string, string>[]) => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "数据");
+    const path = join(directory, name);
+    XLSX.writeFile(workbook, path);
+    return path;
+  };
+  try {
+    const mdmPath = write("mdm.xlsx", [{ 款号: "202426107128", SKC编码: "20242610712800101", SKU编码: "sku-140", 颜色名称: "黑色", 尺码名称: "140" }]);
+    const planPath = write("plan.xlsx", [{ 大货款号: "202426107128", 款色号: "20242610712800101", 产品线: "童装", 品类: "羽绒服" }]);
+    const copyPath = write("copy.xlsx", [{ 款号: "202426107128", 款色: "20242610712800101", 搜索标题: "巴拉巴拉羽绒服" }]);
+    const imported = await importBalabalaSources({ spu: "202426107128-test", sourceSpu: "202426107128", mdmPath, launchPlanPath: planPath, copywritingPath: copyPath });
+    assert.equal(imported.spu, "202426107128-test");
+    assert.equal(imported.sourceSpu, "202426107128");
+    assert.equal(imported.skus.length, 1);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("keeps supplied hangtag and wash-label PDFs in the auditable OCR evidence manifest", async () => {
   const directory = await mkdtemp(join(tmpdir(), "deepdraw-balabala-import-"));
   const write = (name: string, rows: Record<string, string>[]) => {

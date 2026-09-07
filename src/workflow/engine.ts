@@ -4,7 +4,7 @@ import type { BrandPlugin } from "../brands/types.js";
 import { hydrateBalabalaRemoteDraft, type ReadbackComparison } from "../brands/balabala/readback.js";
 import type { TradeDecision } from "../brands/balabala/trade-selection.js";
 import { createWorkflowSnapshot, fingerprint, WorkflowStore } from "./store.js";
-import type { SourceReference, WorkflowField, WorkflowSnapshot } from "./types.js";
+import type { RemoteOperationContext, SourceReference, WorkflowField, WorkflowSnapshot } from "./types.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -138,7 +138,7 @@ export class BalabalaWorkflowEngine {
     return this.assemble({ ...current, normalized: { ...current.normalized, auditedValues }, audit: { ...current.audit, ocr: result } });
   }
 
-  async syncRemote(remote: JsonRecord): Promise<WorkflowSnapshot> {
+  async syncRemote(remote: JsonRecord, operation?: RemoteOperationContext): Promise<WorkflowSnapshot> {
     const current = await this.store.read() ?? createWorkflowSnapshot(this.store.brand, this.store.spu);
     const draft = hydrateBalabalaRemoteDraft(remote);
     if (text(draft.code) && text(draft.code) !== this.store.spu) throw new Error(`resource=form returned ${text(draft.code)}, not requested workflow ${this.store.spu}`);
@@ -149,8 +149,8 @@ export class BalabalaWorkflowEngine {
       state: "ready",
       normalized: { ...current.normalized, productId: draft.productId, resourceId: draft.resourceId, remoteSyncAt: now },
       draft,
-      audit: { ...current.audit, remoteSyncAt: now, remoteFieldCount: Array.isArray(draft.fields) ? draft.fields.length : 0 },
-      readbacks: [...current.readbacks, { at: now, kind: "remote_sync", resource: remote }],
+      audit: { ...current.audit, remoteSyncAt: now, remoteFieldCount: Array.isArray(draft.fields) ? draft.fields.length : 0, ...(operation ? { remoteOperation: operation } : {}) },
+      readbacks: [...current.readbacks, { at: now, kind: "remote_sync", ...(operation ? { operation } : {}), resource: remote }],
       blocking: [],
       manual: [],
     });
@@ -202,11 +202,11 @@ export class BalabalaWorkflowEngine {
     return { fields: Object.fromEntries([...new Set([...names, color, size])].map((name) => [name, existing[name]])) };
   }
 
-  async compareReadback(remote: JsonRecord): Promise<WorkflowSnapshot> {
+  async compareReadback(remote: JsonRecord, operation?: RemoteOperationContext): Promise<WorkflowSnapshot> {
     const current = await this.snapshot();
     const comparison = this.plugin.compareReadback(current.draft, remote, current.draft) as unknown as ReadbackComparison;
-    const state = comparison.status === "readback_verified" ? "readback_verified" : comparison.status === "readback_mismatch" ? "readback_mismatch" : "review_required";
-    const readback = { at: new Date().toISOString(), comparison, resource: remote };
+    const state = comparison.status;
+    const readback = { at: new Date().toISOString(), comparison, ...(operation ? { operation } : {}), resource: remote };
     return this.store.write({ ...current, state, readbacks: [...current.readbacks, readback], blocking: comparison.mismatches.map((mismatch) => ({ code: "readback_mismatch", message: `回读字段 ${mismatch.field} 与发送值不一致` })), manual: comparison.uiVerification.map((field) => ({ code: "needs_ui_verification", message: `资源回读未完整返回 ${field}，需要 UI 复核` })) });
   }
 }
