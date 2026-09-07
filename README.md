@@ -356,11 +356,33 @@ deepdraw balabala full-update --input draft.json --execute --plan
 deepdraw balabala full-update --input draft.json --execute --yes
 ```
 
-增量更新只用于选定的普通字段，并且必须同时携带颜色与销售尺码；先生成计划，经用户授权后执行，随后用 `resource=form` 回读。`204426140121-test` 已完成“展示标题 → 回读 → 恢复 → 回读”联调：两次业务码均为 `10200`，恢复后颜色 2、尺码 15、SKU 30，以及主表、唯品会、天猫、抖音四张各 15 行尺码表均保留。尺码表、商家 SKU 与多平台尺码仍必须走全量更新；多平台尺码暂无安全的增量写入结论。
+#### 增量更新：按变更对象选择接口
+
+CLI 提供两个增量接口；它们使用的产品 ID 和字段约束不同，不能互换：
+
+| 场景 | 接口与产品 ID | 必带字段 / 使用边界 |
+| --- | --- | --- |
+| 普通字段小范围修改 | `dp.product.incremental.update`；使用 `resource=form` 返回的内部 UUID（例如 `id`） | 如果提交 `商家SKU`，必须同时带颜色和尺码；如果提交任一尺码表，必须同时带尺码。空 `places` 不会发送，避免意外清空平台。 |
+| 新增或变更颜色、SKU | `dp.product.sku.color.incremental.update`；使用数值 `productId` | 强制同时带完整的颜色、尺码和商家 SKU，且 SKU 的颜色别名、尺码必须命中对应字段。 |
+| 巴拉普通字段修改 | `deepdraw balabala incremental`；草稿中的 `productId` 必须是内部 UUID | 必须以 `--fields` 明确选择当前模板中的普通字段；CLI 自动附带完整颜色与销售尺码。 |
+
+巴拉增量会先完成本地模板/证据审查，再生成写入计划。真实执行后必须用 `resource=form` 回读，不以 HTTP 200 或 `10200` 代替持久化证明。`204426140121-test` 已完成“展示标题 → 回读 → 恢复 → 回读”联调：两次业务码均为 `10200`，恢复后颜色 2、尺码 15、SKU 30，以及主表、唯品会、天猫、抖音四张各 15 行尺码表均保留。
+
+尺码表、商家 SKU 与多平台尺码不允许走巴拉普通字段增量，必须走全量更新；多平台尺码暂无安全的增量写入结论。
 
 ```bash
+# 巴拉普通字段增量：--fields 可用英文逗号列出多个当前模板字段
 deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --plan
 deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --yes
+```
+
+直接调用通用增量接口时，先从 `resource=form` 取得内部 UUID，并用完整颜色/尺码值构建小 patch：
+
+```bash
+deepdraw call dp.product.incremental.update \
+  --execute --plan \
+  --param productId=INTERNAL_UUID \
+  --json '{"fields":{"颜色":"蓝色,蓝色调00388","尺码":"26;27","商品展示标题":"新展示标题"}}'
 ```
 
 ### 高风险接口先生成计划
