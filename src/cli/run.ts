@@ -8,6 +8,8 @@ import { callDeepdrawApi, type DeepdrawFetch } from "../core/deepdraw-client.js"
 import { configPathForPlatform, resolveDeepdrawConfig, type ConfigPlatform, type DeepdrawConfig, type StoredConfigFile } from "../core/config.js";
 import { type CredentialStore, FileCredentialStore } from "../core/credentials.js";
 import { extractDeepdrawProductContent } from "../core/product-content.js";
+import { buildProductPayload, type ProductPayloadStage } from "../core/product-payload.js";
+import { reviewBalabalaFields } from "../core/balabala-field-rules.js";
 import { redactSensitive } from "../core/redact.js";
 import type { ApiDefinition } from "../core/types.js";
 import { callJavaSdkApi, type JavaSdkSpawn } from "../sdk/java-adapter.js";
@@ -67,6 +69,8 @@ function helpText() {
     "",
     "Commands:",
     "  call <api-name>    Call any registered DeepDraw API",
+    "  balabala           Run the auditable Balabala listing workflow",
+    "  product payload    Build a local Balabala product publish payload",
     "  product content    Extract product summary, SKU, and asset URLs",
     "  auth               Manage DeepDraw tenant credentials",
     "  config             Inspect local DeepDraw configuration",
@@ -323,6 +327,312 @@ function parseProductContentArgs(argv: string[]): {
   return { dryRun, execute, summary, assets, query };
 }
 
+function parseProductPayloadArgs(argv: string[]): {
+  input?: string;
+  json?: unknown;
+  stage: ProductPayloadStage;
+  pretty: boolean;
+  tenantName?: string;
+  merchantId?: string;
+} {
+  let input: string | undefined;
+  let json: unknown;
+  let stage: ProductPayloadStage = "create";
+  let pretty = false;
+  let tenantName: string | undefined;
+  let merchantId: string | undefined;
+
+  for (let index = 2; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const next = () => {
+      const value = argv[index + 1];
+      if (!value) throw new Error(`${arg} requires a value`);
+      index += 1;
+      return value;
+    };
+
+    if (arg === "--help") {
+      continue;
+    }
+    if (arg === "--input") {
+      input = next();
+      continue;
+    }
+    if (arg === "--json") {
+      try {
+        json = JSON.parse(next()) as unknown;
+      } catch (error) {
+        throw new Error(`Invalid JSON: ${errorMessage(error)}`);
+      }
+      continue;
+    }
+    if (arg === "--stage") {
+      const value = next();
+      if (value !== "create" && value !== "update") {
+        throw new Error("--stage must be create or update");
+      }
+      stage = value;
+      continue;
+    }
+    if (arg === "--pretty") {
+      pretty = true;
+      continue;
+    }
+    if (arg === "--dry-run") {
+      continue;
+    }
+    if (arg === "--tenant") {
+      tenantName = next();
+      continue;
+    }
+    if (arg === "--merchant-id") {
+      merchantId = next();
+      continue;
+    }
+    throw new Error(`Unknown product payload option: ${arg}`);
+  }
+
+  if (input && json !== undefined) throw new Error("product payload accepts either --input or --json, not both");
+  if (!input && json === undefined) throw new Error("product payload requires --input file or --json JSON");
+  return { input, json, stage, pretty, tenantName, merchantId };
+}
+
+function productPayloadHelpText(): string {
+  return [
+    "Usage: deepdraw product payload --input draft.json [--stage create|update] [--pretty]",
+    "       deepdraw product payload --json JSON [--stage create|update] [--pretty]",
+    "",
+    "Builds a local Balabala payload only; it never reads credentials, calls the network, or publishes.",
+  ].join("\n") + "\n";
+}
+
+type BalabalaWorkflowAction = "query" | "review" | "create" | "full-update" | "incremental";
+
+type BalabalaWorkflowArgs = {
+  action: BalabalaWorkflowAction;
+  input?: string;
+  json?: unknown;
+  tenantName?: string;
+  merchantId: string;
+  productCode?: string;
+  productId?: string;
+  resource: string;
+  incrementalFields: string[];
+  dryRun: boolean;
+  execute: boolean;
+  yes: boolean;
+  plan: boolean;
+};
+
+function balabalaWorkflowHelpText(): string {
+  return [
+    "Usage: deepdraw balabala query --product-code CODE [--resource form] [--execute]",
+    "       deepdraw balabala review --input draft.json",
+    "       deepdraw balabala create --input draft.json --execute --plan",
+    "       deepdraw balabala full-update --input draft.json --execute --plan",
+    "       deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --plan",
+    "",
+    "Review validates the current class template, source evidence, AI candidates, and size-chart inputs locally.",
+    "Balabala listing assembles only active current-template fields before calling registered APIs.",
+    "Create, full-update, and incremental update require --execute --plan, then explicit --execute --yes.",
+    "Incremental update requires --fields and always carries 颜色 and 尺码; 尺码表、商家SKU and 多平台尺码 require full-update.",
+  ].join("\n") + "\n";
+}
+
+function parseBalabalaWorkflowArgs(argv: string[]): BalabalaWorkflowArgs {
+  const action = argv[1] as BalabalaWorkflowAction | undefined;
+  if (!action || !["query", "review", "create", "full-update", "incremental"].includes(action)) {
+    throw new Error("balabala requires query, review, create, full-update, or incremental");
+  }
+
+  let input: string | undefined;
+  let json: unknown;
+  let tenantName: string | undefined;
+  let merchantId = "1162";
+  let productCode: string | undefined;
+  let productId: string | undefined;
+  let resource = "form";
+  let incrementalFields: string[] = [];
+  let dryRun = false;
+  let execute = false;
+  let yes = false;
+  let plan = false;
+
+  for (let index = 2; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const next = () => {
+      const value = argv[index + 1];
+      if (!value) throw new Error(`${arg} requires a value`);
+      index += 1;
+      return value;
+    };
+    if (arg === "--help") continue;
+    if (arg === "--input") {
+      input = next();
+      continue;
+    }
+    if (arg === "--json") {
+      try {
+        json = JSON.parse(next()) as unknown;
+      } catch (error) {
+        throw new Error(`Invalid JSON: ${errorMessage(error)}`);
+      }
+      continue;
+    }
+    if (arg === "--tenant") {
+      tenantName = next();
+      continue;
+    }
+    if (arg === "--merchant-id") {
+      merchantId = next();
+      continue;
+    }
+    if (arg === "--product-code") {
+      productCode = next();
+      continue;
+    }
+    if (arg === "--product-id") {
+      productId = next();
+      continue;
+    }
+    if (arg === "--resource") {
+      resource = next();
+      continue;
+    }
+    if (arg === "--fields") {
+      incrementalFields = [...new Set(next().split(",").map((value) => value.trim()).filter(Boolean))];
+      continue;
+    }
+    if (arg === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
+    if (arg === "--execute") {
+      execute = true;
+      continue;
+    }
+    if (arg === "--yes") {
+      yes = true;
+      continue;
+    }
+    if (arg === "--plan") {
+      plan = true;
+      continue;
+    }
+    throw new Error(`Unknown balabala option: ${arg}`);
+  }
+
+  if (dryRun && execute) throw new Error("Cannot combine --dry-run and --execute");
+  if (input && json !== undefined) throw new Error("balabala accepts either --input or --json, not both");
+  if (action === "query") {
+    if (input || json !== undefined) throw new Error("balabala query does not accept --input or --json");
+    if (!productCode && !productId) throw new Error("balabala query requires --product-code or --product-id");
+  } else if (!input && json === undefined) {
+    throw new Error(`balabala ${action} requires --input file or --json JSON`);
+  }
+  if (action !== "incremental" && incrementalFields.length > 0) {
+    throw new Error("--fields is only supported by balabala incremental");
+  }
+  if (action === "incremental" && incrementalFields.length === 0) {
+    throw new Error("balabala incremental requires --fields with one or more current template field names");
+  }
+
+  return {
+    action,
+    input,
+    json,
+    tenantName,
+    merchantId,
+    productCode,
+    productId,
+    resource,
+    incrementalFields,
+    dryRun,
+    execute,
+    yes,
+    plan,
+  };
+}
+
+function incrementalFieldKey(name: string): string {
+  return name.replace(/\s+/g, "").toLocaleLowerCase();
+}
+
+function hasIncrementalFieldValue(value: unknown): boolean {
+  return typeof value === "string" ? value.trim().length > 0 : value !== undefined && value !== null;
+}
+
+function balabalaIncrementalProduct(
+  product: { fields: Record<string, unknown> },
+  requestedFields: string[],
+): { product?: { fields: Record<string, unknown> }; error?: string } {
+  const actualNames = new Map(Object.keys(product.fields).map((name) => [incrementalFieldKey(name), name]));
+  const selectedNames: string[] = [];
+  for (const name of requestedFields) {
+    const key = incrementalFieldKey(name);
+    const actualName = actualNames.get(key);
+    if (!actualName) return { error: `增量字段 ${name} 不在当前类目模板或没有可提交值。` };
+    if (key === incrementalFieldKey("多平台尺码")) {
+      return { error: "巴拉上新流程暂不允许通过增量更新写入多平台尺码；请使用全量更新并做资源回读。" };
+    }
+    if (key === incrementalFieldKey("商家SKU") || actualName.includes("尺码表")) {
+      return { error: `巴拉上新流程暂不允许通过增量更新写入 ${actualName}；请使用全量更新并做资源回读。` };
+    }
+    if (!selectedNames.includes(actualName)) selectedNames.push(actualName);
+  }
+
+  const colorName = actualNames.get(incrementalFieldKey("颜色"));
+  const sizeName = actualNames.get(incrementalFieldKey("尺码"));
+  if (!colorName || !hasIncrementalFieldValue(product.fields[colorName])) {
+    return { error: "巴拉上新流程的增量更新必须携带有效的颜色字段。" };
+  }
+  if (!sizeName || !hasIncrementalFieldValue(product.fields[sizeName])) {
+    return { error: "巴拉上新流程的增量更新必须携带有效的尺码字段。" };
+  }
+
+  const fields = Object.fromEntries([...new Set([...selectedNames, colorName, sizeName])].map((name) => [name, product.fields[name]]));
+  return { product: { fields } };
+}
+
+function readWorkflowInput(args: BalabalaWorkflowArgs, cwd: string): unknown {
+  if (!args.input) return args.json;
+  const inputPath = resolve(cwd, args.input);
+  try {
+    return JSON.parse(readFileSync(inputPath, "utf8")) as unknown;
+  } catch (error) {
+    throw new Error(`Invalid JSON file ${inputPath}: ${errorMessage(error)}`);
+  }
+}
+
+function withReviewedBalabalaFields(input: unknown, fields: Record<string, unknown>[]): unknown {
+  if (!isRecord(input)) return { fields };
+  const attach = (value: unknown) => isRecord(value) ? { ...value, fields } : value;
+  return {
+    ...input,
+    fields,
+    ...(isRecord(input.product) ? { product: attach(input.product) } : {}),
+    ...(isRecord(input.draft) ? { draft: attach(input.draft) } : {}),
+    ...(isRecord(input.payload) ? { payload: attach(input.payload) } : {}),
+  };
+}
+
+function withBalabalaWorkflowMetadata(
+  result: CliRunResult,
+  action: BalabalaWorkflowAction,
+): CliRunResult {
+  if (!result.stdout) return result;
+  try {
+    const payload = JSON.parse(result.stdout) as unknown;
+    if (!isRecord(payload)) return result;
+    return {
+      ...result,
+      stdout: jsonLine({ workflow: "balabala-listing", action, ...payload }),
+    };
+  } catch {
+    return result;
+  }
+}
+
 function redactSemanticCommandArgv(argv: string[]): string[] {
   const redactedArgv: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
@@ -360,6 +670,197 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export async function runCli(argv: string[], options: CliRunOptions): Promise<CliRunResult> {
   const cwd = options.cwd ?? process.cwd();
+  if (argv[0] === "product" && argv[1] === "payload") {
+    if (argv.includes("--help")) {
+      return { exitCode: 0, stdout: productPayloadHelpText(), stderr: "" };
+    }
+
+    let payloadArgs: ReturnType<typeof parseProductPayloadArgs>;
+    try {
+      payloadArgs = parseProductPayloadArgs(argv);
+    } catch (error) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: `${errorMessage(error)}\n`,
+      };
+    }
+
+    let input: unknown = payloadArgs.json;
+    if (payloadArgs.input) {
+      const inputPath = resolve(cwd, payloadArgs.input);
+      try {
+        input = JSON.parse(readFileSync(inputPath, "utf8")) as unknown;
+      } catch (error) {
+        return {
+          exitCode: 1,
+          stdout: "",
+          stderr: `Invalid JSON file ${inputPath}: ${errorMessage(error)}\n`,
+        };
+      }
+    }
+
+    try {
+      const result = buildProductPayload(input, {
+        stage: payloadArgs.stage,
+        tenantName: payloadArgs.tenantName,
+        merchantId: payloadArgs.merchantId,
+      });
+      return {
+        exitCode: result.ok ? 0 : 1,
+        stdout: jsonLine(result, payloadArgs.pretty),
+        stderr: "",
+      };
+    } catch (error) {
+      return {
+        exitCode: 1,
+        stdout: "",
+        stderr: `${errorMessage(error)}\n`,
+      };
+    }
+  }
+
+  if (argv[0] === "balabala") {
+    if (argv.includes("--help")) {
+      return { exitCode: 0, stdout: balabalaWorkflowHelpText(), stderr: "" };
+    }
+
+    let workflowArgs: BalabalaWorkflowArgs;
+    try {
+      workflowArgs = parseBalabalaWorkflowArgs(argv);
+    } catch (error) {
+      return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` };
+    }
+
+    const query: Record<string, string> = {
+      merchantId: workflowArgs.merchantId,
+      ...(workflowArgs.productCode ? { productCode: workflowArgs.productCode } : {}),
+      ...(workflowArgs.productId ? { productId: workflowArgs.productId } : {}),
+      resource: workflowArgs.resource,
+    };
+    if (workflowArgs.action === "query") {
+      if (!workflowArgs.execute) {
+        return {
+          exitCode: 0,
+          stdout: jsonLine({
+            ok: true,
+            workflow: "balabala-listing",
+            action: "query",
+            api: "dp.product.resource",
+            dryRun: true,
+            query,
+          }),
+          stderr: "",
+        };
+      }
+      const callArgv = [
+        "call",
+        "dp.product.resource",
+        "--execute",
+        "--param",
+        `merchantId=${workflowArgs.merchantId}`,
+        ...(workflowArgs.productCode ? ["--param", `productCode=${workflowArgs.productCode}`] : []),
+        ...(workflowArgs.productId ? ["--param", `productId=${workflowArgs.productId}`] : []),
+        "--param",
+        `resource=${workflowArgs.resource}`,
+      ];
+      const result = await runCli(callArgv, {
+        ...options,
+        env: {
+          ...options.env,
+          ...(workflowArgs.tenantName ? { DEEPDRAW_TENANT_NAME: workflowArgs.tenantName } : {}),
+          DEEPDRAW_MERCHANT_ID: workflowArgs.merchantId,
+        },
+      });
+      return withBalabalaWorkflowMetadata(result, workflowArgs.action);
+    }
+
+    let workflowInput: unknown;
+    try {
+      workflowInput = readWorkflowInput(workflowArgs, cwd);
+    } catch (error) {
+      return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` };
+    }
+    const review = reviewBalabalaFields(workflowInput);
+    if (workflowArgs.action === "review") {
+      return {
+        exitCode: review.ok ? 0 : 1,
+        stdout: jsonLine({ workflow: "balabala-listing", action: "review", ...review }),
+        stderr: "",
+      };
+    }
+    if (!review.ok) {
+      return {
+        exitCode: 1,
+        stdout: jsonLine({
+          ok: false,
+          workflow: "balabala-listing",
+          action: workflowArgs.action,
+          review,
+          diagnostics: review.diagnostics,
+        }),
+        stderr: "",
+      };
+    }
+
+    let assembled;
+    try {
+      assembled = buildProductPayload(withReviewedBalabalaFields(workflowInput, review.submissionFields), {
+        stage: workflowArgs.action === "create" ? "create" : "update",
+        tenantName: workflowArgs.tenantName,
+        merchantId: workflowArgs.merchantId,
+        allowedFieldNames: review.activeTemplateFieldNames,
+      });
+    } catch (error) {
+      return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` };
+    }
+    if (!assembled.ok) {
+      return {
+        exitCode: 1,
+        stdout: jsonLine({
+          ok: false,
+          workflow: "balabala-listing",
+          action: workflowArgs.action,
+          diagnostics: assembled.diagnostics,
+        }),
+        stderr: "",
+      };
+    }
+
+    const apiName = workflowArgs.action === "create"
+      ? "dp.product.create"
+      : workflowArgs.action === "full-update"
+        ? "dp.product.update"
+        : "dp.product.incremental.update";
+    const writeQuery = workflowArgs.action === "create"
+      ? assembled.sdkInput.query
+      : { productId: assembled.query.productId };
+    const incremental = workflowArgs.action === "incremental"
+      ? balabalaIncrementalProduct(assembled.sdkInput.product, workflowArgs.incrementalFields)
+      : undefined;
+    if (incremental?.error) return { exitCode: 1, stdout: "", stderr: `${incremental.error}\n` };
+    const writeProduct = incremental?.product ?? assembled.sdkInput.product;
+    const writeArgv = [
+      "call",
+      apiName,
+      ...(workflowArgs.execute ? ["--execute"] : []),
+      ...(workflowArgs.yes ? ["--yes"] : []),
+      ...(workflowArgs.plan ? ["--plan"] : []),
+      ...Object.entries(writeQuery).flatMap(([key, value]) => value ? ["--param", `${key}=${value}`] : []),
+      "--json",
+      JSON.stringify(writeProduct),
+    ];
+    const result = await runCli(writeArgv, {
+      ...options,
+      env: {
+        ...options.env,
+        DEEPDRAW_TENANT_NAME: assembled.tenant,
+        DEEPDRAW_MERCHANT_ID: assembled.merchantId,
+      },
+    });
+    return withBalabalaWorkflowMetadata(result, workflowArgs.action);
+  }
+
   if (argv[0] === "call") {
     const apiName = argv[1];
     if (!apiName || apiName === "--help") {

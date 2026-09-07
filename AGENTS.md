@@ -38,7 +38,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `dp.product.create` | 创建产品 | `write` | `java-sdk` | `deepdraw call dp.product.create --param merchantId=MERCHANT_ID --param tradeId=TRADE_ID --json-file product.json --plan` | `deepdraw product create` |
 | `dp.product.update` | 更新产品 | `write` | `java-sdk` | `deepdraw call dp.product.update --param productId=PRODUCT_ID --json-file product.json --plan` | `deepdraw product update` |
-| `dp.product.incremental.update` | 产品增量更新 | `write` | `http` | `deepdraw call dp.product.incremental.update --param productId=PRODUCT_ID --json-file patch.json --plan` | `deepdraw product patch` |
+| `dp.product.incremental.update` | 产品增量更新 | `write` | `java-sdk` | `deepdraw call dp.product.incremental.update --param productId=PRODUCT_ID --json-file patch.json --plan` | `deepdraw product patch` |
 | `dp.product.sku.color.incremental.update` | 产品颜色与 SKU 增量更新（特殊用户定制需求） | `write` | `java-sdk` | `deepdraw call dp.product.sku.color.incremental.update --param productId=PRODUCT_ID --json-file product.json --plan` | - |
 | `dp.product.resource` | 获取产品指定类型资源 | `read` | `java-sdk` | `deepdraw call dp.product.resource --param productCode=208226102001 --param resource=form` | `deepdraw product resource` |
 | `dp.product.search` | 查询产品列表（慎用） | `caution` | `http` | `deepdraw call dp.product.search --param merchantId=MERCHANT_ID --param productCodes=208226102001 --plan` | `deepdraw product search` |
@@ -147,6 +147,100 @@ deepdraw product content --product-code 208326105214 --summary --assets --execut
 新版 1.6.24 读回还会保留 `summary.remark`、`summary.complete`、`summary.tags`，以及详情页的 `templateWidth`、`templateSites`、`active` 和 `assets.videos`。其中 `complete=false` 表示草稿，`active=false` 表示详情页禁用；这些状态必须在后续人工确认中保留，不能因为 HTTP 200 就当作已完成上架。
 
 商品内容包需要按标签过滤时，可传 `--tags 标签1,标签2`；该参数最终对应 `dp.product.resource` 的 `tags` 查询条件。
+
+## 本地构建巴拉巴拉商品 payload
+
+`deepdraw product payload` 是纯本地的 payload 构建器，不属于一个新的 `dp.*` 接口：它不读取凭据、不联网、不调用 Java，也不会发布商品。默认租户是 `电商巴拉巴拉`，默认 `merchantId` 是 `1162`，可用 `--tenant` 和 `--merchant-id` 覆盖显示参数。
+
+```bash
+deepdraw product payload --input draft.json --stage create --pretty
+deepdraw product payload --input draft.json --stage update --pretty
+```
+
+输入可以是草稿对象，也可以包在 `product`、`draft` 或 `payload` 下。字段数组支持 `value`、`value_text`、`value_json` 三种常见形态：
+
+```json
+{
+  "code": "204426140121",
+  "title": "巴拉巴拉儿童运动鞋",
+  "tradeId": "546",
+  "productId": "6518125",
+  "productType": "shoe",
+  "date": "2026-09-04",
+  "retailPrice": 359.9,
+  "sizeRemarks": { "26码": "脚长15.8-16.2/内长17" },
+  "fields": [
+    { "field_name": "颜色", "field_type": "TEXT", "value_text": "蓝色,蓝色调00388" },
+    { "field_name": "尺码", "field_type": "MULTI_CHOICE", "value_text": "26;27" },
+    {
+      "field_name": "尺码表",
+      "field_type": "MULTI_TEXT",
+      "value_json": { "title": "尺码,适合脚长,内长", "26": "15.8,17", "27": "16.3,17.7" }
+    }
+  ],
+  "skus": [
+    { "skuCode": "sku-26", "skcCode": "skc-00388", "color": "蓝色调00388", "size": "26", "sellerCode": "seller-26", "price": 359.9 }
+  ]
+}
+```
+
+输出字段含义：
+
+- `sdkInput.product` 是 Java SDK bridge 实际消费的商品实体；顶层审查结果不是 `deepdraw call` 的直接 body。
+- `sdkInput.query` 在 create 阶段是 `merchantId + tradeId`，在 update 阶段是 `productId`；`sdkInput.config` 不包含 appSecret、dopKey 或签名。
+- `fields` 是当前阶段的审查字段；`legacyUpdateFields` 是完整更新字段集。`dp.product.update` 是覆盖式更新，update 输入必须带完整商品字段、颜色、销售尺码、商家 SKU、主表和已有平台尺码表，不能用小 patch 代替。
+- `sizes.options` 是规范尺码，`sizes.optionAliases` 是规范尺码到展示尺码的映射，`sizes.texts` 使用 `s<尺码>,<展示值>,<平台>` 形式输出；这些内容与 `sdkInput.product.fields` 一起用于审查。
+
+巴拉巴拉最新字段组装规则：
+
+- 鞋品内部销售尺码只允许整数规范值，例如 `26`、`27`，不生成半码；展示 alias 为 `26码`、`27码`。销售尺码备注使用 `尺码*备注`，例如 `26码*脚长15.8-16.2/内长17`。
+- 鞋品主表固定为 `尺码,脚长,鞋内长`；传给 SDK 的商品字段去掉重复的销售尺码列，实际为 `脚长,鞋内长`。唯品会欧洲码传裸数字。
+- 鞋品多平台尺码固定六列 `天猫,京东,拼多多,微信视频小店,小红书,快手`；天猫/快手留空，京东填裸数字，拼多多/微信视频小店/小红书填带备注展示值。
+- 服饰销售尺码使用 `140cm` 这类展示值，主表第二个尺码列使用裸数字 `140`；上装、牛仔裤使用固定表头；缺失测量值留空而不是 `0`；巴拉巴拉服饰尺码会使用内置体重参考，例如 `140 -> 31kg`。
+- create 阶段发送主尺码表和多平台尺码；update 阶段发送主表、唯品会、天猫、抖音及多平台尺码，避免覆盖式更新导致已有 SKU 或尺码表消失。鞋品 `淘宝尺码表` 会省略并记录 warning。
+
+这个命令只负责本地构建和审查。真实创建/更新仍须对注册的 `dp.product.create` 或 `dp.product.update` 先执行 `--execute --plan`，获得用户明确授权后才能执行 `--execute --yes`；`10200` 或 HTTP 200 也不能替代资源回读。
+
+## 巴拉上新流程
+
+优先使用 `deepdraw balabala` 将巴拉巴拉字段组装、查重/回读、创建和全量更新串在同一命令空间。该流程始终通过 `api-registry` 的注册接口执行，并在输出中标记 `workflow: "balabala-listing"`：
+
+```bash
+# 纯本地审查当前类目模板、输入证据、AI 候选和尺码表
+deepdraw balabala review --input draft.json
+
+# 以 resource=form 查询款号，先 dry-run；确认后才读取真实资源
+deepdraw balabala query --product-code 204426140121
+deepdraw balabala query --product-code 204426140121 --execute
+
+# 创建：先计划，用户明确批准后才允许 --yes
+deepdraw balabala create --input draft.json --execute --plan
+deepdraw balabala create --input draft.json --execute --yes
+
+# 创建返回 productId 后，完整更新稳定尺码表、颜色与 SKU
+deepdraw balabala full-update --input draft.json --execute --plan
+deepdraw balabala full-update --input draft.json --execute --yes
+
+# 增量更新：指定普通变动字段；颜色与尺码会自动随请求携带
+deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --plan
+deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --yes
+```
+
+- `create` 使用创建阶段字段：主尺码表和多平台尺码；创建成功后必须以资源回读取得/确认 `productId`，再决定是否执行 `full-update`。
+- `full-update` 使用覆盖式完整字段集，包含颜色、销售尺码、商家 SKU、主表和稳定的平台尺码表；不能把小 patch 当作全量 body。
+- 增量更新（`incremental`）只可更新当前模板中的普通字段，必须用 `--fields` 写明本次变动字段；CLI 自动携带完整的 `颜色` 与 `尺码`，不能省略。
+- 已使用 `204426140121-test` 完成“展示标题 → 资源回读 → 恢复 → 资源回读”联调：两次业务码均为 `10200`，恢复后颜色 2、尺码 15、SKU 30，且主表、唯品会、天猫、抖音四张各 15 行尺码表均在。
+- `尺码表`、`唯品会尺码表`、`天猫尺码表`、`抖音尺码表`、`多平台尺码` 和 `商家SKU` 禁止走巴拉增量流程，统一使用全量更新（`full-update`）并资源回读；多平台尺码尚无安全的增量写入结论。
+
+`review`、`create`、`full-update` 和 `incremental` 的草稿输入必须有 `templateFields`：它必须是本次 `merchantId + tradeId` 的最新 `dp.trade.fields` 返回，不能用历史类目白名单。`templateFields` 支持 API 原始的 `id/name/type/options/required/isSaleProp/attributes` 和 snake_case 字段。CLI 会只保留当前模板中的字段，并在 `attributes.isChildAttr=true` 时依据 `parentAttr + parentAttrValue` 激活子字段。
+
+先用 `deepdraw call dp.trade.fields --execute --param merchantId=1162 --param tradeId=TRADE_ID` 读取当前模板，再把响应 body 放进 `templateFields`。读取不是写入授权，仍要遵守本文件的频控要求。
+
+输入证据按事实来源传入：`mdm`（类目、SKU 颜色和销售尺码）、`launchPlan`（日期/价格）、`copywriting`（标题/材质/卖点）、`ocrEvidence`（吊牌/洗唛文本），字段必须用 `source_type` 表明来源。传了 SKU、尺码表或商家 SKU 后，当前模板中全部 `isSaleProp=true` 的字段都是必填，缺失会阻断计划。
+
+鞋品需要 `sizeChart.source=shoe_size_chart` 且每个 SKU 尺码有对应行；服饰需要 `sizeChart.source=plm_size_chart`。尺码表只接受这两类可追溯来源，绝不能让 AI 或图片生成；服饰缺 PLM 量点时留空并阻断，不能填 `0`。输出仍按鞋品整数销售尺码/六码多平台列，以及服饰 `cm` 展示尺码/裸数字量点来组装。
+
+AI 只可填 `review.aiCandidates` 中、具有当前模板枚举的字段。将建议作为 `aiResponses`（`fieldName/value/confidence/evidence`）传入；仅置信度 `>= 0.7`、命中枚举、有证据、未覆盖人工字段的建议会被接纳。最多 4 张 jpeg/png/webp 参考图，每张不超过 4MB，排序为平铺图、主图、模特图、参考图、吊牌、洗唛。AI 不得填价格、产地、条码、生产/合规事实、SKU、销售尺码或真实尺码表。
 
 带参数的只读接口示例：
 

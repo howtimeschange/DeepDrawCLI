@@ -130,7 +130,7 @@ export const apiRegistry: ApiDefinition[] = [
     title: "产品增量更新",
     group: "product",
     version: "v2",
-    transport: "http",
+    transport: "java-sdk",
     method: "POST",
     path: "/rest/v2",
     riskLevel: "write",
@@ -139,7 +139,7 @@ export const apiRegistry: ApiDefinition[] = [
     semanticCommand: "deepdraw product patch",
     requiredParams: [queryParam("productId", true, "深绘产品 id"), bodyParam("product", true, "增量更新 payload")],
     optionalParams: [],
-    notes: "Approval required because it mutates product data. Uses POST so JSON patch payloads can be sent consistently.",
+    notes: "Uses the SDK ProductIncrementalUpdateRequest bridge so Product entity serialization follows the official Java example.",
   },
   {
     apiName: "dp.product.sku.color.incremental.update",

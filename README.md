@@ -21,7 +21,7 @@
 - 所有参考文档里的 `dp.*` 接口都注册在 `src/core/api-registry.ts`。
 - 低风险只读接口可以 dry-run 后执行。
 - 写入、付费和慎用接口必须先生成执行计划，用户明确授权后才允许执行。
-- 商品创建、更新、颜色/SKU 增量更新和商品资源读取走 DeepDraw Java SDK bridge。
+- 商品创建、更新、通用增量、颜色/SKU 增量更新和商品资源读取走 DeepDraw Java SDK bridge。
 - 简单元数据和查询接口走 TypeScript HTTP 签名请求。
 
 ## 能实现什么效果
@@ -33,6 +33,7 @@
 - 对高风险接口先生成计划，看到接口名、租户、参数摘要和风险级别。
 - 只有加上 `--execute --yes` 后才真正执行写入、付费或慎用接口。
 - 通过 `deepdraw product content` 直接拿到商品摘要、SKU 摘要、商品图片 URL、详情页 URL 和详情模块 URL。
+- 通过 `deepdraw product payload` 在本地构建电商巴拉巴拉的商品发布 payload，并同时输出 `sizes.optionAliases`、`sizes.texts` 和 Java SDK 实际消费的商品实体。
 - 在 macOS / Windows 上通过同一套 SDK bundle 运行 Java bridge，无需 Maven 下载。
 - 避免把真实 `appSecret`、`dopKey`、签名和租户凭据写入 tracked files。
 
@@ -233,6 +234,135 @@ deepdraw product content \
   --execute
 ```
 
+### 本地构建巴拉巴拉商品发布 payload
+
+这个命令只读取本地 JSON，默认按租户 `电商巴拉巴拉`、商户 `1162` 组装，不读取凭据、不联网、不调用 Java，也不会创建或更新深绘商品：
+
+```bash
+deepdraw product payload --input draft.json --stage create --pretty
+deepdraw product payload --input draft.json --stage update --pretty
+```
+
+也可以直接传 JSON：
+
+```bash
+deepdraw product payload \
+  --json '{"code":"204426140121","title":"巴拉巴拉儿童运动鞋","tradeId":"546","productType":"shoe","fields":[],"skus":[]}' \
+  --stage create \
+  --pretty
+```
+
+输入文件可以是草稿对象，也可以包在 `product`、`draft` 或 `payload` 下。核心字段如下；字段数组中的值支持 `value`、`value_text` 或 `value_json`：
+
+```json
+{
+  "code": "204426140121",
+  "title": "巴拉巴拉儿童运动鞋",
+  "tradeId": "546",
+  "productId": "6518125",
+  "productType": "shoe",
+  "date": "2026-09-04",
+  "retailPrice": 359.9,
+  "sizeRemarks": { "26码": "脚长15.8-16.2/内长17" },
+  "fields": [
+    { "field_name": "颜色", "field_type": "TEXT", "value_text": "蓝色,蓝色调00388" },
+    { "field_name": "尺码", "field_type": "MULTI_CHOICE", "value_text": "26;27" },
+    {
+      "field_name": "尺码表",
+      "field_type": "MULTI_TEXT",
+      "value_json": {
+        "title": "尺码,适合脚长,内长",
+        "26": "15.8,17",
+        "27": "16.3,17.7"
+      }
+    }
+  ],
+  "skus": [
+    { "skuCode": "sku-26", "skcCode": "skc-00388", "color": "蓝色调00388", "size": "26", "sellerCode": "seller-26", "price": 359.9 }
+  ]
+}
+```
+
+输出中的边界：
+
+- `sdkInput.product` 是传给 Java SDK bridge 的商品实体；真正调用 `dp.product.create/update` 时，应把它单独保存为 body，并继续使用 CLI 的 `--plan`、`--yes` 授权流程。顶层输出不是 `deepdraw call` 的直接 body。
+- `sdkInput.query` 是本地审查用的 query：创建阶段为 `merchantId + tradeId`，更新阶段为 `productId`；`sdkInput.config` 只放非敏感的商户/类目参数，不含 appSecret、dopKey 或签名。
+- `fields` 是当前阶段发送的可审查字段；`legacyUpdateFields` 是完整更新字段集。因为 `dp.product.update` 是覆盖式更新，更新输入必须包含完整商品字段、颜色、销售尺码、商家 SKU、主尺码表和已有平台尺码表，不能拿一个小 patch 当全量 body。
+- `sizes.options` 是规范尺码，`sizes.optionAliases` 是规范尺码到展示尺码的映射，`sizes.texts` 是按 `s<尺码>,<展示值>,<平台>` 组装的备注/平台文本；这三项会和 `sdkInput.product.fields` 一起输出供审查。
+
+巴拉巴拉最新尺码组装规则：
+
+- 鞋品的销售尺码使用整数规范值（例如 `26`、`27`），禁止生成半码；展示别名为 `26码`、`27码`。销售尺码备注使用 `26码*脚长15.8-16.2/内长17;...`，主表固定为 `尺码,脚长,鞋内长`，传给 SDK 时去掉重复的销售尺码列，变成 `脚长,鞋内长`。
+- 鞋品多平台尺码固定六列 `天猫,京东,拼多多,微信视频小店,小红书,快手`：天猫和快手留空，京东使用裸数字，拼多多/微信视频小店/小红书使用带备注的展示值。
+- 服饰销售尺码使用带 `cm` 的展示值；主尺码表第一列为 `140cm`，第二个尺码列为裸数字 `140`。上装和牛仔裤使用固定列顺序；缺失测量值留空，不填 `0`；巴拉巴拉服饰尺码会补内置体重参考（例如 `140 -> 31kg`）。
+- 创建阶段发送主尺码表和多平台尺码；更新阶段保留主表、唯品会、天猫、抖音及多平台尺码，连同颜色、SKU 一起作为完整更新输入。鞋品不支持的 `淘宝尺码表` 会被省略并在 `diagnostics.warnings` 中说明。
+
+本地构建结果通过审查后，真实写入仍必须分两步：先对 `dp.product.create` 或 `dp.product.update` 运行 `--execute --plan`，得到用户明确授权后，才允许 `--execute --yes`。HTTP 200 或业务码 `10200` 只代表请求接受，资源回读仍需单独验证。
+
+### 巴拉上新流程
+
+`deepdraw balabala` 将上述本地字段组装与 Listingify 的深绘上新顺序组合成可审计的流程。每次输出带有 `workflow: "balabala-listing"` 和动作名；它仍通过已注册的 `dp.*` 接口执行，不绕过计划和授权。
+
+先运行纯本地审查。`review` 不读取凭据、不联网、不调用 Java 或 AI；它输出当前类目的有效字段、阻断项、可接受的 AI 候选和最终会交给 payload 组装器的字段。创建、全量更新和增量计划都会先执行同一套审查；审查未通过时不会生成深绘执行计划。
+
+```bash
+deepdraw balabala review --input draft.json
+```
+
+先读取当前模板，再把响应 body 写入 `templateFields`：
+
+```bash
+deepdraw call dp.trade.fields --execute --param merchantId=1162 --param tradeId=TRADE_ID
+```
+
+`draft.json` 必须带 `templateFields`，它是本次 `merchantId + tradeId` 的 `dp.trade.fields` 当前返回（可保留 `id/name/type/options/required/isSaleProp/attributes` 或其 snake_case 版本）。不要复用历史类目模板。需要的业务输入是：
+
+- `mdm`：款号、产品线/类目、颜色和 SKU 销售尺码；`launchPlan`：上市日期、零售价等业务事实；`copywriting`：标题、材质和卖点；`ocrEvidence`：吊牌/洗唛的可追溯文本。字段值应带 `source_type`，例如 `mdm`、`launch_plan`、`copywriting`、`ocr_hangtag`、`ocr_washlabel`、`manual`。
+- 当输入 SKU、尺码表或商家 SKU 时，模板中所有 `isSaleProp=true` 的字段都成为必填。模板 `attributes.isChildAttr=true` 的字段仅在其 `parentAttr/parentAttrValue` 被当前父字段命中时激活；未激活字段不会提交。
+- 鞋品必须提供 `sizeChart: { "source": "shoe_size_chart", "rows": [...] }`，每个 SKU 尺码都要有对应行；服饰必须用 `sizeChart: { "source": "plm_size_chart", "rows": [...] }`。尺码表不能从图片或 AI 生成，缺失 PLM 量点保持空并阻断，不得填 `0` 或编造数值。
+
+示意结构：
+
+```json
+{
+  "templateFields": [{ "id": "当前字段ID", "name": "款式", "type": "SINGLE_CHOICE", "options": ["运动鞋", "凉鞋"] }],
+  "mdm": { "product_line_name": "鞋品" },
+  "sizeChart": { "source": "shoe_size_chart", "rows": [{ "size": "26", "footLength": "15.8", "innerLength": "17" }] },
+  "fields": [{ "field_name": "款式", "value_text": "运动鞋", "source_type": "copywriting" }],
+  "skus": [{ "color": "蓝色调00388", "size": "26" }]
+}
+```
+
+AI 只处理 `review.aiCandidates` 中的当前模板枚举字段。上游 agent 若要提交建议，传入 `aiResponses` 的 `fieldName/value/confidence/evidence`；CLI 仅接受置信度 `>= 0.7`、命中当前枚举、有证据且未覆盖人工字段的结果。至多使用 4 张 jpeg/png/webp、每张不超过 4MB 的参考图，按平铺图、主图、模特图、参考图、吊牌、洗唛排序。价格、产地、条码、生产/合规事实、SKU、销售尺码和真实尺码表永远不能由 AI 填充。
+
+先以 `resource=form` 查询款号，供查重和后续资源回读使用：
+
+```bash
+deepdraw balabala query --product-code 204426140121
+deepdraw balabala query --product-code 204426140121 --execute
+```
+
+创建会使用 create 阶段的主尺码表和多平台尺码。先生成计划；只有用户明确批准后才可执行：
+
+```bash
+deepdraw balabala create --input draft.json --execute --plan
+deepdraw balabala create --input draft.json --execute --yes
+```
+
+创建返回数值 `productId` 后，将它写回草稿输入，再以全量更新补齐唯品会、天猫、抖音等稳定尺码表。全量更新是覆盖语义，不能用小 patch 代替：
+
+```bash
+deepdraw balabala full-update --input draft.json --execute --plan
+deepdraw balabala full-update --input draft.json --execute --yes
+```
+
+增量更新只用于选定的普通字段，并且必须同时携带颜色与销售尺码；先生成计划，经用户授权后执行，随后用 `resource=form` 回读。`204426140121-test` 已完成“展示标题 → 回读 → 恢复 → 回读”联调：两次业务码均为 `10200`，恢复后颜色 2、尺码 15、SKU 30，以及主表、唯品会、天猫、抖音四张各 15 行尺码表均保留。尺码表、商家 SKU 与多平台尺码仍必须走全量更新；多平台尺码暂无安全的增量写入结论。
+
+```bash
+deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --plan
+deepdraw balabala incremental --input draft.json --fields 商品展示标题 --execute --yes
+```
+
 ### 高风险接口先生成计划
 
 写入、付费和慎用接口不能直接真实调用。先生成计划：
@@ -291,14 +421,14 @@ Java SDK bridge 接口会把 `--json-file product.json` 作为 SDK entity payloa
 | --- | --- | --- |
 | merchant | `dp.merchant.name.search`, `dp.merchant.sites.get`, `dp.merchant.watermarks.get` | 查询商家和商户平台信息 |
 | trade | `dp.merchant.trades`, `dp.trade.fields` | 同步类目树和类目字段模板 |
-| product | `dp.product.create`, `dp.product.update`, `dp.product.sku.color.incremental.update`, `dp.product.resource`, `dp.product.basic.search` | 商品创建、更新、颜色/SKU 增量更新、查重、readback 和基础查询 |
+| product | `dp.product.create`, `dp.product.update`, `dp.product.incremental.update`, `dp.product.sku.color.incremental.update`, `dp.product.resource`, `dp.product.basic.search` | 商品创建、覆盖更新、通用增量、颜色/SKU 增量、查重、readback 和基础查询 |
 | image | `dp.product.retrieve.image`, `dp.product.label.image`, `dp.product.image.upload` | 以图搜款、图片标签、素材上传和图片修改 |
 | common | `dp.colors.get` | 深绘标准颜色 |
 
 transport 策略：
 
 - `http`: TypeScript 手写签名请求，适合简单查询、元数据同步和轻量接口。
-- `java-sdk`: Java SDK bridge，适合商品创建、商品更新、颜色/SKU 增量更新、商品资源读取等和 SDK entity mapping 强相关的接口。
+- `java-sdk`: Java SDK bridge，适合商品创建、商品更新、通用增量、颜色/SKU 增量更新、商品资源读取等和 SDK entity mapping 强相关的接口。
 
 风险策略：
 
@@ -326,6 +456,8 @@ transport 策略：
 │   │   ├── signer.ts            # DeepDraw HTTP 签名
 │   │   ├── result.ts            # 响应归一化
 │   │   ├── product-content.ts   # 商品内容包抽取
+│   │   ├── balabala-field-rules.ts # 动态模板、证据、AI 与尺码审查
+│   │   ├── product-payload.ts   # 巴拉巴拉商品 payload 本地构建
 │   │   ├── redact.ts            # 敏感字段脱敏
 │   │   └── reference-parser.ts  # 文档接口索引解析
 │   └── sdk/
@@ -382,6 +514,7 @@ CLI 根据注册表统一处理 dry-run、参数校验、风险授权和 transpo
 
 - `DeepdrawProductCreateCli`: 调用 `ProductPostCreateProductRequest`。
 - `DeepdrawProductUpdateCli`: 调用 `ProductPostUpdateProductByIdRequest`。
+- `DeepdrawProductIncrementalUpdateCli`: 调用 `ProductIncrementalUpdateRequest`，空 `places` 不会被发送。
 - `DeepdrawProductSkuColorIncrementalUpdateCli`: 调用 `ProductPostIncrementalUpdateProductSkuColorByIdRequest`，执行颜色/SKU 增量更新。
 - `DeepdrawProductResourceCli`: 调用 `ProductGetByIdRequest`，并额外保留 SDK 没有显式 setter 的新版 query 参数。
 

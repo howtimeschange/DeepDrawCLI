@@ -55,6 +55,18 @@ test("AGENTS.md documents Chinese agent calling workflows", () => {
   assert.match(text, /%APPDATA%\\DeepDrawCli\\config\.json/);
 });
 
+test("AGENTS.md documents the local Balabala payload builder and latest size fields", () => {
+  const text = readFileSync("AGENTS.md", "utf8");
+  assert.match(text, /deepdraw product payload --input draft\.json --stage create --pretty/);
+  assert.match(text, /电商巴拉巴拉/);
+  assert.match(text, /sizes\.optionAliases/);
+  assert.match(text, /sizes\.texts/);
+  assert.match(text, /天猫,京东,拼多多,微信视频小店,小红书,快手/);
+  assert.match(text, /不生成半码/);
+  assert.match(text, /legacyUpdateFields/);
+  assert.match(text, /不读取凭据、不联网、不调用 Java/);
+});
+
 test("AGENTS.md lists every registered API with calling metadata", () => {
   const text = readFileSync("AGENTS.md", "utf8");
   assert.match(text, /## 接口目录与调用方法/);
@@ -84,6 +96,34 @@ test("README documents cross-platform auth login", () => {
   assert.match(text, /10494/);
   assert.match(text, /串行队列/);
   assert.match(text, /deepdraw product content --product-code 208326105214 --summary --assets --execute/);
+});
+
+test("README documents the local Balabala payload builder", () => {
+  const text = readFileSync("README.md", "utf8");
+  assert.match(text, /deepdraw product payload --input draft\.json --stage create --pretty/);
+  assert.match(text, /sdkInput\.product/);
+  assert.match(text, /sizes\.optionAliases/);
+  assert.match(text, /sizes\.texts/);
+  assert.match(text, /多平台尺码固定六列/);
+  assert.match(text, /dp\.product\.update` 是覆盖式更新/);
+  assert.match(text, /不读取凭据、不联网、不调用 Java/);
+});
+
+test("README and AGENTS.md document the Balabala listing workflow and its safe incremental boundary", () => {
+  for (const path of ["README.md", "AGENTS.md"]) {
+    const text = readFileSync(path, "utf8");
+    assert.match(text, /deepdraw balabala query --product-code/);
+    assert.match(text, /deepdraw balabala review --input draft\.json/);
+    assert.match(text, /deepdraw balabala create --input draft\.json --execute --plan/);
+    assert.match(text, /deepdraw balabala full-update --input draft\.json --execute --plan/);
+    assert.match(text, /deepdraw balabala incremental --input draft\.json --fields/);
+    assert.match(text, /颜色.*尺码|尺码.*颜色/);
+    assert.match(text, /多平台尺码.*全量更新|全量更新.*多平台尺码/);
+    assert.match(text, /templateFields/);
+    assert.match(text, /shoe_size_chart/);
+    assert.match(text, /plm_size_chart/);
+    assert.match(text, /0\.7/);
+  }
 });
 
 test("README documents bundled DeepDraw SDK jars and runtime dependency jars", () => {

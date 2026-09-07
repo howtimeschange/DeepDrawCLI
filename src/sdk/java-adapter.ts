@@ -21,6 +21,7 @@ export interface CallJavaSdkInput {
 const sdkClasses: Record<string, string> = {
   "dp.product.create": "DeepdrawProductCreateCli",
   "dp.product.update": "DeepdrawProductUpdateCli",
+  "dp.product.incremental.update": "DeepdrawProductIncrementalUpdateCli",
   "dp.product.sku.color.incremental.update": "DeepdrawProductSkuColorIncrementalUpdateCli",
   "dp.product.resource": "DeepdrawProductResourceCli",
 };
@@ -48,7 +49,7 @@ export function buildSdkInput(input: {
 }) {
   return {
     config: sdkConfig(input),
-    ...(input.apiName === "dp.product.create" || input.apiName === "dp.product.update" || input.apiName === "dp.product.sku.color.incremental.update"
+    ...(input.apiName === "dp.product.create" || input.apiName === "dp.product.update" || input.apiName === "dp.product.incremental.update" || input.apiName === "dp.product.sku.color.incremental.update"
       ? { product: input.body ?? {}, query: input.query }
       : { query: input.query }),
   };
@@ -135,6 +136,7 @@ async function compileJavaSources(
   const sources = [
     join(cwd, "java", "DeepdrawProductCreateCli.java"),
     join(cwd, "java", "DeepdrawProductUpdateCli.java"),
+    join(cwd, "java", "DeepdrawProductIncrementalUpdateCli.java"),
     join(cwd, "java", "DeepdrawProductSkuColorIncrementalUpdateCli.java"),
     join(cwd, "java", "DeepdrawProductResourceCli.java"),
   ].filter((source) => existsSync(source));

@@ -77,6 +77,33 @@ test("buildSdkInput maps product update calls to SDK query and product", () => {
   );
 });
 
+test("buildSdkInput maps generic incremental updates to the Product SDK payload", () => {
+  const product = {
+    title: "增量标题",
+    fields: { 颜色: "蓝色,blue", 尺码: "26" },
+  };
+
+  assert.deepEqual(
+    buildSdkInput({
+      config,
+      apiName: "dp.product.incremental.update",
+      query: { productId: "ed18698170c54da4baa88541d66e3536" },
+      body: product,
+    }),
+    {
+      config: {
+        appKey: "app-key",
+        appSecret: "app-secret",
+        dopKey: "dop-key",
+        host: "http://open.deepdraw.cn",
+        merchantId: "1162",
+      },
+      query: { productId: "ed18698170c54da4baa88541d66e3536" },
+      product,
+    },
+  );
+});
+
 test("buildSdkInput maps SKU color incremental updates to the Product SDK payload", () => {
   const product = {
     code: "208226102001",
