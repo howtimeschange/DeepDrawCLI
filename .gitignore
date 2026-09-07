@@ -8,4 +8,6 @@ dist/
 .DS_Store
 tmp/
 coverage/
+.deepdraw-workflows/
+.codex-tmp/
 *.log

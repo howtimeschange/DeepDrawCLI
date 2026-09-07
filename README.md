@@ -303,6 +303,47 @@ deepdraw product payload \
 
 `deepdraw balabala` 将上述本地字段组装与 Listingify 的深绘上新顺序组合成可审计的流程。每次输出带有 `workflow: "balabala-listing"` 和动作名；它仍通过已注册的 `dp.*` 接口执行，不绕过计划和授权。
 
+新版状态型流程把业务资料保存在当前目录的 `.deepdraw-workflows/balabala/<款号>/`：其中有原子状态、来源哈希、标准化资料、当前类目模板、草稿、AI/OCR 审计、计划、执行和回读。该目录已被 Git 忽略，不保存原始表格/图片、凭据、签名或 token。工作流核心只管理状态与已注册的 DeepDraw 调用；巴拉插件独立管理资料列别名、类目评分、字段、颜色、SKU 和尺码规则，因此其他品牌可接入自己的插件而不用复制巴拉规则。
+
+```bash
+# 本地导入会保留 MDM 的全部颜色和 SKU；上市计划或文案只命中一个颜色不会缩减 SKU 集合
+deepdraw balabala import --spu 204426140121 \
+  --mdm '/path/商品SKU表.xlsx' \
+  --launch-plan '/path/上市计划表.xlsx' \
+  --copywriting '/path/标准文案表.xlsx' \
+  --shoe-size-chart '/path/巴拉鞋品尺码表.xlsx' \
+  --images '/path/204426140121'
+
+# 类目树和 dp.trade.fields 是当前字段 ID、枚举、必填、销售属性和子字段激活的唯一权威
+deepdraw balabala template --spu 204426140121 --execute
+deepdraw balabala review --spu 204426140121
+```
+
+XLSX 导入扫描工作表真实单元格，不信任错误的 worksheet dimension，因此 `期货`/`O2O` 即使被标成 `A1` 仍能解析实际数据行。图片只生成路径、角色和 SHA-256 审计，只能作为 OCR/视觉证据，不能生成 MDM 颜色、SKU 或尺码事实。
+
+AI/OCR provider 由业务或 agent 输出本地 JSON 后再交给 CLI 审计，CLI 不自行调用付费模型。AI 仅接受当前模板的激活枚举、具备证据且置信度至少 `0.7` 的建议；价格、条码、生产/合规、SKU、销售尺码、尺码量点和充绒量永远不可由 AI 填写。OCR 必须引用导入图片的 SHA-256 和原始文本。
+
+```bash
+deepdraw balabala review --spu 204426140121 \
+  --ai-responses /path/ai-responses.json \
+  --ocr-facts /path/ocr-facts.json
+```
+
+`plan` 仍会按已有审批机制生成 DeepDraw 计划；`publish` 只允许测试款 `204426140121-test`。创建成功后会自动提取数值 `productId`、继续全量更新并回读。全量更新先读取 `resource=form`，要求本地/远端商家 SKU 至少一个规范颜色+尺码键交集；普通增量只可改标量并自动携带颜色与尺码。尺码表、商家 SKU、颜色/SKU 变化不能走普通增量。回读缺少结构化表时会标记 `needs_ui_verification`，不会误报为成功。
+
+```bash
+# 已有深绘档案：先把 resource=form 的真实字段、颜色别名、销售尺码、写入 productId 和回读 UUID 同步进本地状态
+deepdraw balabala sync --spu 204426140121-test --execute
+
+# 本地只覆盖一个已同步的标量字段；颜色、尺码、SKU 和尺码表不能通过 override 改动
+deepdraw balabala override --spu 204426140121-test --field 商品展示标题 --value '巴拉巴拉男中童运动鞋'
+deepdraw balabala plan incremental --spu 204426140121-test --fields 商品展示标题 --execute --plan
+deepdraw balabala publish incremental --spu 204426140121-test --fields 商品展示标题 --execute --yes
+deepdraw balabala readback --spu 204426140121-test --execute
+```
+
+`sync` 将原始 `resource=form` 作为审计回读保存，同时投影出可编辑草稿：通用增量写入使用数值 `productId`，资源回读使用同一档案的 UUID `id`。两者会分别保存，避免把写入 ID 误传给回读接口。`override` 只修改本地状态，并记录原值、人工覆盖和时间；之后仍需先生成计划。普通增量请求始终带上从同步档案读取的完整 `颜色` 与 `尺码`，但不会带商家 SKU 或任何尺码表。
+
 先运行纯本地审查。`review` 不读取凭据、不联网、不调用 Java 或 AI；它输出当前类目的有效字段、阻断项、可接受的 AI 候选和最终会交给 payload 组装器的字段。创建、全量更新和增量计划都会先执行同一套审查；审查未通过时不会生成深绘执行计划。
 
 ```bash
@@ -349,7 +390,7 @@ deepdraw balabala create --input draft.json --execute --plan
 deepdraw balabala create --input draft.json --execute --yes
 ```
 
-创建返回数值 `productId` 后，将它写回草稿输入，再以全量更新补齐唯品会、天猫、抖音等稳定尺码表。全量更新是覆盖语义，不能用小 patch 代替：
+旧 `--input draft.json` 兼容命令需要将创建返回数值 `productId` 写回草稿，再以全量更新补齐唯品会、天猫、抖音等稳定尺码表；新版状态型 `balabala publish create` 自动完成这一动作。全量更新是覆盖语义，不能用小 patch 代替：
 
 ```bash
 deepdraw balabala full-update --input draft.json --execute --plan
@@ -362,9 +403,9 @@ CLI 提供两个增量接口；它们使用的产品 ID 和字段约束不同，
 
 | 场景 | 接口与产品 ID | 必带字段 / 使用边界 |
 | --- | --- | --- |
-| 普通字段小范围修改 | `dp.product.incremental.update`；使用 `resource=form` 返回的内部 UUID（例如 `id`） | 如果提交 `商家SKU`，必须同时带颜色和尺码；如果提交任一尺码表，必须同时带尺码。空 `places` 不会发送，避免意外清空平台。 |
+| 普通字段小范围修改 | `dp.product.incremental.update`；使用 `resource=form` 返回的数值 `productId` | 如果提交 `商家SKU`，必须同时带颜色和尺码；如果提交任一尺码表，必须同时带尺码。资源回读则使用同一返回中的 UUID `id`。空 `places` 不会发送，避免意外清空平台。 |
 | 新增或变更颜色、SKU | `dp.product.sku.color.incremental.update`；使用数值 `productId` | 强制同时带完整的颜色、尺码和商家 SKU，且 SKU 的颜色别名、尺码必须命中对应字段。 |
-| 巴拉普通字段修改 | `deepdraw balabala incremental`；草稿中的 `productId` 必须是内部 UUID | 必须以 `--fields` 明确选择当前模板中的普通字段；CLI 自动附带完整颜色与销售尺码。 |
+| 巴拉普通字段修改 | `deepdraw balabala incremental`；草稿中的数值 `productId` 由 `sync` 保存 | 必须以 `--fields` 明确选择当前模板中的普通字段；CLI 自动附带完整颜色与销售尺码，并用单独保存的 UUID `resourceId` 回读。 |
 
 巴拉增量会先完成本地模板/证据审查，再生成写入计划。真实执行后必须用 `resource=form` 回读，不以 HTTP 200 或 `10200` 代替持久化证明。`204426140121-test` 已完成“展示标题 → 回读 → 恢复 → 回读”联调：两次业务码均为 `10200`，恢复后颜色 2、尺码 15、SKU 30，以及主表、唯品会、天猫、抖音四张各 15 行尺码表均保留。
 

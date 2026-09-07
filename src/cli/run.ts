@@ -11,6 +11,10 @@ import { extractDeepdrawProductContent } from "../core/product-content.js";
 import { buildProductPayload, type ProductPayloadStage } from "../core/product-payload.js";
 import { reviewBalabalaFields } from "../core/balabala-field-rules.js";
 import { redactSensitive } from "../core/redact.js";
+import { importBalabalaSources } from "../brands/balabala/importers.js";
+import { selectBalabalaTrade } from "../brands/balabala/trade-selection.js";
+import { BalabalaWorkflowEngine } from "../workflow/engine.js";
+import { WorkflowStore } from "../workflow/store.js";
 import type { ApiDefinition } from "../core/types.js";
 import { callJavaSdkApi, type JavaSdkSpawn } from "../sdk/java-adapter.js";
 import { jsonLine } from "./format.js";
@@ -618,7 +622,7 @@ function withReviewedBalabalaFields(input: unknown, fields: Record<string, unkno
 
 function withBalabalaWorkflowMetadata(
   result: CliRunResult,
-  action: BalabalaWorkflowAction,
+  action: BalabalaWorkflowAction | string,
 ): CliRunResult {
   if (!result.stdout) return result;
   try {
@@ -631,6 +635,349 @@ function withBalabalaWorkflowMetadata(
   } catch {
     return result;
   }
+}
+
+type StatefulBalabalaAction = "import" | "assemble" | "template" | "review" | "plan" | "publish" | "sync" | "readback" | "override";
+type StatefulBalabalaStage = "create" | "full-update" | "incremental";
+
+function text(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value).trim();
+  return "";
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+type StatefulBalabalaArgs = {
+  action: StatefulBalabalaAction;
+  stage?: StatefulBalabalaStage;
+  spu: string;
+  merchantId: string;
+  tenantName?: string;
+  workflowRoot: string;
+  fields: string[];
+  execute: boolean;
+  yes: boolean;
+  plan: boolean;
+  mdmPath?: string;
+  launchPlanPath?: string;
+  copywritingPath?: string;
+  shoeSizeChartPath?: string;
+  imagesPath?: string;
+  aiResponsesPath?: string;
+  ocrFactsPath?: string;
+  overrideField?: string;
+  overrideValue?: string;
+};
+
+const statefulBalabalaActions = new Set<StatefulBalabalaAction>(["import", "assemble", "template", "review", "plan", "publish", "sync", "readback", "override"]);
+const deepdrawReadIntervalMs = 3_000;
+
+function waitForDeepdrawReadInterval(): Promise<void> {
+  return new Promise((resolveDelay) => setTimeout(resolveDelay, deepdrawReadIntervalMs));
+}
+
+function statefulBalabalaHelpText(): string {
+  return [
+    "Usage: deepdraw balabala import --spu SPU --mdm SKU.xlsx --launch-plan PLAN.xlsx --copywriting COPY.xlsx [--shoe-size-chart SIZE.xlsx] [--images DIR]",
+    "       deepdraw balabala assemble --spu SPU",
+    "       deepdraw balabala template --spu SPU --execute",
+    "       deepdraw balabala review --spu SPU [--ai-responses AI.json] [--ocr-facts OCR.json]",
+    "       deepdraw balabala sync --spu SPU --execute",
+    "       deepdraw balabala override --spu SPU --field FIELD --value VALUE",
+    "       deepdraw balabala plan create|full-update|incremental --spu SPU --execute --plan [--fields FIELD,...]",
+    "       deepdraw balabala publish create|full-update|incremental --spu 204426140121-test --execute --yes [--fields FIELD,...]",
+    "       deepdraw balabala readback --spu SPU --execute",
+    "",
+    "Import, assemble, review, and override are local only. Template, sync, and readback are read-only DeepDraw calls.",
+    "Publish is restricted to the configured test code and automatically records resource=form readback; create continues with full-update.",
+  ].join("\n") + "\n";
+}
+
+function parseStatefulBalabalaArgs(argv: string[], cwd: string): StatefulBalabalaArgs {
+  const action = argv[1] as StatefulBalabalaAction | undefined;
+  if (!action || !statefulBalabalaActions.has(action)) throw new Error("unknown stateful balabala action");
+  let index = 2;
+  let stage: StatefulBalabalaStage | undefined;
+  if (action === "plan" || action === "publish") {
+    const candidate = argv[index] as StatefulBalabalaStage | undefined;
+    if (!candidate || !["create", "full-update", "incremental"].includes(candidate)) throw new Error(`balabala ${action} requires create, full-update, or incremental`);
+    stage = candidate;
+    index += 1;
+  }
+  let spu = "";
+  let merchantId = "1162";
+  let tenantName: string | undefined;
+  let workflowRoot = cwd;
+  let fields: string[] = [];
+  let execute = false;
+  let yes = false;
+  let plan = false;
+  let mdmPath: string | undefined;
+  let launchPlanPath: string | undefined;
+  let copywritingPath: string | undefined;
+  let shoeSizeChartPath: string | undefined;
+  let imagesPath: string | undefined;
+  let aiResponsesPath: string | undefined;
+  let ocrFactsPath: string | undefined;
+  let overrideField: string | undefined;
+  let overrideValue: string | undefined;
+  for (; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const next = () => {
+      const value = argv[index + 1];
+      if (!value) throw new Error(`${arg} requires a value`);
+      index += 1;
+      return value;
+    };
+    if (arg === "--spu") { spu = next(); continue; }
+    if (arg === "--merchant-id") { merchantId = next(); continue; }
+    if (arg === "--tenant") { tenantName = next(); continue; }
+    if (arg === "--workflow-root") { workflowRoot = resolve(cwd, next()); continue; }
+    if (arg === "--fields") { fields = [...new Set(next().split(",").map((value) => value.trim()).filter(Boolean))]; continue; }
+    if (arg === "--mdm") { mdmPath = resolve(cwd, next()); continue; }
+    if (arg === "--launch-plan") { launchPlanPath = resolve(cwd, next()); continue; }
+    if (arg === "--copywriting") { copywritingPath = resolve(cwd, next()); continue; }
+    if (arg === "--shoe-size-chart") { shoeSizeChartPath = resolve(cwd, next()); continue; }
+    if (arg === "--images") { imagesPath = resolve(cwd, next()); continue; }
+    if (arg === "--ai-responses") { aiResponsesPath = resolve(cwd, next()); continue; }
+    if (arg === "--ocr-facts") { ocrFactsPath = resolve(cwd, next()); continue; }
+    if (arg === "--field") { overrideField = next(); continue; }
+    if (arg === "--value") { overrideValue = next(); continue; }
+    if (arg === "--execute") { execute = true; continue; }
+    if (arg === "--yes") { yes = true; continue; }
+    if (arg === "--plan") { plan = true; continue; }
+    throw new Error(`Unknown balabala option: ${arg}`);
+  }
+  if (!/^[0-9]{12,}(?:-test)?$/.test(spu)) throw new Error("balabala stateful commands require --spu as a numeric code (optional -test suffix)");
+  if (action === "import" && (!mdmPath || !launchPlanPath || !copywritingPath)) throw new Error("balabala import requires --mdm, --launch-plan, and --copywriting");
+  if (stage === "incremental" && fields.length === 0) throw new Error("balabala incremental requires --fields");
+  if (stage !== "incremental" && fields.length > 0) throw new Error("--fields is only supported by incremental");
+  if (action === "plan" && (!execute || !plan)) throw new Error("balabala plan requires --execute --plan");
+  if (action === "publish" && (!execute || !yes)) throw new Error("balabala publish requires --execute --yes after a reviewed plan");
+  if ((aiResponsesPath || ocrFactsPath) && action !== "review") throw new Error("--ai-responses and --ocr-facts are only supported by balabala review");
+  if ((overrideField || overrideValue) && action !== "override") throw new Error("--field and --value are only supported by balabala override");
+  if (action === "override" && (!overrideField || overrideValue === undefined)) throw new Error("balabala override requires --field and --value");
+  return { action, stage, spu, merchantId, tenantName, workflowRoot, fields, execute, yes, plan, mdmPath, launchPlanPath, copywritingPath, shoeSizeChartPath, imagesPath, aiResponsesPath, ocrFactsPath, overrideField, overrideValue };
+}
+
+function resultRecord(stdout: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(stdout) as unknown;
+    return isRecord(parsed) ? parsed : {};
+  } catch { return {}; }
+}
+
+function apiRows(data: unknown): Record<string, unknown>[] {
+  if (Array.isArray(data)) return data.filter(isRecord);
+  const root = isRecord(data) ? data : {};
+  for (const key of ["items", "list", "rows", "trades", "fields", "data", "body"]) {
+    if (Array.isArray(root[key])) return root[key].filter(isRecord);
+  }
+  return [];
+}
+
+/**
+ * `dp.merchant.trades` returns a tree.  Only a leaf has a submit-ready
+ * `tradeId`; passing a parent id to `dp.trade.fields` returns DeepDraw 10404.
+ * Preserve the hierarchy as a synthetic path so the Balabala selector can use
+ * the same evidence ranking it uses for an already-flat API response.
+ */
+export function flattenTradeLeaves(data: unknown): Record<string, unknown>[] {
+  const leaves: Record<string, unknown>[] = [];
+  const visit = (node: Record<string, unknown>, parents: string[]): void => {
+    const name = text(node.name ?? node.tradeName ?? node.trade_name ?? node.label);
+    const explicitPath = text(node.tradePath ?? node.trade_path ?? node.path);
+    // Some tenant responses put only the leaf name in `tradePath`. It is not
+    // a full path and would erase the parent evidence needed to distinguish
+    // direct child-shoe trades from gender-specific variants.
+    const hasFullExplicitPath = explicitPath.includes(">") || parents.length === 0 || explicitPath !== name;
+    const path = explicitPath && hasFullExplicitPath ? explicitPath : [...parents, name].filter(Boolean).join(">>");
+    const children = Array.isArray(node.children) ? node.children.filter(isRecord) : [];
+    if (children.length === 0) {
+      const leafNode = { ...node };
+      delete leafNode.children;
+      leaves.push({ ...leafNode, ...(path ? { tradePath: path } : {}) });
+      return;
+    }
+    for (const child of children) visit(child, path ? [path] : parents);
+  };
+  for (const row of apiRows(data)) visit(row, []);
+  return leaves;
+}
+
+function resultMetadata(action: string, spu: string, snapshot: Awaited<ReturnType<BalabalaWorkflowEngine["snapshot"]>>, extra: Record<string, unknown> = {}): CliRunResult {
+  const sourceSkus = Array.isArray(snapshot.normalized.skus) ? snapshot.normalized.skus : snapshot.draft.skus;
+  return {
+    exitCode: snapshot.blocking.length === 0 ? 0 : 1,
+    stdout: jsonLine({
+      ok: snapshot.blocking.length === 0,
+      workflow: "balabala-listing",
+      action,
+      spu,
+      state: snapshot.state,
+      templateHash: text(snapshot.template.hash),
+      sourceSummary: { sources: snapshot.sources.length, skus: Array.isArray(sourceSkus) ? sourceSkus.length : 0, images: Array.isArray(snapshot.normalized.images) ? snapshot.normalized.images.length : 0 },
+      blocking: snapshot.blocking,
+      manual: snapshot.manual,
+      nextAction: snapshot.blocking.length ? "resolve blocking/manual items, then review" : snapshot.state === "ready" ? "generate an execution plan" : "inspect workflow state",
+      ...extra,
+    }),
+    stderr: "",
+  };
+}
+
+function productIdFrom(value: unknown): string {
+  const root = isRecord(value) ? value : {};
+  const direct = text(root.productId ?? root.product_id ?? root.id);
+  if (direct) return direct;
+  for (const child of Object.values(root)) {
+    if (isRecord(child)) {
+      const found = productIdFrom(child);
+      if (found) return found;
+    }
+  }
+  return "";
+}
+
+function workflowPayload(snapshot: Awaited<ReturnType<BalabalaWorkflowEngine["snapshot"]>>, stage: StatefulBalabalaStage) {
+  const result = buildProductPayload(snapshot.draft, { stage: stage === "create" ? "create" : "update" });
+  if (!result.ok) throw new Error(result.diagnostics.errors.join("；"));
+  return result;
+}
+
+async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: string): Promise<CliRunResult> {
+  let args: StatefulBalabalaArgs;
+  try { args = parseStatefulBalabalaArgs(argv, cwd); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  const store = WorkflowStore.open("balabala", args.spu, args.workflowRoot);
+  const engine = new BalabalaWorkflowEngine(store);
+  if (args.action === "import") {
+    try {
+      const imported = await importBalabalaSources({ spu: args.spu, mdmPath: args.mdmPath!, launchPlanPath: args.launchPlanPath!, copywritingPath: args.copywritingPath!, ...(args.shoeSizeChartPath ? { shoeSizeChartPath: args.shoeSizeChartPath } : {}), ...(args.imagesPath ? { imagesPath: args.imagesPath } : {}) });
+      const snapshot = await engine.importNormalized(imported, imported.sources);
+      return resultMetadata("import", args.spu, snapshot);
+    } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  }
+  if (args.action === "assemble") {
+    try { return resultMetadata("assemble", args.spu, await engine.assemble()); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  }
+  if (args.action === "template") {
+    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "template", spu: args.spu, dryRun: true, apis: ["dp.merchant.trades", "dp.trade.fields"] }), stderr: "" };
+    const apiOptions: CliRunOptions = { ...options, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } };
+    const tradesResult = await runCli(["call", "dp.merchant.trades", "--execute", "--param", `merchantId=${args.merchantId}`], apiOptions);
+    if (tradesResult.exitCode !== 0) return withBalabalaWorkflowMetadata(tradesResult, "template");
+    try {
+      const snapshot = await engine.snapshot();
+      const trades = flattenTradeLeaves(resultRecord(tradesResult.stdout).data);
+      const decision = selectBalabalaTrade(snapshot.normalized, trades);
+      if (decision.manualSelectionRequired || !decision.selected) return resultMetadata("template", args.spu, await engine.syncTemplate(trades, []));
+      await waitForDeepdrawReadInterval();
+      const fieldsResult = await runCli(["call", "dp.trade.fields", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", `tradeId=${decision.selected.tradeId}`], apiOptions);
+      if (fieldsResult.exitCode !== 0) return withBalabalaWorkflowMetadata(fieldsResult, "template");
+      const fields = apiRows(resultRecord(fieldsResult.stdout).data);
+      const synced = await engine.syncTemplate(trades, fields);
+      await store.recordExecution({ operation: "template-sync", status: "verified", api: "dp.trade.fields", requestId: text(resultRecord(fieldsResult.stdout).requestId) || null, details: { tradeId: decision.selected.tradeId, fieldCount: fields.length } });
+      return resultMetadata("template", args.spu, synced);
+    } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  }
+  if (args.action === "review") {
+    try {
+      if (args.aiResponsesPath) {
+        const payload = JSON.parse(readFileSync(args.aiResponsesPath, "utf8")) as unknown;
+        if (!Array.isArray(payload)) throw new Error("--ai-responses must contain a JSON array");
+        await engine.auditAi(payload);
+      }
+      if (args.ocrFactsPath) {
+        const payload = JSON.parse(readFileSync(args.ocrFactsPath, "utf8")) as unknown;
+        if (!Array.isArray(payload)) throw new Error("--ocr-facts must contain a JSON array");
+        await engine.auditOcr(payload);
+      }
+      return resultMetadata("review", args.spu, await engine.snapshot());
+    } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  }
+  if (args.action === "sync") {
+    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "sync", spu: args.spu, dryRun: true, api: "dp.product.resource" }), stderr: "" };
+    try {
+      const resource = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", `productCode=${args.spu}`, "--param", "resource=form"], { ...options, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      if (resource.exitCode !== 0) return withBalabalaWorkflowMetadata(resource, "sync");
+      const result = resultRecord(resource.stdout);
+      const synced = await engine.syncRemote(record(result.data));
+      await store.recordExecution({ operation: "resource-form-sync", status: "verified", api: "dp.product.resource", requestId: text(result.requestId) || null, details: { productId: text(synced.draft.productId), fieldCount: Array.isArray(synced.draft.fields) ? synced.draft.fields.length : 0 } });
+      return resultMetadata("sync", args.spu, synced, { requestId: result.requestId, provider: { httpStatus: result.httpStatus, businessCode: result.businessCode }, productId: text(synced.draft.productId), fieldCount: Array.isArray(synced.draft.fields) ? synced.draft.fields.length : 0 });
+    } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  }
+  if (args.action === "override") {
+    try { return resultMetadata("override", args.spu, await engine.overrideDraftField(args.overrideField!, args.overrideValue!)); } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  }
+  if (args.action === "readback") {
+    if (!args.execute) return { exitCode: 0, stdout: jsonLine({ ok: true, workflow: "balabala-listing", action: "readback", spu: args.spu, dryRun: true, api: "dp.product.resource" }), stderr: "" };
+    try {
+      const snapshot = await engine.snapshot();
+      const productId = text(snapshot.draft.productId);
+      const resourceId = text(snapshot.draft.resourceId ?? snapshot.normalized.resourceId);
+      const resource = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", resourceId ? `productId=${resourceId}` : `productCode=${args.spu}`, "--param", "resource=form"], { ...options, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      if (resource.exitCode !== 0) return withBalabalaWorkflowMetadata(resource, "readback");
+      const result = resultRecord(resource.stdout);
+      const productIdFromReadback = productIdFrom(result.data);
+      const saved = await engine.replace({ ...(await engine.snapshot()), draft: { ...snapshot.draft, ...(productIdFromReadback ? { productId: productIdFromReadback } : {}) } });
+      const compared = await engine.compareReadback(record(result.data));
+      await store.recordExecution({ operation: "resource-form-readback", status: compared.state === "readback_mismatch" ? "failed" : "verified", api: "dp.product.resource", requestId: text(result.requestId) || null });
+      return resultMetadata("readback", args.spu, compared, { requestId: result.requestId, provider: { httpStatus: result.httpStatus, businessCode: result.businessCode }, productId: text(saved.draft.productId) || undefined });
+    } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
+  }
+  if (args.action === "publish" && args.spu !== "204426140121-test") {
+    return { exitCode: 1, stdout: "", stderr: "balabala publish is only permitted for configured test code 204426140121-test\n" };
+  }
+  try {
+    let snapshot = await engine.snapshot();
+    const stage = args.stage!;
+    let apiName = stage === "create" ? "dp.product.create" : stage === "full-update" ? "dp.product.update" : "dp.product.incremental.update";
+    let query: Record<string, string>;
+    let body: Record<string, unknown>;
+    if (stage === "incremental") {
+      body = await engine.buildIncremental(args.fields);
+      query = { productId: text(snapshot.draft.productId) };
+    } else {
+      if (stage === "full-update" && text(snapshot.draft.productId) === "") throw new Error("full-update requires a productId from resource=form readback or create response");
+      const payload = workflowPayload(snapshot, stage);
+      body = payload.sdkInput.product;
+      query = stage === "create" ? payload.sdkInput.query : { productId: text(snapshot.draft.productId) };
+    }
+    if (!Object.values(query).every(Boolean)) throw new Error(`${stage} lacks required DeepDraw identifier`);
+    const command = ["call", apiName, "--execute", ...(args.action === "plan" ? ["--plan"] : ["--yes"]), ...Object.entries(query).flatMap(([key, value]) => ["--param", `${key}=${value}`]), "--json", JSON.stringify(body)];
+    if (args.action === "plan") {
+      const planned = await runCli(command, { ...options, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      const payload = resultRecord(planned.stdout);
+      await store.recordExecution({ operation: `${stage}-plan`, status: "planned", api: apiName, details: { fields: stage === "incremental" ? Object.keys(body.fields as Record<string, unknown>) : undefined } });
+      snapshot = await engine.replace({ ...snapshot, state: "planned", plans: [...snapshot.plans, record(payload.plan)] });
+      return { ...planned, stdout: jsonLine({ workflow: "balabala-listing", action: "plan", stage, spu: args.spu, state: snapshot.state, ...payload }) };
+    }
+    if (stage === "full-update") {
+      const resourceId = text(snapshot.draft.resourceId ?? snapshot.normalized.resourceId);
+      const preRead = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", resourceId ? `productId=${resourceId}` : `productCode=${args.spu}`, "--param", "resource=form"], { ...options, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      if (preRead.exitCode !== 0) return withBalabalaWorkflowMetadata(preRead, "publish");
+      const prepared = await engine.prepareExistingUpdate(record(resultRecord(preRead.stdout).data));
+      if (prepared.blocking.length) return resultMetadata("publish", args.spu, await engine.snapshot(), { stage });
+      snapshot = await engine.snapshot();
+      body = workflowPayload(snapshot, stage).sdkInput.product;
+    }
+    const write = await runCli(command, { ...options, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+    const writePayload = resultRecord(write.stdout);
+    await store.recordExecution({ operation: stage, status: write.exitCode === 0 ? "in_progress" : "failed", api: apiName, requestId: text(writePayload.requestId) || null });
+    if (write.exitCode !== 0) return withBalabalaWorkflowMetadata(write, "publish");
+    if (stage === "create") {
+      const productId = productIdFrom(writePayload.data);
+      if (!productId) return { exitCode: 1, stdout: jsonLine({ ok: false, workflow: "balabala-listing", action: "publish", stage, spu: args.spu, state: "transport_unknown", message: "create accepted but productId is absent; query resource before retrying" }), stderr: "" };
+      snapshot = await engine.replace({ ...snapshot, state: "post_create_update", draft: { ...snapshot.draft, productId } });
+      const full = await runCli(["balabala", "publish", "full-update", "--spu", args.spu, "--merchant-id", args.merchantId, "--workflow-root", args.workflowRoot, "--execute", "--yes"], options);
+      return full;
+    }
+    await waitForDeepdrawReadInterval();
+    const read = await runCli(["balabala", "readback", "--spu", args.spu, "--merchant-id", args.merchantId, "--workflow-root", args.workflowRoot, "--execute"], options);
+    return { ...read, stdout: jsonLine({ workflow: "balabala-listing", action: "publish", stage, spu: args.spu, write: { requestId: writePayload.requestId, data: writePayload.data }, readback: resultRecord(read.stdout) }) };
+  } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
 }
 
 function redactSemanticCommandArgv(argv: string[]): string[] {
@@ -718,6 +1065,12 @@ export async function runCli(argv: string[], options: CliRunOptions): Promise<Cl
         stderr: `${errorMessage(error)}\n`,
       };
     }
+  }
+
+  const statefulBalabalaInvocation = argv[0] === "balabala" && statefulBalabalaActions.has(argv[1] as StatefulBalabalaAction) && argv.includes("--spu");
+  if (argv[0] === "balabala" && (statefulBalabalaInvocation || (argv[1] === "--help" && argv.length === 2))) {
+    if (argv[1] === "--help") return { exitCode: 0, stdout: `${statefulBalabalaHelpText()}\n${balabalaWorkflowHelpText()}`, stderr: "" };
+    return runStatefulBalabala(argv, options, cwd);
   }
 
   if (argv[0] === "balabala") {

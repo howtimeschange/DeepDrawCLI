@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "commander": "^14.0.0",
-    "dotenv": "^17.0.0"
+    "dotenv": "^17.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

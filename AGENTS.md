@@ -203,6 +203,27 @@ deepdraw product payload --input draft.json --stage update --pretty
 
 ## 巴拉上新流程
 
+新增状态型流程优先于手写 `draft.json`：
+
+```bash
+deepdraw balabala import --spu SPU --mdm SKU.xlsx --launch-plan PLAN.xlsx --copywriting COPY.xlsx
+deepdraw balabala template --spu SPU --execute
+deepdraw balabala review --spu SPU [--ai-responses AI.json] [--ocr-facts OCR.json]
+deepdraw balabala sync --spu SPU --execute
+deepdraw balabala override --spu SPU --field FIELD --value VALUE
+deepdraw balabala plan create|full-update|incremental --spu SPU --execute --plan
+deepdraw balabala publish create|full-update|incremental --spu 204426140121-test --execute --yes
+deepdraw balabala readback --spu SPU --execute
+```
+
+- `.deepdraw-workflows/balabala/<spu>/` 是本地且 Git 忽略的审计缓存；绝不写入原始表格/图片、凭据、签名或 token。
+- `import` 不读取凭据、不联网；XLSX 必须扫描真实单元格，不能信任 worksheet dimension。颜色/SKU 永远以 MDM 完整集合为准。
+- `template` 串行调用 `dp.merchant.trades` 与 `dp.trade.fields`。后者是当前字段 ID、枚举、必填、销售属性和子字段激活的唯一权威。
+- AI/OCR 只审计调用方提供的本地 JSON。AI 必须满足当前枚举、字段激活、证据和 `>=0.7` 置信度；AI 不可填价格、条码、合规、SKU 或真实尺码事实。OCR 必须引用图片 SHA-256 和原文。
+- `sync` 从 `resource=form` 保存原始远端快照，并将远端字段、颜色别名、销售尺码、数值写入 `productId` 与 UUID 回读 `resourceId` 分别保存。`override` 仅本地修改已同步的普通标量字段并记录人工覆盖；不能改颜色、尺码、商家 SKU 或尺码表。
+- `full-update` 先回读并要求商家 SKU 的规范颜色+尺码交集。普通 `incremental` 只可改标量并自动携带颜色与尺码；尺码表、商家 SKU、颜色/SKU 改动禁止走普通增量。
+- 真实 `publish` 在 CLI 内仅允许 `204426140121-test`。所有写入先 `--execute --plan`，再由用户明确 `--execute --yes`；写后必须 `resource=form` 回读。`10200`、HTTP 200 或丢失响应不能跳过回读。
+
 优先使用 `deepdraw balabala` 将巴拉巴拉字段组装、查重/回读、创建和全量更新串在同一命令空间。该流程始终通过 `api-registry` 的注册接口执行，并在输出中标记 `workflow: "balabala-listing"`：
 
 ```bash
