@@ -35,11 +35,12 @@ function formFields(root: JsonRecord): JsonRecord[] {
     if (Object.keys(meta).length === 0) return [];
     const name = text(meta.name ?? item.name ?? item.fieldName ?? item.field_name);
     if (!name) return [];
+    const valueJson = record(item.valueJson ?? item.value_json);
     return [{
       field_name: name,
       field_id: text(meta.id ?? item.fieldId ?? item.field_id),
       field_type: text(meta.type ?? item.type ?? item.fieldType ?? item.field_type) || "TEXT",
-      value_text: formFieldValue(item),
+      ...(Object.keys(valueJson).length ? { value_json: valueJson } : { value_text: formFieldValue(item) }),
     }];
   });
 }
@@ -87,15 +88,30 @@ function fields(input: Record<string, unknown>): JsonRecord {
     for (const item of [selectionField("颜色", record(root.colors)), selectionField("尺码", record(root.sizes))]) {
       if (item && !projectedNames.has(compact(item.field_name))) projected.push(item);
     }
-    if (projected.length) return Object.fromEntries(projected.map((field) => [text(field.field_name), field.value_text]));
+    if (projected.length) return Object.fromEntries(projected.map((field) => [text(field.field_name), field.value_json ?? field.value_text]));
     return Object.fromEntries(raw.map(record).map((field) => [text(field.name ?? field.fieldName ?? field.field_name), field.value ?? field.valueJson ?? field.value_json ?? field.valueText ?? field.value_text]));
   }
   return record(raw);
 }
 function fieldValue(source: JsonRecord, name: string): unknown { return Object.entries(source).find(([key]) => compact(key) === compact(name))?.[1]; }
 function structured(name: string): boolean { return compact(name).includes("尺码表") || compact(name) === "多平台尺码" || compact(name) === "商家sku"; }
-function normalizeSkuKey(value: unknown): string[] { return Object.keys(record(value)).filter((key) => key !== "title").map((key) => compact(key)); }
-function equal(left: unknown, right: unknown): boolean { return JSON.stringify(left) === JSON.stringify(right) || text(left).replace(/；/g, ";") === text(right).replace(/；/g, ";"); }
+function normalizeSkuKey(value: unknown): string[] {
+  const output: string[] = [];
+  for (const [color, rows] of Object.entries(record(value))) {
+    if (color === "title") continue;
+    const nested = record(rows);
+    if (Object.keys(nested).length > 0) {
+      for (const size of Object.keys(nested)) output.push(`${compact(color)}\u0000${compact(size)}`);
+    } else output.push(compact(color));
+  }
+  return output;
+}
+function normalizedValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizedValue);
+  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value as object).sort((left, right) => left.localeCompare(right, "zh-Hans-CN")).map((key) => [key, normalizedValue(record(value)[key])]));
+  return typeof value === "string" ? value.replace(/；/g, ";") : value;
+}
+function equal(left: unknown, right: unknown): boolean { return JSON.stringify(normalizedValue(left)) === JSON.stringify(normalizedValue(right)); }
 
 export function prepareBalabalaExistingUpdate(localInput: Record<string, unknown>, remoteInput: Record<string, unknown>): { payload: JsonRecord; blocking: Array<{ code: string; message: string }> } {
   const local = fields(localInput);

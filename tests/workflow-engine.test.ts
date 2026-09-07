@@ -25,6 +25,22 @@ test("template sync assembles current-template fields and retains all imported M
   assert.match(String(result.draft.fields?.[0]?.value_text), /白绿色调00414/);
 });
 
+test("template sync blocks publication when a current-template field needs manual special formatting", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "deepdraw-engine-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const engine = new BalabalaWorkflowEngine(WorkflowStore.open("balabala", "204426140121-test", directory));
+  await engine.importNormalized({
+    spu: "204426140121-test", launchPlan: { productLine: "鞋品", category: "运动鞋", officialTrade: "童鞋>>运动鞋" },
+    copywriting: { rows: [] }, skus: [],
+  }, []);
+  const result = await engine.syncTemplate([
+    { tradeId: "546", tradePath: "童鞋>>运动鞋", sites: [] },
+  ], [{ id: "manual", name: "淘宝SKU参数", type: "TEXT", required: false }]);
+  assert.equal(result.state, "review_required");
+  assert.equal(result.blocking[0]?.code, "manual_required_special_format");
+  assert.equal(result.manual[0]?.code, "manual_required_special_format");
+});
+
 test("full-update preparation blocks non-overlapping remote SKU and incremental excludes structured fields", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "deepdraw-engine-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -54,4 +70,23 @@ test("remote sync hydrates an existing test archive and an override keeps colors
   assert.equal((await engine.snapshot()).draft.resourceId, "ed18698170c54da4baa88541d66e3536");
   const incremental = await engine.buildIncremental(["商品展示标题"]);
   assert.deepEqual(incremental.fields, { 商品展示标题: "原标题【增量测试】", 颜色: "蓝色,蓝色调00388", 尺码: "26" });
+});
+
+test("OCR review attaches the supplied PDF evidence to a current-template fact and rejects foreign fields", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "deepdraw-engine-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const engine = new BalabalaWorkflowEngine(WorkflowStore.open("balabala", "202426107033", directory));
+  await engine.importNormalized({
+    spu: "202426107033", launchPlan: { productLine: "童装", category: "羽绒服", officialTrade: "童装>>羽绒服" }, copywriting: { rows: [] }, skus: [],
+    images: [{ path: "/tmp/202426107033合格证.pdf", sha256: "certificate", role: "hangtag", mimeType: "application/pdf" }],
+  }, []);
+  await engine.syncTemplate([{ tradeId: "9680", tradePath: "童装>>羽绒服", sites: [] }], [{ id: "standard", name: "执行标准", type: "TEXT", required: true }]);
+  const result = await engine.auditOcr([
+    { fieldId: "standard", fieldName: "执行标准", value: "Q/BALABALA 103-2021", imageSha256: "certificate", confidence: 0.97, text: "执行标准：Q/BALABALA 103-2021" },
+    { fieldName: "伪造字段", value: "x", imageSha256: "certificate", confidence: 0.97, text: "x" },
+  ]);
+  assert.equal(result.state, "ready");
+  const field = (result.audit.fields as Array<{ fieldName: string; sourceType: string; sourceRefs: Array<{ path: string; sha256: string }> }>).find((item) => item.fieldName === "执行标准");
+  assert.deepEqual(field, { fieldName: "执行标准", sourceType: "ocr", sourceRefs: [{ path: "/tmp/202426107033合格证.pdf", sha256: "certificate", role: "hangtag" }], fieldId: "standard", fieldType: "TEXT", active: true, manualOverride: false, validationStatus: "valid", valueText: "Q/BALABALA 103-2021" });
+  assert.equal((result.audit.ocr as { rejected: Array<{ reason: string }> }).rejected[0]?.reason, "field_not_in_current_template");
 });

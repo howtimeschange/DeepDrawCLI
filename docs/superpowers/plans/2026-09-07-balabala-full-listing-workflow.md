@@ -408,7 +408,7 @@ Expected: original scalar value restored; saved final readback proves the extern
 
 - [ ] **Step 1: Perform final source and secret review**
 
-Run: `git status --short && git diff --check && rg -n --hidden --glob '!.git/**' 'd8cff435354cfdfcdaecc08a5703f862|946011f1dd5c4be994e8d1f02540ce6e' .`
+Run: `git status --short && git diff --check && rg -n --hidden --glob '!.git/**' '<APP_SECRET_VALUE>|<DOP_KEY_VALUE>' .`
 
 Expected: no sensitive credential in tracked changes; ignored state is unstaged.
 

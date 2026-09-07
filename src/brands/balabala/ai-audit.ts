@@ -43,10 +43,11 @@ export function auditAiResponses(planInput: Record<string, unknown>, responses: 
   return { accepted, rejected };
 }
 
-export function auditOcrFacts(images: Array<Record<string, unknown>>, facts: unknown[]): AuditResult {
+export function auditOcrFacts(images: Array<Record<string, unknown>>, facts: unknown[], templateFields?: unknown[]): AuditResult {
   const accepted: JsonRecord[] = [];
   const rejected: Array<JsonRecord & { reason: string }> = [];
   const known = new Set(images.map((image) => text(image.sha256)).filter(Boolean));
+  const currentFields = (templateFields ?? []).map(record);
   for (const raw of facts) {
     const fact = record(raw);
     const imageSha256 = text(fact.imageSha256 ?? fact.image_sha256);
@@ -54,8 +55,14 @@ export function auditOcrFacts(images: Array<Record<string, unknown>>, facts: unk
     const confidence = Number(fact.confidence);
     if (!Number.isFinite(confidence) || confidence < 0.7) { rejected.push({ ...fact, reason: "confidence_below_0_7" }); continue; }
     if (!text(fact.text ?? fact.ocrText ?? fact.ocr_text)) { rejected.push({ ...fact, reason: "ocr_text_evidence_required" }); continue; }
-    if (!text(fact.fieldName ?? fact.field_name) || !text(fact.value)) { rejected.push({ ...fact, reason: "field_and_value_required" }); continue; }
-    accepted.push({ ...fact, sourceType: "ocr" });
+    const fieldName = text(fact.fieldName ?? fact.field_name);
+    const fieldId = text(fact.fieldId ?? fact.field_id);
+    if (!fieldName || !text(fact.value)) { rejected.push({ ...fact, reason: "field_and_value_required" }); continue; }
+    if (currentFields.length > 0 && !currentFields.some((field) => (fieldId && text(field.fieldId ?? field.field_id ?? field.id) === fieldId) || compact(field.fieldName ?? field.field_name ?? field.name) === compact(fieldName))) {
+      rejected.push({ ...fact, reason: "field_not_in_current_template" });
+      continue;
+    }
+    accepted.push({ ...fact, fieldName, ...(fieldId ? { fieldId } : {}), sourceType: "ocr" });
   }
   return { accepted, rejected };
 }

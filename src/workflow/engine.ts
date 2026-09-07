@@ -83,6 +83,12 @@ export class BalabalaWorkflowEngine {
     ];
     const deduped = [...new Map(fields.map((field) => [compact(field.fieldName), field])).values()];
     const missing = deduped.filter((field) => field.active !== false && (field.validationStatus === "missing" || field.validationStatus === "invalid"));
+    // A template field which has no safe automatic representation is not merely
+    // informational.  Leaving it out of the SDK payload would silently drop a
+    // current DeepDraw field, so it must block the workflow until a human
+    // supplies the platform-specific format.
+    const manual = deduped.filter((field) => field.active !== false && field.staleReason?.includes("manual_required"));
+    const blockers = [...missing, ...manual.filter((field) => !missing.includes(field))];
     const plan = record(current.normalized.launchPlan);
     const copyRows = record(current.normalized.copywriting).rows;
     const copy = Array.isArray(copyRows) ? record(copyRows[0]) : {};
@@ -105,7 +111,7 @@ export class BalabalaWorkflowEngine {
       aiPlan: { ...this.plugin.buildAiPlan(current.normalized, deduped), fields: (template.fields as JsonRecord[]).map(record).map((field) => ({ fieldId: field.fieldId, fieldName: field.fieldName, active: true, options: field.options })) },
       assembledAt: new Date().toISOString(),
     };
-    return this.store.write({ ...current, template, draft, audit, state: missing.length ? "review_required" : "ready", blocking: missing.map((field) => ({ code: field.staleReason ?? "required_field_missing", message: `字段 ${field.fieldName} ${field.validationStatus === "invalid" ? "与当前模板不匹配" : "需要补充或人工确认"}` })), manual: deduped.filter((field) => field.staleReason?.includes("manual_required")).map((field) => ({ code: field.staleReason ?? "manual_required", message: `字段 ${field.fieldName} 需要人工确认` })) });
+    return this.store.write({ ...current, template, draft, audit, state: blockers.length ? "review_required" : "ready", blocking: blockers.map((field) => ({ code: field.staleReason ?? "required_field_missing", message: `字段 ${field.fieldName} ${field.validationStatus === "invalid" ? "与当前模板不匹配" : "需要补充或人工确认"}` })), manual: manual.map((field) => ({ code: field.staleReason ?? "manual_required", message: `字段 ${field.fieldName} 需要人工确认` })) });
   }
 
   async auditAi(responses: unknown[]): Promise<WorkflowSnapshot> {
@@ -119,9 +125,16 @@ export class BalabalaWorkflowEngine {
   async auditOcr(facts: unknown[]): Promise<WorkflowSnapshot> {
     const current = await this.snapshot();
     const images = Array.isArray(current.normalized.images) ? current.normalized.images.map(record) : [];
-    const result = auditOcrFacts(images, facts);
+    const templateFields = Array.isArray(current.template.fields) ? current.template.fields : [];
+    const result = auditOcrFacts(images, facts, templateFields);
     const auditedValues = record(current.normalized.auditedValues);
-    for (const item of result.accepted) auditedValues[text(item.fieldName)] = { valueText: text(item.value), sourceType: "ocr", confidence: item.confidence, evidence: [item.imageSha256, item.text] };
+    for (const item of result.accepted) {
+      const evidence = images.find((image) => text(image.sha256) === text(item.imageSha256 ?? item.image_sha256));
+      auditedValues[text(item.fieldName)] = {
+        valueText: text(item.value), sourceType: "ocr", confidence: item.confidence, evidence: [item.imageSha256, item.text],
+        ...(evidence ? { sourceRef: { path: text(evidence.path), sha256: text(evidence.sha256), role: text(evidence.role) } } : {}),
+      };
+    }
     return this.assemble({ ...current, normalized: { ...current.normalized, auditedValues }, audit: { ...current.audit, ocr: result } });
   }
 

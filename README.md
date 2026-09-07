@@ -319,9 +319,9 @@ deepdraw balabala template --spu 204426140121 --execute
 deepdraw balabala review --spu 204426140121
 ```
 
-XLSX 导入扫描工作表真实单元格，不信任错误的 worksheet dimension，因此 `期货`/`O2O` 即使被标成 `A1` 仍能解析实际数据行。图片只生成路径、角色和 SHA-256 审计，只能作为 OCR/视觉证据，不能生成 MDM 颜色、SKU 或尺码事实。
+XLSX 导入扫描工作表真实单元格，不信任错误的 worksheet dimension，因此 `期货`/`O2O` 即使被标成 `A1` 仍能解析实际数据行。图片包会生成路径、角色和 SHA-256 审计；除 `jpg/jpeg/png/webp` 外，也会保留合格证、吊牌、洗标等 `PDF` 原件（`hangtag`/`washlabel`），只能作为 OCR/视觉证据，不能生成 MDM 颜色、SKU 或尺码事实。
 
-AI/OCR provider 由业务或 agent 输出本地 JSON 后再交给 CLI 审计，CLI 不自行调用付费模型。AI 仅接受当前模板的激活枚举、具备证据且置信度至少 `0.7` 的建议；价格、条码、生产/合规、SKU、销售尺码、尺码量点和充绒量永远不可由 AI 填写。OCR 必须引用导入图片的 SHA-256 和原始文本。
+AI/OCR provider 由业务或 agent 输出本地 JSON 后再交给 CLI 审计，CLI 不自行调用付费模型。AI 仅接受当前模板的激活枚举、具备证据且置信度至少 `0.7` 的建议；价格、条码、生产/合规、SKU、销售尺码、尺码量点和充绒量永远不可由 AI 填写。OCR 必须引用导入图片或 PDF 的 SHA-256 和原始文本，且字段 ID/名称必须命中当前深绘模板；采纳后字段会回链原始文件路径、哈希和角色。
 
 ```bash
 deepdraw balabala review --spu 204426140121 \
@@ -329,7 +329,7 @@ deepdraw balabala review --spu 204426140121 \
   --ocr-facts /path/ocr-facts.json
 ```
 
-`plan` 仍会按已有审批机制生成 DeepDraw 计划；`publish` 只允许测试款 `204426140121-test`。创建成功后会自动提取数值 `productId`、继续全量更新并回读。全量更新先读取 `resource=form`，要求本地/远端商家 SKU 至少一个规范颜色+尺码键交集；普通增量只可改标量并自动携带颜色与尺码。尺码表、商家 SKU、颜色/SKU 变化不能走普通增量。回读缺少结构化表时会标记 `needs_ui_verification`，不会误报为成功。
+`plan` 仍会按已有审批机制生成 DeepDraw 计划；远端商品动作 `sync`、`readback` 和 `publish` 都只允许测试款 `204426140121-test`，正式款只能本地导入、组装和审查。创建成功后会自动提取数值 `productId`、继续全量更新并回读。全量更新先读取 `resource=form`，要求本地/远端商家 SKU 至少一个规范颜色+尺码键交集，并以合并后的完整档案重新生成请求体；普通增量只可改标量并自动携带颜色与尺码。尺码表、商家 SKU、颜色/SKU 变化不能走普通增量。回读缺少结构化表时会标记 `needs_ui_verification`，不会误报为成功。
 
 ```bash
 # 已有深绘档案：先把 resource=form 的真实字段、颜色别名、销售尺码、写入 productId 和回读 UUID 同步进本地状态

@@ -23,3 +23,12 @@ test("OCR only accepts traceable textual facts and does not invent missing image
   assert.equal(result.accepted.length, 1);
   assert.equal(result.rejected.length, 1);
 });
+
+test("OCR facts are constrained to the current DeepDraw template when one is available", () => {
+  const result = auditOcrFacts([{ path: "/tmp/tag.pdf", sha256: "tag", role: "hangtag", mimeType: "application/pdf" }], [
+    { fieldId: "standard", fieldName: "执行标准", value: "Q/BALABALA 103-2021", imageSha256: "tag", confidence: 0.95, text: "执行标准：Q/BALABALA 103-2021" },
+    { fieldName: "任意伪造字段", value: "x", imageSha256: "tag", confidence: 0.95, text: "x" },
+  ], [{ fieldId: "standard", fieldName: "执行标准" }]);
+  assert.equal(result.accepted.length, 1);
+  assert.equal(result.rejected[0]?.reason, "field_not_in_current_template");
+});

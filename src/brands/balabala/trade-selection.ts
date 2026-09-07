@@ -45,6 +45,10 @@ function leaf(value: unknown): string {
   return parts.at(-1) ?? "";
 }
 
+function isGenericOfficialLeaf(value: unknown): boolean {
+  return ["裤子", "套装", "其他", "其他童装", "运动鞋", "t恤", "羽绒服", "马甲", "卫衣", "衬衫", "连衣裙", "大衣", "羽绒马甲", "运动裤卫裤", "学步鞋", "靴子", "鞋"].includes(leaf(value));
+}
+
 function valueFor(object: JsonRecord, names: string[]): unknown {
   // The upstream trade tree carries both `name` and the synthesized
   // `tradePath`. Prefer the semantic field order supplied by the caller;
@@ -86,7 +90,10 @@ function normalizedSize(value: unknown): string {
 function categoryEvidence(context: JsonRecord): Array<{ value: string; weight: number }> {
   const plan = record(context.launchPlan);
   const values: Array<{ value: string; weight: number }> = [
-    { value: text(plan.officialTrade), weight: 1000 },
+    // Listingify treats a generic official leaf (for example “裤子”) as a
+    // candidate, not a mandate.  More specific VIP/Douyin/plan evidence may
+    // safely replace it when it identifies a child-apparel leaf.
+    { value: text(plan.officialTrade), weight: isGenericOfficialLeaf(plan.officialTrade) ? 300 : 1000 },
     { value: text(plan.vipTrade), weight: 420 },
     { value: text(plan.vipStyle), weight: 320 },
     { value: text(plan.douyinTrade), weight: 260 },
@@ -102,6 +109,7 @@ function categoryEvidence(context: JsonRecord): Array<{ value: string; weight: n
     [/衬衫/, ["衬衫"]],
     [/大衣/, ["呢大衣"]],
     [/运动裤卫裤|休闲裤/, ["长裤"]],
+    [/牛仔(?:裤|长裤|短裤|中裤)/, ["牛仔裤"]],
   ];
   for (const { value, weight } of [...values]) {
     for (const [expression, matches] of aliases) {
@@ -139,6 +147,31 @@ function scoreCandidate(context: JsonRecord, candidate: JsonRecord): TradeCandid
   if (/鞋|靴/.test(pathContext) && /运动|户外/.test(path) && /运动|户外/.test(pathContext)) score += 80;
   if (/鞋|靴/.test(pathContext) && /男童鞋|女童鞋/.test(path) && !/男童鞋|女童鞋/.test(normalized(plan.officialTrade))) score -= 90;
   if (/blbl&mini/.test(path)) score -= 500;
+
+  // The DeepDraw tree contains adult, sports and child leaves with identical
+  // names.  This is the context/tie-break layer used by Listingify after a
+  // leaf match: retain a real tie for manual review, but prefer the child
+  // branch, then the gender/age/subcategory branch when source evidence is
+  // explicit.  It is deliberately not a hard-coded trade id mapping.
+  const apparel = /服|衣|裤|裙/.test(`${text(plan.productLine)} ${text(plan.category)} ${text(plan.subcategory)}`);
+  const gender = normalized(plan.gender);
+  const middleChild = /中童|大童/.test(normalized(plan.ageBand)) || Number((text(plan.sizeRange).match(/\d+/g) ?? []).at(-1) ?? 0) >= 130;
+  const longPants = /长裤/.test(`${text(plan.category)} ${text(plan.subcategory)}`);
+  const down = /羽绒服/.test(`${text(plan.category)} ${text(plan.subcategory)}`);
+  const sweatshirt = /卫衣/.test(`${text(plan.category)} ${text(plan.subcategory)}`);
+  const denim = /牛仔/.test(`${text(plan.category)} ${text(plan.subcategory)} ${text(plan.douyinTrade)}`);
+  if (apparel && /童装婴幼儿服装/.test(path)) score += 480;
+  if (apparel && /男/.test(gender) && /童装婴幼儿服装>+男童/.test(path)) score += 360;
+  if (apparel && /女/.test(gender) && /童装婴幼儿服装>+中大童/.test(path)) score += 260;
+  if (apparel && /中性|男女/.test(gender) && /童装婴幼儿服装>+中性童装/.test(path)) score += 300;
+  if (apparel && middleChild && /童装婴幼儿服装>+中大童/.test(path)) score += 100;
+  if (longPants && /男/.test(gender) && /童装婴幼儿服装>+男童>+长裤/.test(path)) score += 360;
+  if (longPants && /女/.test(gender) && /童装婴幼儿服装>+中大童>+长裤/.test(path)) score += 260;
+  if (longPants && /中性|男女/.test(gender) && /童装婴幼儿服装>+中性童装>+长裤/.test(path)) score += 300;
+  if (down && /男/.test(gender) && /童装婴幼儿服装>+男童>+羽绒服/.test(path)) score += 220;
+  if (down && /女/.test(gender) && /童装婴幼儿服装>+中大童>+羽绒服/.test(path)) score += 190;
+  if (sweatshirt && /女/.test(gender) && /童装婴幼儿服装>+中大童>+卫衣/.test(path)) score += 170;
+  if (denim && /童装婴幼儿服装>+(?:中大童>+)?牛仔裤/.test(path)) score += 500;
 
   const actualPlatforms = [...new Set(list(valueFor(candidate, ["sites", "platforms", "supportSites", "support_sites"])).map(platformKey))];
   const required = requiredPlatforms(context);

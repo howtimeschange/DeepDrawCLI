@@ -3,6 +3,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
 import XLSX from "xlsx";
 import type { SourceReference } from "../../workflow/types.js";
+import { normalizePlmSizeChartRows } from "./size-chart-rules.js";
 
 type JsonRecord = Record<string, unknown>;
 type SheetCell = { w?: unknown; v?: unknown };
@@ -19,6 +20,9 @@ export interface BalabalaImportInput {
   launchPlanPath: string;
   copywritingPath: string;
   shoeSizeChartPath?: string;
+  plmSizeChartPath?: string;
+  apparelSizeReferencePath?: string;
+  fieldMappingsPath?: string;
   imagesPath?: string;
 }
 
@@ -30,6 +34,9 @@ export interface ImportedBalabalaSources extends JsonRecord {
   launchPlan: JsonRecord;
   copywriting: { rows: JsonRecord[] };
   sizeChart?: JsonRecord;
+  plmSizeChart?: JsonRecord;
+  apparelSizeReference?: JsonRecord;
+  fieldMappings?: JsonRecord[];
   images: JsonRecord[];
 }
 
@@ -141,6 +148,7 @@ export function selectBalabalaRows(rows: PhysicalRow[], spu: string, spuColumns:
 
 function normalizeMdmRow(values: Record<string, string>, ref: SourceReference): JsonRecord {
   return {
+    raw: { ...values },
     code: valueFor(values, ["款号"]),
     title: valueFor(values, ["款名称", "商品名称"]),
     skcCode: valueFor(values, ["SKC编码", "款色", "款色号"]),
@@ -165,6 +173,7 @@ function normalizePlanRow(values: Record<string, string>, ref: SourceReference):
     ? `2026-${rawLaunchDate.match(/^(\d{1,2})月(\d{1,2})日$/)![1].padStart(2, "0")}-${rawLaunchDate.match(/^(\d{1,2})月(\d{1,2})日$/)![2].padStart(2, "0")}`
     : rawLaunchDate;
   return {
+    raw: { ...values },
     code: valueFor(values, ["大货款号", "商品编码", "款号"]),
     skcCode: valueFor(values, ["款色号", "款色"]),
     productLine: valueFor(values, ["产品线"]),
@@ -191,6 +200,7 @@ function normalizePlanRow(values: Record<string, string>, ref: SourceReference):
 
 function normalizeCopyRow(values: Record<string, string>, ref: SourceReference): JsonRecord {
   return {
+    raw: { ...values },
     code: valueFor(values, ["款号"]),
     skcCode: valueFor(values, ["款色"]),
     category: valueFor(values, ["品类"]),
@@ -237,16 +247,77 @@ function shoeSizeRows(path: string): JsonRecord[] {
   return rows;
 }
 
+async function plmSizeRows(path: string, spu: string): Promise<JsonRecord[]> {
+  const books = rowsFromWorkbook(path, ["款号", "测量点", "尺码", "尺码值"]);
+  const physicalRows = books.flatMap(({ sheet, rows }) => rows.map((entry) => ({ ...entry.values, sheetName: sheet, rowNumber: entry.row })));
+  const normalized = normalizePlmSizeChartRows(physicalRows).filter((row) => row.spuCode === spu);
+  if (normalized.length === 0) throw new Error(`PLM size chart has no normalized rows for ${spu}`);
+  return normalized.map((row) => ({
+    款号: row.spuCode,
+    ...(row.skcCode ? { 款色: row.skcCode } : {}),
+    测量点: row.measurementPoint,
+    尺码: row.size,
+    尺码值: row.sizeValue,
+    ...row.rowJson,
+  }));
+}
+
+/**
+ * The Balabala tab in 尺码数据模板.xlsx is not a product PLM measurement
+ * table.  It is the brand-wide, auditable reference for age, weight, Douyin
+ * weight and GB/T-style top/bottom model values.  Keep it separate so it can
+ * never be mistaken for a source of garment measurements such as 衣长.
+ */
+function apparelSizeReference(path: string): JsonRecord {
+  const workbook = XLSX.readFile(path, { cellText: true, cellDates: false });
+  const sheetName = workbook.SheetNames.find((name) => normalizeHeader(name) === "balabala");
+  if (!sheetName) throw new Error("apparel size reference requires a balabala worksheet");
+  const cells = physicalCells(workbook.Sheets[sheetName] as PhysicalSheet);
+  const headerRow = headerRowFor(workbook.Sheets[sheetName] as PhysicalSheet, ["抖音重量", "男上装", "男下装", "女上装", "女下装"]);
+  if (!headerRow) throw new Error("apparel size reference has no Balabala header row");
+  const headers = cells.filter((cell) => cell.row === headerRow);
+  const column = (name: string, occurrence = 0): number | undefined => headers.filter((cell) => normalizeHeader(cell.value) === normalizeHeader(name))[occurrence]?.col;
+  const columns = {
+    size: column("尺码", 1) ?? column("尺码", 0), weightKg: column("体重"), age: column("年龄"), douyinWeightJin: column("抖音重量"),
+    maleTop: column("男上装"), maleBottom: column("男下装"), femaleTop: column("女上装"), femaleBottom: column("女下装"), neutralTop: column("中性上装"), neutralBottom: column("中性下装"),
+  };
+  if (!columns.size || !columns.weightKg || !columns.age || !columns.douyinWeightJin || !columns.maleTop || !columns.maleBottom || !columns.femaleTop || !columns.femaleBottom || !columns.neutralTop || !columns.neutralBottom) {
+    throw new Error("apparel size reference is missing required Balabala columns");
+  }
+  const byAddress = new Map(cells.map((cell) => [`${columnName(cell.col)}${cell.row}`, cell.value]));
+  const value = (row: number, col: number) => byAddress.get(`${columnName(col)}${row}`) ?? "";
+  const rows = [...new Set(cells.map((cell) => cell.row))].filter((row) => row > headerRow).map((row) => ({
+    size: text(value(row, columns.size!)), weightKg: text(value(row, columns.weightKg!)), age: text(value(row, columns.age!)), douyinWeightJin: text(value(row, columns.douyinWeightJin!)),
+    maleTop: text(value(row, columns.maleTop!)), maleBottom: text(value(row, columns.maleBottom!)), femaleTop: text(value(row, columns.femaleTop!)), femaleBottom: text(value(row, columns.femaleBottom!)), neutralTop: text(value(row, columns.neutralTop!)), neutralBottom: text(value(row, columns.neutralBottom!)),
+  })).filter((row) => /^\d{2,3}(?:cm)?$/i.test(row.size) && row.age && row.maleTop && row.maleBottom && row.femaleTop && row.femaleBottom && row.neutralTop && row.neutralBottom);
+  if (rows.length === 0) throw new Error("apparel size reference has no usable Balabala reference rows");
+  return { source: "apparel_size_reference", sheet: sheetName, headerRow, rows };
+}
+
+async function fieldMappings(path: string): Promise<JsonRecord[]> {
+  let parsed: unknown;
+  try { parsed = JSON.parse(await readFile(path, "utf8")) as unknown; } catch (error) { throw new Error(`Invalid field mappings JSON ${path}: ${error instanceof Error ? error.message : String(error)}`); }
+  const root = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as JsonRecord : {};
+  const list: unknown[] = Array.isArray(parsed) ? parsed : Array.isArray(root.mappings) ? root.mappings : [];
+  const output = list.filter((item): item is JsonRecord => Boolean(item) && typeof item === "object" && !Array.isArray(item)).map((item) => ({ ...item }));
+  if (output.some((item) => !text(item.targetField ?? item.target_field ?? item.fieldName ?? item.field_name))) throw new Error("field mappings require targetField");
+  return output;
+}
+
 function imageRole(path: string): string {
   const name = basename(path).toLowerCase();
-  if (/洗唛|wash/.test(name)) return "washlabel";
-  if (/吊牌|hangtag|tag/.test(name)) return "hangtag";
+  if (/洗唛|洗标|wash/.test(name)) return "washlabel";
+  if (/吊牌|合格证|hangtag|certificate|tag/.test(name)) return "hangtag";
   if (/平铺|flat/.test(name) || /^\d{12,}/.test(name)) return "flat_image";
   return "reference";
 }
 
 async function imageManifest(path: string): Promise<JsonRecord[]> {
-  const accepted = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+  // OCR evidence in the real Balabala material packages is often a print-ready
+  // PDF (合格证/洗标), not only a flattened image.  Store its original bytes and
+  // hash in the same evidence manifest so a reviewed OCR fact is traceable to
+  // the exact supplied file.  Recognition itself stays external/audited.
+  const accepted = new Set([".jpg", ".jpeg", ".png", ".webp", ".pdf"]);
   const files: string[] = [];
   const visit = async (directory: string): Promise<void> => {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -259,7 +330,7 @@ async function imageManifest(path: string): Promise<JsonRecord[]> {
   return Promise.all(files.sort().map(async (file) => ({
     path: file,
     role: imageRole(file),
-    mimeType: extname(file).toLowerCase() === ".png" ? "image/png" : extname(file).toLowerCase() === ".webp" ? "image/webp" : "image/jpeg",
+    mimeType: extname(file).toLowerCase() === ".pdf" ? "application/pdf" : extname(file).toLowerCase() === ".png" ? "image/png" : extname(file).toLowerCase() === ".webp" ? "image/webp" : "image/jpeg",
     bytes: (await stat(file)).size,
     sha256: createHash("sha256").update(await readFile(file)).digest("hex"),
   })));
@@ -287,22 +358,31 @@ export async function importBalabalaSources(input: BalabalaImportInput): Promise
   const copyRefs = await Promise.all(copyMatches.map(({ sheet, row }) => sourceReference(input.copywritingPath, sheet, row)));
   const copywritingRows = copyMatches.map((item, index) => normalizeCopyRow(item.values, copyRefs[index]));
 
-  const sourceFiles = [input.mdmPath, input.launchPlanPath, input.copywritingPath, ...(input.shoeSizeChartPath ? [input.shoeSizeChartPath] : [])];
+  const sourceFiles = [input.mdmPath, input.launchPlanPath, input.copywritingPath, ...(input.shoeSizeChartPath ? [input.shoeSizeChartPath] : []), ...(input.plmSizeChartPath ? [input.plmSizeChartPath] : []), ...(input.apparelSizeReferencePath ? [input.apparelSizeReferencePath] : []), ...(input.fieldMappingsPath ? [input.fieldMappingsPath] : [])];
   const sources = await Promise.all(sourceFiles.map((path) => sourceReference(path)));
   const sizeChart = input.shoeSizeChartPath ? {
     source: "shoe_size_chart",
     group: "sport_leisure",
     rows: shoeSizeRows(input.shoeSizeChartPath).filter((row) => skus.some((sku) => text(sku.size) === text(row.size))),
   } : undefined;
+  const plmSizeChart = input.plmSizeChartPath ? {
+    source: "plm_size_chart",
+    rows: await plmSizeRows(input.plmSizeChartPath, spu),
+  } : undefined;
+  const importedApparelSizeReference = input.apparelSizeReferencePath ? apparelSizeReference(input.apparelSizeReferencePath) : undefined;
+  const configuredMappings = input.fieldMappingsPath ? await fieldMappings(input.fieldMappingsPath) : undefined;
   const images = input.imagesPath ? await imageManifest(input.imagesPath) : [];
   return {
     spu,
     sources,
     skus,
-    mdm: { title: text(skus[0]?.title), colors: [...new Set(skus.map((sku) => text(sku.color)).filter(Boolean))] },
+    mdm: { title: text(skus[0]?.title), colors: [...new Set(skus.map((sku) => text(sku.color)).filter(Boolean))], rows: skus.map((sku) => sku.raw && typeof sku.raw === "object" && !Array.isArray(sku.raw) ? sku.raw : {}) },
     launchPlan: { ...launchRows[0], rows: launchRows },
     copywriting: { rows: copywritingRows },
     ...(sizeChart ? { sizeChart } : {}),
+    ...(plmSizeChart ? { plmSizeChart } : {}),
+    ...(importedApparelSizeReference ? { apparelSizeReference: importedApparelSizeReference } : {}),
+    ...(configuredMappings ? { fieldMappings: configuredMappings } : {}),
     images,
   };
 }

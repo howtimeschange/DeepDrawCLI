@@ -44,3 +44,38 @@ test("uses full tradePath ahead of a same-named leaf when trees are flattened", 
   assert.equal(result.selected?.tradeId, "546");
   assert.equal(result.manualSelectionRequired, false);
 });
+
+test("ports Listingify child-apparel context tie breaks for down jackets and long pants", () => {
+  const candidates = [
+    { id: "27", name: "羽绒服", tradePath: "女装>>羽绒服" },
+    { id: "629", name: "羽绒服", tradePath: "童装婴幼儿服装>>羽绒服" },
+    { id: "9652", name: "羽绒服", tradePath: "童装婴幼儿服装>>中大童>>羽绒服" },
+    { id: "9680", name: "羽绒服", tradePath: "童装婴幼儿服装>>男童>>羽绒服" },
+  ];
+  const down = selectBalabalaTrade({
+    launchPlan: { officialTrade: "童装/婴儿装/亲子装>>羽绒服饰/羽绒内胆>>羽绒服", category: "羽绒服", subcategory: "中羽绒服", gender: "男", ageBand: "中童", sizeRange: "140-180" },
+    skus: [{ size: "140" }],
+  }, candidates);
+  assert.equal(down.selected?.tradeId, "9680");
+  const pants = selectBalabalaTrade({
+    launchPlan: { category: "长裤", subcategory: "针织长裤", vipTrade: "儿童裤子", douyinTrade: "服饰内衣>服饰>童装>休闲裤", gender: "男", ageBand: "中童", sizeRange: "110-175" },
+    skus: [{ size: "110" }],
+  }, [
+    { id: "10962", name: "长裤", tradePath: "童装婴幼儿服装>>中性童装>>长裤" },
+    { id: "9659", name: "长裤", tradePath: "童装婴幼儿服装>>中大童>>长裤" },
+    { id: "9685", name: "长裤", tradePath: "童装婴幼儿服装>>男童>>长裤" },
+  ]);
+  assert.equal(pants.selected?.tradeId, "9685");
+});
+
+test("lets specific denim evidence outrank a generic official pants leaf", () => {
+  const result = selectBalabalaTrade({
+    launchPlan: { officialTrade: "童装/婴儿装/亲子装>>裤子", category: "长裤", subcategory: "牛仔长裤", vipTrade: "儿童裤子", douyinTrade: "服饰内衣>服饰>童装>牛仔裤", gender: "女", ageBand: "中童", sizeRange: "140-175" },
+    skus: [{ size: "140" }],
+  }, [
+    { id: "72", name: "裤子", tradePath: "童装婴幼儿服装>>裤子" },
+    { id: "11740", name: "牛仔裤", tradePath: "童装婴幼儿服装>>中大童>>牛仔裤" },
+  ]);
+  assert.equal(result.selected?.tradeId, "11740");
+  assert.equal(result.manualSelectionRequired, false);
+});
