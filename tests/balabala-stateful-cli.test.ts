@@ -204,6 +204,7 @@ test("stateful template --tenant selects the requested stored tenant instead of 
     },
   }), "utf8");
   const seenKeys: string[] = [];
+  const seenRequests: Array<{ type: string | null; merchantId: string | null; tradeId: string | null }> = [];
   const result = await runCli([
     "balabala", "template", "--mode", "production", "--spu", "202426107128", "--tenant", "电商巴拉巴拉", "--execute",
   ], {
@@ -217,7 +218,9 @@ test("stateful template --tenant selects the requested stored tenant instead of 
     }),
     fetchImpl: async (url, init) => {
       seenKeys.push(String(new Headers(init?.headers).get("x-ca-key")));
-      const type = new URL(String(url)).searchParams.get("type");
+      const requestUrl = new URL(String(url));
+      const type = requestUrl.searchParams.get("type");
+      seenRequests.push({ type, merchantId: requestUrl.searchParams.get("merchantId"), tradeId: requestUrl.searchParams.get("tradeId") });
       const body = type === "dp.merchant.trades"
         ? [{ id: "9680", name: "羽绒服", tradePath: "童装婴幼儿服装>>男童>>羽绒服" }]
         : [{ id: "color", name: "颜色", type: "MULTI_CHOICE", isSaleProp: true, options: ["蓝色,蓝色调00388"] }, { id: "size", name: "尺码", type: "MULTI_CHOICE", isSaleProp: true, options: ["140cm"] }];
@@ -226,6 +229,10 @@ test("stateful template --tenant selects the requested stored tenant instead of 
   });
   assert.equal(result.exitCode, 0);
   assert.deepEqual(seenKeys, ["balabala-app-key", "balabala-app-key"]);
+  assert.deepEqual(seenRequests, [
+    { type: "dp.merchant.trades", merchantId: "1162", tradeId: null },
+    { type: "dp.trade.fields", merchantId: "1162", tradeId: "9680" },
+  ]);
 });
 
 test("stateful full-update sends the post-readback merged payload, including remote fields retained for a covering update", async (t) => {
@@ -292,4 +299,51 @@ test("stateful full-update sends the post-readback merged payload, including rem
   const readback = audited?.readbacks.at(-1) as { comparison?: { status?: string }; operation?: { targetSpu?: string } } | undefined;
   assert.equal(readback?.operation?.targetSpu, "204426140121-test");
   assert.equal(readback?.comparison?.status, "readback_verified");
+});
+
+test("a reviewed production create performs form merge, required full-update, and final readback", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "deepdraw-production-create-chain-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const spu = "202426121024";
+  const store = WorkflowStore.open("balabala", spu, directory);
+  const draft = {
+    code: spu, title: "巴拉巴拉女童卫衣", tradeId: "9652", productType: "apparel", retailPrice: "299", date: "2026-09-04",
+    skus: [{ skuCode: "sku-140", sellerCode: "seller-140", color: "米白10302", size: "140", price: "299" }],
+    fields: [
+      { field_name: "商品展示标题", field_type: "TEXT", value_text: "巴拉巴拉女童卫衣" },
+      { field_name: "颜色", field_type: "MULTI_CHOICE", value_text: "白色,米白10302" },
+      { field_name: "尺码", field_type: "MULTI_CHOICE", value_text: "140cm" },
+    ],
+  };
+  await store.write({ ...createWorkflowSnapshot("balabala", spu), state: "ready", draft, template: { tradeId: "9652", tradeDecision: { selected: { tradeId: "9652", tradePath: "童装婴幼儿服装>>中大童>>卫衣" } } } });
+  const environment = { DEEPDRAW_TENANT_NAME: "电商巴拉巴拉", DEEPDRAW_APP_KEY: "app-key", DEEPDRAW_APP_SECRET: "app-secret", DEEPDRAW_DOP_KEY: "dop-key", DEEPDRAW_MERCHANT_ID: "1162", DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" };
+  const plan = await runCli(["balabala", "plan", "create", "--mode", "production", "--spu", spu, "--execute", "--plan"], { cwd: directory, env: environment, stdin: "" });
+  const planBody = JSON.parse(plan.stdout);
+  assert.equal(planBody.plan.postCreateFullUpdate.required, true);
+  const calls: string[] = [];
+  const result = await runCli(["balabala", "publish", "create", "--mode", "production", "--spu", spu, "--execute", "--yes", "--plan-hash", planBody.plan.planHash], {
+    cwd: directory, env: environment, stdin: "",
+    javaSpawnImpl: async (command, args) => {
+      if (command === "javac") return { exitCode: 0, stdout: "", stderr: "" };
+      const className = args[2]!;
+      calls.push(className);
+      if (className === "DeepdrawProductCreateCli") return { exitCode: 0, stdout: JSON.stringify({ status: 200, response: { code: 10200, response: "success", requestId: "create", body: { productId: "6517001" } } }), stderr: "" };
+      if (className === "DeepdrawProductUpdateCli") return { exitCode: 0, stdout: JSON.stringify({ status: 200, response: { code: 10200, response: "success", requestId: "update", body: { productId: "6517001" } } }), stderr: "" };
+      if (className === "DeepdrawProductResourceCli") return { exitCode: 0, stdout: JSON.stringify({ status: 200, response: { code: 10200, response: "success", requestId: `resource-${calls.length}`, body: {
+        id: "resource-6517001", productId: "6517001", code: spu,
+        fields: [
+          { field: { name: "商品展示标题", type: "TEXT" }, texts: ["巴拉巴拉女童卫衣"] },
+          { field: { name: "商家SKU", type: "MULTI_TEXT" }, value_json: { title: "价格", "米白10302": { "140cm": "299" } } },
+        ],
+        colors: { field: { type: "MULTI_CHOICE" }, options: ["白色"], optionAliases: { 白色: "米白10302" } },
+        sizes: { field: { type: "MULTI_CHOICE" }, options: ["140cm"] },
+      } } }), stderr: "" };
+      throw new Error(`unexpected ${className}`);
+    },
+  });
+  assert.equal(result.exitCode, 0, `${result.stderr}${result.stdout}`);
+  assert.deepEqual(calls, ["DeepdrawProductCreateCli", "DeepdrawProductResourceCli", "DeepdrawProductUpdateCli", "DeepdrawProductResourceCli"]);
+  const saved = await store.read();
+  assert.ok(saved?.executions.some((entry) => entry.operation === "post-create-full-update"));
+  assert.equal(saved?.state, "readback_verified");
 });

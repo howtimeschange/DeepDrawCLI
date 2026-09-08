@@ -95,16 +95,50 @@ function fields(input: Record<string, unknown>): JsonRecord {
 }
 function fieldValue(source: JsonRecord, name: string): unknown { return Object.entries(source).find(([key]) => compact(key) === compact(name))?.[1]; }
 function structured(name: string): boolean { return compact(name).includes("尺码表") || compact(name) === "多平台尺码" || compact(name) === "商家sku"; }
-function normalizeSkuKey(value: unknown): string[] {
+function saleColorAliases(value: unknown): Map<string, string> {
+  const aliases = new Map<string, string>();
+  for (const choice of text(value).split(/[;；]/).map((item) => item.trim()).filter(Boolean)) {
+    const parts = choice.split(/[,，]/).map((item) => item.trim()).filter(Boolean);
+    const canonical = parts.at(-1) ?? "";
+    for (const part of parts) aliases.set(compact(part), canonical || part);
+  }
+  return aliases;
+}
+function skuSizeKey(value: unknown): string { return text(value).replace(/\s*码$/u, "").replace(/\s*cm$/iu, "").trim(); }
+function normalizeSkuKey(value: unknown, saleColors: Map<string, string> = new Map()): string[] {
   const output: string[] = [];
   for (const [color, rows] of Object.entries(record(value))) {
     if (color === "title") continue;
+    const colorKey = saleColors.get(compact(color)) ?? text(color);
     const nested = record(rows);
     if (Object.keys(nested).length > 0) {
-      for (const size of Object.keys(nested)) output.push(`${compact(color)}\u0000${compact(size)}`);
-    } else output.push(compact(color));
+      for (const size of Object.keys(nested)) output.push(`${compact(colorKey)}\u0000${compact(skuSizeKey(size))}`);
+    } else {
+      // Early local drafts stored merchant-SKU rows as a flattened
+      // `sale-colour,size` key.  Normalize it to the same identity as the
+      // nested DeepDraw form resource before deciding whether a cover update
+      // has a safe intersection.
+      const parts = text(color).split(/[,，]/).map((item) => item.trim()).filter(Boolean);
+      const rawSize = parts.at(-1) ?? "";
+      if (/^\d+(?:\.5)?(?:cm|码)?$/i.test(rawSize) && parts.length > 1) {
+        const rawColor = parts.slice(0, -1).join(",");
+        const canonicalColor = saleColors.get(compact(rawColor)) ?? saleColors.get(compact(parts.at(-2))) ?? rawColor;
+        output.push(`${compact(canonicalColor)}\u0000${compact(skuSizeKey(rawSize))}`);
+      } else output.push(compact(colorKey));
+    }
   }
-  return output;
+  return [...new Set(output)].sort();
+}
+function tableValue(value: unknown): unknown {
+  const source = record(value);
+  if (Object.keys(source).length === 0) return value;
+  const columns = text(source.title).split(/[,，]/).map((item) => compact(item)).filter(Boolean);
+  const sizeColumn = columns.findIndex((column) => column === compact("尺码") || column === compact("尺寸") || column === compact("欧洲码"));
+  const rows = Object.entries(source)
+    .filter(([key]) => key !== "title")
+    .map(([size, row]) => [compact(skuSizeKey(size)), text(row).replace(/；/g, ";").split(/[,，]/).map((cell, index) => index === sizeColumn ? skuSizeKey(cell) : cell.trim()).join(",")] as const)
+    .sort(([left], [right]) => left.localeCompare(right, "zh-Hans-CN"));
+  return { title: columns.join(","), rows };
 }
 function normalizedValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalizedValue);
@@ -116,8 +150,9 @@ function equal(left: unknown, right: unknown): boolean { return JSON.stringify(n
 export function prepareBalabalaExistingUpdate(localInput: Record<string, unknown>, remoteInput: Record<string, unknown>): { payload: JsonRecord; blocking: Array<{ code: string; message: string }> } {
   const local = fields(localInput);
   const remote = fields(remoteInput);
-  const localSku = normalizeSkuKey(fieldValue(local, "商家SKU"));
-  const remoteSku = normalizeSkuKey(fieldValue(remote, "商家SKU"));
+  const aliases = saleColorAliases(fieldValue(local, "颜色"));
+  const localSku = normalizeSkuKey(fieldValue(local, "商家SKU"), aliases);
+  const remoteSku = normalizeSkuKey(fieldValue(remote, "商家SKU"), aliases);
   const blocking: Array<{ code: string; message: string }> = [];
   if (localSku.length > 0 && remoteSku.length > 0 && !localSku.some((key) => remoteSku.includes(key))) blocking.push({ code: "sku_intersection_required", message: "现有商品商家 SKU 与本地 SKU 没有颜色和尺码交集，已阻止覆盖式全量更新。" });
   const merged = { ...remote, ...local };
@@ -128,16 +163,23 @@ export function prepareBalabalaExistingUpdate(localInput: Record<string, unknown
 export function compareBalabalaReadback(expectedInput: Record<string, unknown>, remoteInput: Record<string, unknown>): ReadbackComparison {
   const expected = fields(expectedInput);
   const actual = fields(remoteInput);
+  const saleColors = saleColorAliases(fieldValue(expected, "颜色"));
   const mismatches: Array<{ field: string; expected: unknown; actual: unknown }> = [];
   const uiVerification: string[] = [];
   for (const [name, expectedValue] of Object.entries(expected)) {
     const actualValue = fieldValue(actual, name);
     if (actualValue === undefined || actualValue === null || actualValue === "") {
-      if (structured(name)) uiVerification.push(name);
+      // The resource API can omit multi-platform rows even when the UI still
+      // holds them.  Other structured fields are safety-critical and must be
+      // mismatches rather than silently treated as verified.
+      if (compact(name) === compact("多平台尺码")) uiVerification.push(name);
       else mismatches.push({ field: name, expected: expectedValue, actual: actualValue });
       continue;
     }
-    if (!equal(expectedValue, actualValue)) mismatches.push({ field: name, expected: expectedValue, actual: actualValue });
+    const merchantSku = compact(name) === compact("商家SKU");
+    const left = merchantSku ? normalizeSkuKey(expectedValue, saleColors) : structured(name) ? tableValue(expectedValue) : expectedValue;
+    const right = merchantSku ? normalizeSkuKey(actualValue, saleColors) : structured(name) ? tableValue(actualValue) : actualValue;
+    if (!equal(left, right)) mismatches.push({ field: name, expected: expectedValue, actual: actualValue });
   }
   return { status: mismatches.length ? "readback_mismatch" : uiVerification.length ? "needs_ui_verification" : "readback_verified", mismatches, uiVerification };
 }

@@ -201,6 +201,23 @@ function normalizePlanRow(values: Record<string, string>, ref: SourceReference):
   };
 }
 
+function validLaunchDate(value: unknown): boolean {
+  return /^20\d{2}-\d{2}-\d{2}$/.test(text(value));
+}
+
+/**
+ * Launch plans are usually one row per SKC.  A cancelled colour row must not
+ * become the SPU-wide operational record merely because it appears first in
+ * the worksheet.  Keep all rows for category/colour evidence, while choosing
+ * the first dated row for scalar defaults such as date and retail price.
+ */
+function preferredLaunchPlanRow(rows: JsonRecord[]): JsonRecord {
+  return rows.find((row) => validLaunchDate(row.launchDate))
+    ?? rows.find((row) => text(row.rawLaunchDate).toLowerCase() !== "取消")
+    ?? rows[0]
+    ?? {};
+}
+
 function normalizeCopyRow(values: Record<string, string>, ref: SourceReference): JsonRecord {
   return {
     raw: { ...values },
@@ -386,7 +403,7 @@ export async function importBalabalaSources(input: BalabalaImportInput): Promise
     sources,
     skus,
     mdm: { title: text(skus[0]?.title), colors: [...new Set(skus.map((sku) => text(sku.color)).filter(Boolean))], rows: skus.map((sku) => sku.raw && typeof sku.raw === "object" && !Array.isArray(sku.raw) ? sku.raw : {}) },
-    launchPlan: { ...launchRows[0], rows: launchRows },
+    launchPlan: { ...preferredLaunchPlanRow(launchRows), rows: launchRows },
     copywriting: { rows: copywritingRows },
     ...(sizeChart ? { sizeChart } : {}),
     ...(plmSizeChart ? { plmSizeChart } : {}),

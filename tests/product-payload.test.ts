@@ -244,7 +244,7 @@ test("Balabala apparel payload keeps cm display identities, bare table values, a
   assert.doesNotMatch(JSON.stringify(fields["尺码表"]), /(?:^|,)0(?:,|$)/);
 });
 
-test("create and update expose the complete field sets without shrinking SKU or stable size tables", () => {
+test("create and update expose the stable field sets without shrinking SKU or stable size tables", () => {
   const create = buildProductPayload(shoeDraft, { stage: "create" });
   const update = buildProductPayload(shoeDraft, { stage: "update" });
   const createNames = Object.keys(create.sdkInput.product.fields as Record<string, unknown>);
@@ -264,6 +264,30 @@ test("create and update expose the complete field sets without shrinking SKU or 
   assert.equal(update.legacyUpdateFields.length, update.fields.length);
   assert.deepEqual(update.query, { productId: "6518125" });
   assert.deepEqual(update.sdkInput.query, { productId: "6518125" });
+  assert.ok(!update.diagnostics.warnings.some((warning) => warning.includes("省略多平台尺码")));
+});
+
+test("full update sends multi-platform size rows by default", () => {
+  const update = buildProductPayload(shoeDraft, { stage: "update" });
+  assert.ok(Object.hasOwn(sdkFields(update), "多平台尺码"));
+});
+
+test("full update can explicitly omit multi-platform size rows for a confirmed incompatible template", () => {
+  const update = buildProductPayload({ ...shoeDraft, includeMultiPlatformSizeOnUpdate: false }, { stage: "update" });
+  assert.equal(Object.hasOwn(sdkFields(update), "多平台尺码"), false);
+  assert.ok(update.diagnostics.warnings.some((warning) => warning.includes("includeMultiPlatformSizeOnUpdate=false")));
+});
+
+test("merchant SKU tables use the sale-colour alias key, not the display enum, including historical buckets", () => {
+  const result = buildProductPayload({
+    ...shoeDraft,
+    fields: shoeDraft.fields.map((field) => field.field_name === "商家SKU"
+      ? { ...field, value_json: { title: "价格", "蓝色,蓝色调00388": { "26码": "359.9" } } }
+      : field),
+  }, { stage: "update" });
+  const merchantSku = sdkFields(result)["商家SKU"] as Record<string, unknown>;
+  assert.deepEqual(Object.keys(merchantSku).sort(), ["title", "蓝色调00388"]);
+  assert.ok(!Object.hasOwn(merchantSku, "蓝色,蓝色调00388"));
 });
 
 test("explicitly disabling multi-platform sizes omits the field from the SDK payload", () => {

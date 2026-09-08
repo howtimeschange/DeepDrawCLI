@@ -79,3 +79,17 @@ test("lets specific denim evidence outrank a generic official pants leaf", () =>
   assert.equal(result.selected?.tradeId, "11740");
   assert.equal(result.manualSelectionRequired, false);
 });
+
+test("uses Listingify priority roots when a complete DeepDraw hierarchy is available", () => {
+  const result = selectBalabalaTrade({
+    tenantName: "电商巴拉巴拉",
+    launchPlan: { officialTrade: "童装婴幼儿服装>>男童>>羽绒服", category: "羽绒服", gender: "男" },
+    skus: [{ size: "140" }],
+  }, [
+    { id: "adult", tradePath: "女装>>羽绒服", ancestorIds: ["adult"] },
+    { id: "9680", tradePath: "童装婴幼儿服装>>男童>>羽绒服", ancestorIds: ["7", "9680"] },
+    { id: "private", tradePath: "blbl&mini>>羽绒服", ancestorIds: ["9631", "private"] },
+  ]);
+  assert.equal(result.selected?.tradeId, "9680");
+  assert.equal(result.candidates.find((item) => item.tradeId === "private")?.priorityTier, 99);
+});

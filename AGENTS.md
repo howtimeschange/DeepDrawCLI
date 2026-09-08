@@ -197,7 +197,7 @@ deepdraw product payload --input draft.json --stage update --pretty
 - 鞋品主表固定为 `尺码,脚长,鞋内长`；传给 SDK 的商品字段去掉重复的销售尺码列，实际为 `脚长,鞋内长`。唯品会欧洲码传裸数字。
 - 鞋品多平台尺码固定六列 `天猫,京东,拼多多,微信视频小店,小红书,快手`；天猫/快手留空，京东填裸数字，拼多多/微信视频小店/小红书填带备注展示值。
 - 服饰销售尺码使用 `140cm` 这类展示值，主表第二个尺码列使用裸数字 `140`；上装、牛仔裤使用固定表头；缺失测量值留空而不是 `0`；巴拉巴拉服饰尺码会使用内置体重参考，例如 `140 -> 31kg`。
-- create 阶段发送主尺码表和多平台尺码；update 阶段发送主表、唯品会、天猫、抖音及多平台尺码，避免覆盖式更新导致已有 SKU 或尺码表消失。鞋品 `淘宝尺码表` 会省略并记录 warning。
+- create 与 full-update 阶段默认发送主尺码表、唯品会、天猫、抖音和多平台尺码；覆盖式更新不得默认省略多平台尺码，以免清空远端已存表。仅在已确认当前模板不兼容时，才可用 `includeMultiPlatformSizeOnUpdate=false` 显式省略并记录 warning。鞋品 `淘宝尺码表` 会省略并记录 warning。
 
 这个命令只负责本地构建和审查。真实创建/更新仍须对注册的 `dp.product.create` 或 `dp.product.update` 先执行 `--execute --plan`，获得用户明确授权后才能执行 `--execute --yes`；`10200` 或 HTTP 200 也不能替代资源回读。
 
@@ -240,8 +240,8 @@ deepdraw balabala plan incremental --mode test --spu 204426140121-test --fields 
 deepdraw balabala publish incremental --mode test --spu 204426140121-test --fields 商品展示标题 --execute --yes
 ```
 
-- `create` 使用创建阶段字段：主尺码表和多平台尺码；创建成功后必须以资源回读取得/确认 `productId`。生产创建不可以在未单独计划的情况下自动继续覆盖式 `full-update`。
-- `full-update` 使用覆盖式完整字段集，包含颜色、销售尺码、商家 SKU、主表和稳定的平台尺码表；不能把小 patch 当作全量 body。
+- `create` 使用创建阶段字段：主尺码表和多平台尺码；经审阅的 create 计划明确包含“创建 → `resource=form` 取得/确认 `productId` → 合并 form 快照 → 覆盖式 `full-update` → 最终回读”。post-create 的 update body 必须由新档案的回读重建，绝不预猜 productId 或复用旧快照；若颜色/尺码/SKU 交集校验失败则停止，不发送全量更新。
+- `full-update` 使用覆盖式完整字段集，包含颜色、销售尺码、商家 SKU、主表、唯品会、天猫、抖音和多平台尺码；不能把小 patch 当作全量 body。
 - 增量更新（`incremental`）只可更新当前模板中的普通字段，必须用 `--fields` 写明本次变动字段；CLI 自动携带完整的 `颜色` 与 `尺码`，不能省略。
 - 已使用 `204426140121-test` 完成“展示标题 → 资源回读 → 恢复 → 资源回读”联调：两次业务码均为 `10200`，恢复后颜色 2、尺码 15、SKU 30，且主表、唯品会、天猫、抖音四张各 15 行尺码表均在。
 - `尺码表`、`唯品会尺码表`、`天猫尺码表`、`抖音尺码表`、`多平台尺码` 和 `商家SKU` 禁止走巴拉增量流程，统一使用全量更新（`full-update`）并资源回读；多平台尺码尚无安全的增量写入结论。

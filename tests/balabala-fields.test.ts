@@ -51,6 +51,17 @@ test("marks unsupported special fields manual-required instead of synthesizing t
   assert.equal(fields[0]?.staleReason, "manual_required_special_format");
 });
 
+test("blocks unsupported Tmall guide-title schema until an operator supplies a manual value", () => {
+  const fields = buildBalabalaFields({
+    spu: "202426107128",
+    launchPlan: { productLine: "童装", category: "羽绒服", subcategory: "中羽绒服" },
+    copywriting: { rows: [{ guideTitle: "巴拉巴拉男童羽绒服" }] },
+    skus: [],
+  }, { fields: [{ fieldName: "天猫导购标题", fieldType: "TEXT", required: true }] });
+  assert.equal(fields[0]?.validationStatus, "missing");
+  assert.equal(fields[0]?.staleReason, "manual_required_special_format");
+});
+
 test("accepts a reviewed manual value for a special-format field", () => {
   const fields = buildBalabalaFields({
     spu: "204426140121",

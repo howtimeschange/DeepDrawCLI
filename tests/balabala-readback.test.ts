@@ -17,11 +17,20 @@ test("blocks a full update if no remote SKU key intersects", () => {
   assert.equal(protectedPayload.blocking[0]?.code, "sku_intersection_required");
 });
 
-test("marks absent structured readback as UI verification instead of verified", () => {
-  const result = compareBalabalaReadback(local, { fields: { 商品展示标题: "新标题", 颜色: "蓝色,蓝色调00388", 尺码: "26码", 商家SKU: { title: "价格", "蓝色,蓝色调00388,26码": "359.9" } } });
+test("marks absent multi-platform readback as UI verification instead of verified", () => {
+  const expected = { fields: { ...local.fields, 多平台尺码: { title: "天猫,京东", "26码": ",26" } } };
+  delete expected.fields.尺码表;
+  const result = compareBalabalaReadback(expected, { fields: { 商品展示标题: "新标题", 颜色: "蓝色,蓝色调00388", 尺码: "26码", 商家SKU: { title: "价格", "蓝色,蓝色调00388,26码": "359.9" } } });
   assert.equal(result.status, "needs_ui_verification");
   assert.equal(result.mismatches.length, 0);
-  assert.deepEqual(result.uiVerification, ["尺码表"]);
+  assert.deepEqual(result.uiVerification, ["多平台尺码"]);
+});
+
+test("treats an absent primary size table as a mismatch, while canonicalizing sale-colour SKU aliases", () => {
+  const missingTable = compareBalabalaReadback(local, { fields: { 商品展示标题: "新标题", 颜色: "蓝色,蓝色调00388", 尺码: "26码", 商家SKU: { title: "价格", "蓝色调00388": { "26": "359.9" } } } });
+  assert.equal(missingTable.status, "readback_mismatch");
+  assert.ok(missingTable.mismatches.some((item) => item.field === "尺码表"));
+  assert.equal(missingTable.mismatches.some((item) => item.field === "商家SKU"), false);
 });
 
 test("hydrates DeepDraw form fields plus sale colors and sizes without inventing values", () => {

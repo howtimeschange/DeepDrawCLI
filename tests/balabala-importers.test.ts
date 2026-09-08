@@ -55,6 +55,32 @@ test("imports complete source rows and an apparel PLM long table for the request
   }
 });
 
+test("uses the first valid dated launch row for SPU scalar defaults while retaining cancelled rows as source evidence", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "deepdraw-balabala-active-plan-"));
+  const write = (name: string, rows: Record<string, string>[]) => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "数据");
+    const path = join(directory, name);
+    XLSX.writeFile(workbook, path);
+    return path;
+  };
+  try {
+    const spu = "202426107128";
+    const mdm = write("mdm.xlsx", [{ 款号: spu, SKC编码: `${spu}90001`, SKU编码: "sku-140", 颜色名称: "黑色", 尺码名称: "140" }]);
+    const plan = write("plan.xlsx", [
+      { 大货款号: spu, 款色号: `${spu}90001`, 产品线: "童装", 品类: "羽绒服", 吊牌价: "399", 上市时间: "取消" },
+      { 大货款号: spu, 款色号: `${spu}20047`, 产品线: "童装", 品类: "羽绒服", 吊牌价: "499", 上市时间: "2026-09-04" },
+    ]);
+    const copy = write("copy.xlsx", [{ 款号: spu, 款色: `${spu}90001`, 搜索标题: "巴拉巴拉羽绒服" }]);
+    const imported = await importBalabalaSources({ spu, mdmPath: mdm, launchPlanPath: plan, copywritingPath: copy });
+    assert.equal(imported.launchPlan.launchDate, "2026-09-04");
+    assert.equal(imported.launchPlan.retailPrice, "499");
+    assert.equal(imported.launchPlan.rows.length, 2);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test("imports a test workflow from an explicitly supplied formal source style without changing its remote target code", async () => {
   const directory = await mkdtemp(join(tmpdir(), "deepdraw-balabala-test-import-"));
   const write = (name: string, rows: Record<string, string>[]) => {

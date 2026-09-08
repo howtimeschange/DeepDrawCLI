@@ -426,7 +426,7 @@ deepdraw balabala publish create --mode production --spu 202426107128 \
   --execute --yes --plan-hash PLAN_HASH_FROM_PREVIOUS_COMMAND
 ```
 
-创建成功只会自动回读新档案；为了避免未经审查的覆盖式请求，CLI **不会**在正式模式自动继续全量更新。若需要补齐更新阶段的平台尺码表，必须重新生成并审阅一份 `full-update` 计划。测试模式不允许 `publish create`，只能更新已存在且精确配置的 `-test` 档案。
+经审阅的 create 计划会明确列出“创建 → `resource=form` 回读 → 合并 → `full-update` → 最终回读”。正式模式的 `publish create --execute --yes --plan-hash ...` 会按该已确认链路执行；覆盖式 body 只能从新档案的 form 回读重建，且颜色/尺码/SKU 无交集时会停止，不会发送 update。测试模式不允许 `publish create`，只能更新已存在且精确配置的 `-test` 档案。
 
 `sync` 将原始 `resource=form` 作为审计回读保存，同时投影出可编辑草稿：通用增量写入使用数值 `productId`，资源回读使用同一档案的 UUID `id`。两者会分别保存，避免把写入 ID 误传给回读接口。每条远端执行记录都会保存模式、source/target/用户指定款号、计划哈希（如有）、request ID 与回读状态；工作流存储会脱敏并拒绝凭据、签名和 token。`override` 只修改本地状态，并记录原值、人工覆盖和时间；之后仍需先生成计划。普通增量请求始终带上从同步档案读取的完整 `颜色` 与 `尺码`，但不会带商家 SKU 或任何尺码表。
 
@@ -464,7 +464,7 @@ deepdraw call dp.trade.fields --execute --param merchantId=1162 --param tradeId=
 
 AI 只处理 `review.aiCandidates` 中的当前模板枚举字段。上游 agent 若要提交建议，传入 `aiResponses` 的 `fieldName/value/confidence/evidence`；CLI 仅接受置信度 `>= 0.7`、命中当前枚举、有证据且未覆盖人工字段的结果。至多使用 4 张 jpeg/png/webp、每张不超过 4MB 的参考图，按平铺图、主图、模特图、参考图、吊牌、洗唛排序。价格、产地、条码、生产/合规事实、SKU、销售尺码和真实尺码表永远不能由 AI 填充。
 
-旧的 `balabala query/create/full-update/incremental --input ...` 兼容远端入口已禁用，避免绕过 `--mode`、精确 `--spu`、计划哈希和工作流回读。纯本地 `deepdraw balabala review --input draft.json` 保持可用；远端操作统一使用上面的状态型流程。`publish create` 在正式模式会回读新建档案，但不会未经另一份全量更新计划就自动执行覆盖式更新；请审阅并单独计划 `full-update`。
+旧的 `balabala query/create/full-update/incremental --input ...` 兼容远端入口已禁用，避免绕过 `--mode`、精确 `--spu`、计划哈希和工作流回读。纯本地 `deepdraw balabala review --input draft.json` 保持可用；远端操作统一使用上面的状态型流程。`publish create` 只会在已审阅 create 计划明确列出 post-create full-update 链路时执行该链路，并始终以新档案的 form 回读作为覆盖式 payload 的合并基线。
 
 #### 全量更新与增量更新：按变更对象选择接口
 

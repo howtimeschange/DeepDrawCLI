@@ -16,8 +16,8 @@ function businessKey(value: unknown): string { return text(value).toLowerCase().
 function nameOf(field: JsonRecord): string { return text(field.fieldName ?? field.field_name ?? field.name); }
 function typeOf(field: JsonRecord): string { return text(field.fieldType ?? field.field_type ?? field.type) || "TEXT"; }
 function bool(value: unknown): boolean { return value === true || value === 1 || ["true", "1"].includes(text(value).toLowerCase()); }
-function required(field: JsonRecord): boolean { return bool(field.required ?? field.isRequired ?? field.is_required); }
-function saleProp(field: JsonRecord): boolean { return bool(field.saleProp ?? field.sale_prop ?? field.isSaleProp ?? field.is_sale_prop); }
+function required(field: JsonRecord): boolean { const attributes = record(field.attributes); return bool(field.required ?? field.isRequired ?? field.is_required ?? attributes.isRequired ?? attributes.is_required); }
+function saleProp(field: JsonRecord): boolean { const attributes = record(field.attributes); return bool(field.saleProp ?? field.sale_prop ?? field.isSaleProp ?? field.is_sale_prop ?? attributes.isSaleProp ?? attributes.is_sale_prop); }
 function optionText(value: unknown): string { const item = record(value); return text(typeof value === "object" ? item.name ?? item.value ?? item.label ?? item.text ?? item.optionName : value); }
 function options(field: JsonRecord): string[] { const source = field.options ?? field.options_json ?? field.optionsJson; return Array.isArray(source) ? source.map(optionText).filter(Boolean) : []; }
 function sourceRefs(...values: unknown[]): WorkflowField["sourceRefs"] { return values.map(record).map((value) => record(value.sourceRef)).filter((value) => text(value.path) && text(value.sha256)) as WorkflowField["sourceRefs"]; }
@@ -460,9 +460,16 @@ function isBusinessBlankField(name: string, template: JsonRecord, context: JsonR
 function sourceRows(context: JsonRecord): Array<{ row: JsonRecord; source: WorkflowField["sourceType"] }> {
   const copyRows = record(context.copywriting).rows;
   const mdmRows = record(context.mdm).rows;
+  const launch = record(context.launchPlan);
+  const launchRows = Array.isArray(launch.rows) ? launch.rows.map(record) : [launch];
+  // `launchPlan` itself is the importer-selected active row (dated and not
+  // cancelled).  Keep all rows afterwards for explicit category-conflict
+  // detection, but never let a first cancelled SKC row supply a scalar fact.
+  const remainingLaunchRows = launchRows.filter((row) => row !== launch && text(row.skcCode) !== text(launch.skcCode));
   return [
     ...(Array.isArray(copyRows) ? copyRows.map(record).map((row) => ({ row, source: "copywriting" as const })) : []),
-    { row: record(context.launchPlan), source: "launch_plan" as const },
+    { row: launch, source: "launch_plan" as const },
+    ...remainingLaunchRows.map((row) => ({ row, source: "launch_plan" as const })),
     ...(Array.isArray(mdmRows) ? mdmRows.map(record).map((row) => ({ row, source: "mdm" as const })) : [record(context.mdm)].filter((row) => Object.keys(row).length > 0).map((row) => ({ row, source: "mdm" as const }))),
   ];
 }
@@ -862,7 +869,18 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   return { value: "", source: "skip", refs: [] };
 }
 
-function buildMerchantSku(context: JsonRecord, template: JsonRecord): WorkflowField {
+/**
+ * DeepDraw's sale-colour field stores `base colour,merchant SKU colour`, but
+ * the MULTI_TEXT merchant-SKU table is keyed by its last (SKU) component.
+ * Keep that identity separate from the display value; otherwise a full update
+ * creates a second colour bucket for every SKU.
+ */
+function merchantSkuColorKey(value: string): string {
+  const parts = value.split(/[,，]/).map((item) => item.trim()).filter(Boolean);
+  return parts.at(-1) ?? value;
+}
+
+function buildMerchantSku(context: JsonRecord, template: JsonRecord, colorMap: Map<string, string>): WorkflowField {
   const plan = record(context.launchPlan);
   const kind = productKind(context);
   const price = decimal(plan.retailPrice);
@@ -874,9 +892,10 @@ function buildMerchantSku(context: JsonRecord, template: JsonRecord): WorkflowFi
   const copyRows = Array.isArray(copywriting.rows) ? copywriting.rows.map(record) : [];
   const guideTitle = text(copyRows[0]?.guideTitle);
   for (const sku of rows) {
-    const color = text(sku.color ?? sku.colorName ?? sku.color_name);
+    const rawColor = text(sku.color ?? sku.colorName ?? sku.color_name);
+    const color = merchantSkuColorKey(colorMap.get(rawColor) ?? rawColor);
     const size = saleSizeLabel(sku.size ?? sku.sizeName ?? sku.size_name, kind);
-    if (!color || !size) continue;
+    if (!rawColor || !color || !size) continue;
     const skuPrice = decimal(sku.price) || price;
     const skuCode = text(sku.skuCode ?? sku.sku_code);
     const skcCode = text(sku.skcCode ?? sku.skc_code) || text(context.spu);
@@ -972,7 +991,7 @@ export function buildBalabalaFields(contextInput: Record<string, unknown>, templ
       continue;
     }
     if (key === "商家sku" || key === "商家sku") {
-      output.push(buildMerchantSku(context, template));
+      output.push(buildMerchantSku(context, template, colorMap));
       continue;
     }
     const scalar = scalarFor(name, context, template);

@@ -792,6 +792,27 @@ function parseColorParts(value: unknown): string[] {
   return text(value).split(/[;；]/).flatMap((part) => part.split(/[,，]/).map((item) => item.trim())).filter(Boolean);
 }
 
+function colorAliasVariants(value: unknown): string[] {
+  const alias = text(value);
+  if (!alias) return [];
+  // Down-garment sale colours may append the filling while MDM SKU colours do
+  // not.  Compare both representations but preserve the template value.
+  const undecorated = alias.replace(/[\-－—]\s*(?:白|灰)?(?:鸭|鹅)绒\s*$/u, "").trim();
+  return unique([alias, undecorated]);
+}
+
+function merchantSkuColorKey(value: unknown, saleColorValue: unknown): string {
+  const sourceColor = text(value);
+  if (!sourceColor || !saleColorValue) return sourceColor;
+  const sourceAliases = new Set(colorAliasVariants(sourceColor));
+  for (const choice of text(saleColorValue).split(/[;；]/).map((item) => item.trim()).filter(Boolean)) {
+    const parts = choice.split(/[,，]/).map((item) => item.trim()).filter(Boolean);
+    const merchantKey = parts.at(-1) ?? "";
+    if (merchantKey && parts.some((part) => colorAliasVariants(part).some((alias) => sourceAliases.has(alias)))) return merchantKey;
+  }
+  return sourceColor;
+}
+
 function baseColorName(value: string): string {
   if (/卡其|贝壳卡|卡色/.test(value)) return "卡其";
   if (value.includes("粉")) return "粉红";
@@ -864,6 +885,7 @@ function buildMerchantSkuField(
   identities: SizeIdentity[],
   kind: ProductKind,
   date: string,
+  saleColorValue: unknown,
 ): JsonRecord {
   const existingRecord = record(existing);
   if (Object.keys(existingRecord).length > 0) {
@@ -872,12 +894,15 @@ function buildMerchantSkuField(
     const lookup = sizeLookup(identities);
     for (const [color, rows] of Object.entries(existingRecord)) {
       if (color === "title" || !rows || typeof rows !== "object" || Array.isArray(rows)) continue;
+      const colorKey = merchantSkuColorKey(color, saleColorValue);
       const nextRows: JsonRecord = {};
       for (const [size, value] of Object.entries(record(rows))) {
         const identity = lookup.get(canonicalSizeKey(size).toLowerCase());
         nextRows[identity?.alias ?? size] = normalizeMerchantSkuRow(value, title);
       }
-      output[color] = nextRows;
+      // Multiple historical aliases can resolve to one current sale-colour
+      // enum.  Merge their size rows rather than silently dropping either.
+      output[colorKey] = { ...record(output[colorKey]), ...nextRows };
     }
     return output;
   }
@@ -928,9 +953,10 @@ function buildMerchantSkuField(
       天猫SKU搜索标题: guideTitle,
     };
     const row = columns.map((column) => valuesByColumn[column] ?? "").join(",");
-    const colorBucket = record(output[sku.color]);
+    const colorKey = merchantSkuColorKey(sku.color, saleColorValue);
+    const colorBucket = record(output[colorKey]);
     colorBucket[sku.sizeAlias] = row;
-    output[sku.color] = colorBucket;
+    output[colorKey] = colorBucket;
   }
   return output;
 }
@@ -967,7 +993,7 @@ function upsertField(fields: JsonRecord[], name: string, value: unknown, fieldTy
   return [...fields, next];
 }
 
-function stageFields(fields: JsonRecord[], stage: ProductPayloadStage, kind: ProductKind, warnings: string[]): JsonRecord[] {
+function stageFields(fields: JsonRecord[], stage: ProductPayloadStage, kind: ProductKind, warnings: string[], includeMultiPlatformOnUpdate = true): JsonRecord[] {
   return fields.filter((field) => {
     const name = text(field.name);
     if (kind === "shoe" && compactKey(name) === compactKey(UNSUPPORTED_SHOE_TABLE)) {
@@ -976,6 +1002,21 @@ function stageFields(fields: JsonRecord[], stage: ProductPayloadStage, kind: Pro
     }
     if (stage === "create" && isStructuredField(name) && !isMainSizeTable(name) && compactKey(name) !== compactKey("多平台尺码")) {
       return false;
+    }
+    // A covering update must carry the complete generated size-table set.
+    // In particular, 多平台尺码 is part of the default create/full-update
+    // contract; omitting it can silently clear the remote table.  Callers
+    // may still explicitly opt out for a confirmed incompatible template.
+    if (stage === "update" && isStructuredField(name)) {
+      const key = compactKey(name);
+      const stable = isMainSizeTable(name)
+        || key === compactKey("唯品会尺码表")
+        || key === compactKey("天猫尺码表")
+        || key === compactKey("抖音尺码表");
+      if (!stable && !(includeMultiPlatformOnUpdate && key === compactKey("多平台尺码"))) {
+        if (key === compactKey("多平台尺码")) warnings.push("includeMultiPlatformSizeOnUpdate=false，已按显式配置从覆盖式更新省略多平台尺码。");
+        return false;
+      }
     }
     return true;
   });
@@ -1077,7 +1118,7 @@ export function buildProductPayload(input: unknown, options: BuildProductPayload
     ...source,
     code: source.code ?? source.spuCode ?? source.spu_code,
     retailPrice: source.retailPrice ?? source.retail_price ?? source.price,
-  }, normalizedSkus, identities, kind, date);
+  }, normalizedSkus, identities, kind, date, fieldValue(allFields, ["颜色"]));
   if (normalizedSkus.length > 0 || nonEmpty(existingMerchantSku)) allFields = upsertField(allFields, "商家SKU", merchantSku, "MULTI_TEXT");
 
   const multiField = fieldByName(allFields, ["多平台尺码"]);
@@ -1107,8 +1148,9 @@ export function buildProductPayload(input: unknown, options: BuildProductPayload
       warnings.push(`字段 ${text(field.name)} 不属于当前激活模板，已从 SDK payload 排除。`);
       return false;
     });
-  const fullFields = stageFields(localAllFields, "update", kind, warnings);
-  const selectedFields = stageFields(localAllFields, stage, kind, warnings);
+  const includeMultiPlatformOnUpdate = source.includeMultiPlatformSizeOnUpdate !== false && source.include_multi_platform_size_on_update !== false;
+  const fullFields = stageFields(localAllFields, "update", kind, warnings, includeMultiPlatformOnUpdate);
+  const selectedFields = stageFields(localAllFields, stage, kind, warnings, includeMultiPlatformOnUpdate);
   const auditFields = selectedFields.map(auditField);
   const legacyUpdateFields = fullFields.map(auditField);
   const sdkFieldObject = sdkFields(selectedFields, kind);

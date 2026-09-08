@@ -7,6 +7,7 @@ export interface TradeCandidateDecision {
   platformCoverage: string[];
   missingPlatforms: string[];
   missingSizes: string[];
+  priorityTier: number;
   reasons: string[];
 }
 
@@ -74,13 +75,50 @@ function platformKey(value: string): string {
   return text(value);
 }
 
-function requiredPlatforms(context: JsonRecord): string[] {
+function launchRows(context: JsonRecord): JsonRecord[] {
   const plan = record(context.launchPlan);
+  const rows = Array.isArray(plan.rows) ? plan.rows.map(record) : [];
+  return rows.length ? rows : [plan];
+}
+
+function requiredPlatforms(context: JsonRecord): string[] {
   const required = new Set<string>();
-  if (text(plan.officialTrade)) ["Alibaba", "PDD", "Taobao", "Kuaishou"].forEach((item) => required.add(item));
-  if (text(plan.vipTrade) || text(plan.vipStyle)) required.add("VIP");
-  if (text(plan.douyinTrade)) required.add("Douyin");
+  for (const plan of launchRows(context)) {
+    if (text(plan.officialTrade)) ["Alibaba", "PDD", "Taobao", "Kuaishou"].forEach((item) => required.add(item));
+    if (text(plan.vipTrade) || text(plan.vipStyle)) required.add("VIP");
+    if (text(plan.douyinTrade)) required.add("Douyin");
+  }
   return [...required];
+}
+
+function hasCategoryConflict(context: JsonRecord): boolean {
+  const keys = ["officialTrade", "vipTrade", "vipStyle", "douyinTrade"];
+  return keys.some((key) => new Set(launchRows(context).map((row) => text(row[key])).filter(Boolean)).size > 1);
+}
+
+const BALABALA_TRADE_TIERS = [
+  new Set(["7", "531", "9483", "6741", "6744", "905", "10087"]),
+  new Set(["3245", "3525", "893"]),
+  new Set(["9631"]),
+];
+
+function candidateIds(candidate: JsonRecord): string[] {
+  const values = candidate.ancestorIds ?? candidate.ancestor_ids ?? candidate.lineageIds ?? candidate.lineage_ids;
+  const listed = Array.isArray(values) ? values.map(text) : text(values).split(/[,，;；]/).map((item) => item.trim());
+  return [...new Set([text(valueFor(candidate, ["tradeId", "trade_id", "id"])), text(valueFor(candidate, ["parentTradeId", "parent_trade_id"])), ...listed].filter(Boolean))];
+}
+
+function priorityTier(context: JsonRecord, candidate: JsonRecord, path: string): number {
+  if (/^blbl&mini(?:>|$)/.test(path)) return 99;
+  const tenant = text(context.tenantName ?? context.tenant_name);
+  const ids = candidateIds(candidate);
+  if (tenant && tenant !== "电商巴拉巴拉") return 0;
+  // Unit callers and some historical responses contain only flattened leaves.
+  // In that case hierarchy cannot be proven, so retain the candidate and let
+  // the semantic/platform/size checks decide rather than inventing an ID.
+  if (ids.length <= 1) return 0;
+  const match = BALABALA_TRADE_TIERS.findIndex((tier) => ids.some((id) => tier.has(id)));
+  return match >= 0 ? match : 98;
 }
 
 function normalizedSize(value: unknown): string {
@@ -123,6 +161,7 @@ function scoreCandidate(context: JsonRecord, candidate: JsonRecord): TradeCandid
   const tradeId = text(valueFor(candidate, ["tradeId", "trade_id", "id"]));
   const tradePath = text(valueFor(candidate, ["tradePath", "trade_path", "path", "tradeName", "trade_name", "name"]));
   const path = normalized(tradePath);
+  const tier = priorityTier(context, candidate, path);
   const candidateLeaf = leaf(tradePath);
   const reasons: string[] = [];
   let score = 0;
@@ -182,21 +221,33 @@ function scoreCandidate(context: JsonRecord, candidate: JsonRecord): TradeCandid
   const sizeOptions = list(valueFor(candidate, ["sizeOptions", "size_options", "saleSizeOptions", "sale_size_options"])).map(normalizedSize).filter(Boolean);
   const missingSizes = sizeOptions.length === 0 ? [] : skuSizes.filter((size) => !sizeOptions.includes(size));
   if (missingSizes.length) reasons.push(`不支持尺码 ${missingSizes.join(",")}`);
-  return { tradeId, tradePath, score, platformCoverage: actualPlatforms, missingPlatforms, missingSizes, reasons };
+  return { tradeId, tradePath, score, platformCoverage: actualPlatforms, missingPlatforms, missingSizes, priorityTier: tier, reasons };
 }
 
 export function selectBalabalaTrade(contextInput: Record<string, unknown>, candidatesInput: unknown[]): TradeDecision {
   const context = record(contextInput);
   const candidates = candidatesInput.map(record).map((candidate) => scoreCandidate(context, candidate))
     .filter((candidate) => candidate.tradeId && candidate.tradePath)
-    .sort((left, right) => right.score - left.score || left.tradeId.localeCompare(right.tradeId));
-  const eligible = candidates.filter((candidate) => candidate.score > 0 && candidate.missingPlatforms.length === 0 && candidate.missingSizes.length === 0);
+    .sort((left, right) => left.priorityTier - right.priorityTier || right.score - left.score || left.tradeId.localeCompare(right.tradeId));
+  let eligible = candidates.filter((candidate) => candidate.priorityTier < 98 && candidate.score > 0 && candidate.missingPlatforms.length === 0 && candidate.missingSizes.length === 0);
+  const shoe = categoryEvidence(context).some((item) => /鞋/.test(item.value));
+  // A direct child-shoe leaf is more specific than gender-segmented copies
+  // with the same name. Listingify only uses gendered shoe branches when no
+  // direct leaf can satisfy source platform and size coverage.
+  if (shoe && eligible.some((candidate) => !/男童鞋|女童鞋/.test(normalized(candidate.tradePath)))) {
+    eligible = eligible.filter((candidate) => !/男童鞋|女童鞋/.test(normalized(candidate.tradePath)));
+  }
   if (eligible.length === 0) {
     const reasons = candidates.flatMap((candidate) => candidate.reasons).filter(Boolean);
     return { candidates, manualSelectionRequired: true, reasons: reasons.length ? reasons : ["没有覆盖资料与当前模板要求的深绘类目"] };
   }
-  const top = eligible[0];
-  const tied = eligible.filter((candidate) => candidate.score === top.score);
+  const bestTier = Math.min(...eligible.map((candidate) => candidate.priorityTier));
+  const tierEligible = eligible.filter((candidate) => candidate.priorityTier === bestTier);
+  const top = tierEligible[0];
+  const tied = tierEligible.filter((candidate) => candidate.score === top.score);
   if (tied.length > 1) return { candidates, manualSelectionRequired: true, reasons: [`类目评分并列：${tied.map((candidate) => candidate.tradeId).join(",")}`] };
-  return { selected: top, candidates, manualSelectionRequired: false, reasons: top.reasons };
+  return { selected: top, candidates, manualSelectionRequired: false, reasons: [
+    ...(hasCategoryConflict(context) ? ["上市计划同一类目来源存在冲突；已按优先级、平台、尺码与语义规则选择，需人工确认。"] : []),
+    ...top.reasons,
+  ] };
 }

@@ -674,6 +674,7 @@ type StatefulBalabalaArgs = {
   testConfigPath?: string;
   planHash?: string;
   merchantId: string;
+  tradeId?: string;
   tenantName?: string;
   workflowRoot: string;
   fields: string[];
@@ -705,7 +706,7 @@ function statefulBalabalaHelpText(): string {
   return [
     "Usage: deepdraw balabala import --mode test|production --spu SPU --mdm SKU.xlsx --launch-plan PLAN.xlsx --copywriting COPY.xlsx [--test-config TARGETS.json] [--shoe-size-chart SIZE.xlsx] [--plm-size-chart PLM.xlsx] [--apparel-size-reference 尺码数据模板.xlsx] [--field-mappings MAPPINGS.json] [--images DIR]",
     "       deepdraw balabala assemble --mode test|production --spu SPU [--test-config TARGETS.json]",
-    "       deepdraw balabala template --mode test|production --spu SPU --execute [--test-config TARGETS.json]",
+    "       deepdraw balabala template --mode test|production --spu SPU --execute [--trade-id TRADE_ID] [--test-config TARGETS.json]",
     "       deepdraw balabala review --mode test|production --spu SPU [--test-config TARGETS.json] [--ai-responses AI.json] [--ocr-facts OCR.json]",
     "       deepdraw balabala sync --mode test|production --spu SPU --execute [--test-config TARGETS.json]",
     "       deepdraw balabala override --mode test|production --spu SPU --field FIELD --value VALUE [--test-config TARGETS.json]",
@@ -735,6 +736,7 @@ function parseStatefulBalabalaArgs(argv: string[], cwd: string): StatefulBalabal
   let testConfigPath: string | undefined;
   let planHash: string | undefined;
   let merchantId = "1162";
+  let tradeId: string | undefined;
   let tenantName: string | undefined;
   let workflowRoot = cwd;
   let fields: string[] = [];
@@ -771,6 +773,7 @@ function parseStatefulBalabalaArgs(argv: string[], cwd: string): StatefulBalabal
     if (arg === "--test-config") { testConfigPath = resolve(cwd, next()); continue; }
     if (arg === "--plan-hash") { planHash = next(); continue; }
     if (arg === "--merchant-id") { merchantId = next(); continue; }
+    if (arg === "--trade-id") { tradeId = next(); continue; }
     if (arg === "--tenant") { tenantName = next(); continue; }
     if (arg === "--workflow-root") { workflowRoot = resolve(cwd, next()); continue; }
     if (arg === "--fields") { fields = [...new Set(next().split(",").map((value) => value.trim()).filter(Boolean))]; continue; }
@@ -803,7 +806,8 @@ function parseStatefulBalabalaArgs(argv: string[], cwd: string): StatefulBalabal
   if ((aiResponsesPath || ocrFactsPath) && action !== "review") throw new Error("--ai-responses and --ocr-facts are only supported by balabala review");
   if ((overrideField || overrideValue) && action !== "override") throw new Error("--field and --value are only supported by balabala override");
   if (action === "override" && (!overrideField || overrideValue === undefined)) throw new Error("balabala override requires --field and --value");
-  return { action, stage, spu, mode, testConfigPath, planHash, merchantId, tenantName, workflowRoot, fields, execute, yes, plan, mdmPath, launchPlanPath, copywritingPath, shoeSizeChartPath, plmSizeChartPath, apparelSizeReferencePath, fieldMappingsPath, imagesPath, aiResponsesPath, ocrFactsPath, overrideField, overrideValue };
+  if (tradeId && action !== "template") throw new Error("--trade-id is only supported by balabala template");
+  return { action, stage, spu, mode, testConfigPath, planHash, merchantId, tradeId, tenantName, workflowRoot, fields, execute, yes, plan, mdmPath, launchPlanPath, copywritingPath, shoeSizeChartPath, plmSizeChartPath, apparelSizeReferencePath, fieldMappingsPath, imagesPath, aiResponsesPath, ocrFactsPath, overrideField, overrideValue };
 }
 
 function resultRecord(stdout: string): Record<string, unknown> {
@@ -830,8 +834,9 @@ function apiRows(data: unknown): Record<string, unknown>[] {
  */
 export function flattenTradeLeaves(data: unknown): Record<string, unknown>[] {
   const leaves: Record<string, unknown>[] = [];
-  const visit = (node: Record<string, unknown>, parents: string[]): void => {
+  const visit = (node: Record<string, unknown>, parents: string[], ancestorIds: string[]): void => {
     const name = text(node.name ?? node.tradeName ?? node.trade_name ?? node.label);
+    const id = text(node.id ?? node.tradeId ?? node.trade_id);
     const explicitPath = text(node.tradePath ?? node.trade_path ?? node.path);
     // Some tenant responses put only the leaf name in `tradePath`. It is not
     // a full path and would erase the parent evidence needed to distinguish
@@ -842,12 +847,12 @@ export function flattenTradeLeaves(data: unknown): Record<string, unknown>[] {
     if (children.length === 0) {
       const leafNode = { ...node };
       delete leafNode.children;
-      leaves.push({ ...leafNode, ...(path ? { tradePath: path } : {}) });
+      leaves.push({ ...leafNode, ...(path ? { tradePath: path } : {}), ancestorIds: [...ancestorIds, id].filter(Boolean) });
       return;
     }
-    for (const child of children) visit(child, path ? [path] : parents);
+    for (const child of children) visit(child, path ? [path] : parents, [...ancestorIds, id].filter(Boolean));
   };
-  for (const row of apiRows(data)) visit(row, []);
+  for (const row of apiRows(data)) visit(row, [], []);
   return leaves;
 }
 
@@ -990,6 +995,13 @@ function writePlanSummary(input: {
     coveringFullUpdateRisk: input.stage === "full-update"
       ? "dp.product.update is covering: omitted fields, colors, SKUs, sales sizes or platform size tables can be erased."
       : null,
+    postCreateFullUpdate: input.stage === "create"
+      ? {
+        required: true,
+        sequence: ["dp.product.create", "dp.product.resource(form)", "dp.product.update", "dp.product.resource(form)"],
+        note: "The reviewed create authorization includes the required post-create read/merge/full-update chain. The update body is rebuilt from the returned productId and form snapshot; it is never guessed before creation.",
+      }
+      : null,
   };
 }
 
@@ -1047,14 +1059,18 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
       const snapshot = await engine.snapshot();
       const trades = flattenTradeLeaves(resultRecord(tradesResult.stdout).data);
       const decision = selectBalabalaTrade(snapshot.normalized, trades);
-      if (decision.manualSelectionRequired || !decision.selected) return resultMetadata("template", target.targetSpu, await engine.syncTemplate(trades, []), remoteOperationContext(target));
+      const manuallySelected = args.tradeId ? decision.candidates.find((candidate) => candidate.tradeId === args.tradeId) : undefined;
+      if (args.tradeId && (!manuallySelected || manuallySelected.priorityTier === 99)) throw new Error(`--trade-id ${args.tradeId} is not an allowed current DeepDraw leaf`);
+      if (!args.tradeId && (decision.manualSelectionRequired || !decision.selected)) return resultMetadata("template", target.targetSpu, await engine.syncTemplate(trades, []), remoteOperationContext(target));
+      const selectedTradeId = args.tradeId ?? decision.selected?.tradeId;
+      if (!selectedTradeId) throw new Error("no selected DeepDraw tradeId");
       await waitForDeepdrawReadInterval();
-      const fieldsResult = await runCli(["call", "dp.trade.fields", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", `tradeId=${decision.selected.tradeId}`], apiOptions);
+      const fieldsResult = await runCli(["call", "dp.trade.fields", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", `tradeId=${selectedTradeId}`], apiOptions);
       if (fieldsResult.exitCode !== 0) return withBalabalaWorkflowMetadata(fieldsResult, "template");
       const fields = apiRows(resultRecord(fieldsResult.stdout).data);
-      const synced = await engine.syncTemplate(trades, fields);
+      const synced = await engine.syncTemplate(trades, fields, args.tradeId);
       const requestId = text(resultRecord(fieldsResult.stdout).requestId) || null;
-      await store.recordExecution({ operation: "template-sync", status: "verified", api: "dp.trade.fields", requestId, details: { ...remoteOperationContext(target, undefined, requestId), tradeId: decision.selected.tradeId, fieldCount: fields.length } });
+      await store.recordExecution({ operation: "template-sync", status: "verified", api: "dp.trade.fields", requestId, details: { ...remoteOperationContext(target, undefined, requestId), tradeId: selectedTradeId, fieldCount: fields.length, ...(args.tradeId ? { manualTradeSelection: true } : {}) } });
       return resultMetadata("template", target.targetSpu, synced, remoteOperationContext(target, undefined, requestId));
     } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
@@ -1186,13 +1202,30 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
       const productId = productIdFrom(writePayload.data);
       if (!productId) return { exitCode: 1, stdout: jsonLine({ ok: false, workflow: "balabala-listing", action: "publish", stage, spu: target.targetSpu, state: "transport_unknown", ...remoteOperationContext(target, planHash, writeRequestId), message: "create accepted but productId is absent; query resource before retrying" }), stderr: "" };
       snapshot = await engine.replace({ ...snapshot, state: "post_create_update", draft: { ...snapshot.draft, productId } });
-      if (args.mode === "test") {
-        const full = await runCli(["balabala", "publish", "full-update", "--mode", "test", "--spu", target.targetSpu, "--merchant-id", args.merchantId, ...(args.testConfigPath ? ["--test-config", args.testConfigPath] : []), ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--execute", "--yes"], options);
-        return { ...full, stdout: jsonLine({ workflow: "balabala-listing", action: "publish", stage, spu: target.targetSpu, ...remoteOperationContext(target, planHash, writeRequestId), write: { requestId: writePayload.requestId, data: writePayload.data }, postCreateFullUpdate: resultRecord(full.stdout) }) };
-      }
+      // `create` is only complete after the covering update.  This uses the
+      // form snapshot returned for the newly created product, so it cannot
+      // accidentally reuse a guessed id, stale SKU table, or previous draft.
       await waitForDeepdrawReadInterval();
-      const read = await runCli(["balabala", "readback", "--mode", "production", "--spu", target.targetSpu, "--merchant-id", args.merchantId, ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--plan-hash", planHash, "--execute"], options);
-      return { ...read, stdout: jsonLine({ workflow: "balabala-listing", action: "publish", stage, spu: target.targetSpu, ...remoteOperationContext(target, planHash, writeRequestId), write: { requestId: writePayload.requestId, data: writePayload.data }, readback: resultRecord(read.stdout), nextAction: "review and run a separately planned full-update before declaring the created product complete" }) };
+      const createdResource = await runCli(["call", "dp.product.resource", "--execute", "--param", `merchantId=${args.merchantId}`, "--param", `productId=${productId}`, "--param", "resource=form"], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      if (createdResource.exitCode !== 0) return withBalabalaWorkflowMetadata(createdResource, "publish");
+      const createdForm = resultRecord(createdResource.stdout);
+      assertResourceFormTarget(createdForm.data, target);
+      const createdReadRequestId = text(createdForm.requestId) || null;
+      await store.recordExecution({ operation: "post-create-form-read", status: "verified", api: "dp.product.resource", requestId: createdReadRequestId, details: { ...remoteOperationContext(target, planHash, createdReadRequestId), productId } });
+      const prepared = await engine.prepareExistingUpdate(record(createdForm.data));
+      if (prepared.blocking.length) return resultMetadata("publish", target.targetSpu, await engine.snapshot(), { ...remoteOperationContext(target, planHash), stage, message: "post-create full-update blocked by form/SKU intersection validation" });
+      snapshot = await engine.snapshot();
+      const postCreateBody = workflowPayload(snapshot, "full-update").sdkInput.product;
+      const postCreateHash = planHashFor({ target, stage: "full-update", api: "dp.product.update", query: { productId }, body: postCreateBody });
+      const postCreateSummary = writePlanSummary({ snapshot, target, stage: "full-update", api: "dp.product.update", query: { productId }, body: postCreateBody });
+      const postCreateWrite = await runCli(["call", "dp.product.update", "--execute", "--yes", "--param", `productId=${productId}`, "--json", JSON.stringify(postCreateBody)], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
+      const postCreatePayload = resultRecord(postCreateWrite.stdout);
+      const postCreateRequestId = text(postCreatePayload.requestId) || null;
+      await store.recordExecution({ operation: "post-create-full-update", status: postCreateWrite.exitCode === 0 ? "in_progress" : "failed", api: "dp.product.update", requestId: postCreateRequestId, inputHash: postCreateHash, details: { ...remoteOperationContext(target, planHash, postCreateRequestId), productId, parentPlanHash: planHash, ...postCreateSummary } });
+      if (postCreateWrite.exitCode !== 0) return withBalabalaWorkflowMetadata(postCreateWrite, "publish");
+      await waitForDeepdrawReadInterval();
+      const read = await runCli(["balabala", "readback", "--mode", args.mode, "--spu", target.targetSpu, "--merchant-id", args.merchantId, ...(args.testConfigPath ? ["--test-config", args.testConfigPath] : []), ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--plan-hash", planHash, "--execute"], options);
+      return { ...read, stdout: jsonLine({ workflow: "balabala-listing", action: "publish", stage, spu: target.targetSpu, ...remoteOperationContext(target, planHash, writeRequestId), write: { requestId: writePayload.requestId, data: writePayload.data }, postCreateFullUpdate: { requestId: postCreateRequestId, planHash: postCreateHash, data: postCreatePayload.data }, readback: resultRecord(read.stdout) }) };
     }
     await waitForDeepdrawReadInterval();
     const read = await runCli(["balabala", "readback", "--mode", args.mode, "--spu", target.targetSpu, "--merchant-id", args.merchantId, ...(args.testConfigPath ? ["--test-config", args.testConfigPath] : []), ...(args.tenantName ? ["--tenant", args.tenantName] : []), "--workflow-root", args.workflowRoot, "--plan-hash", planHash, "--execute"], options);

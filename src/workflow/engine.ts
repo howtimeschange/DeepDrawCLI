@@ -1,4 +1,4 @@
-import { auditAiResponses, auditOcrFacts } from "../brands/balabala/ai-audit.js";
+import { auditAiResponses, auditOcrFacts, buildLocalVisionReviewPlan } from "../brands/balabala/ai-audit.js";
 import { balabalaPlugin } from "../brands/balabala/index.js";
 import type { BrandPlugin } from "../brands/types.js";
 import { hydrateBalabalaRemoteDraft, type ReadbackComparison } from "../brands/balabala/readback.js";
@@ -58,9 +58,17 @@ export class BalabalaWorkflowEngine {
     return this.store.write(next);
   }
 
-  async syncTemplate(trades: unknown[], rawFields: unknown[]): Promise<WorkflowSnapshot> {
+  async syncTemplate(trades: unknown[], rawFields: unknown[], manuallySelectedTradeId?: string): Promise<WorkflowSnapshot> {
     const current = await this.snapshot();
-    const decision = this.plugin.selectTrade(current.normalized, trades) as unknown as TradeDecision;
+    const automated = this.plugin.selectTrade(current.normalized, trades) as unknown as TradeDecision;
+    const manualCandidate = manuallySelectedTradeId
+      ? automated.candidates.find((candidate) => candidate.tradeId === manuallySelectedTradeId)
+      : undefined;
+    if (manuallySelectedTradeId && !manualCandidate) throw new Error(`manual tradeId ${manuallySelectedTradeId} is not a current submit-ready DeepDraw leaf`);
+    if (manualCandidate?.priorityTier === 99) throw new Error("manual trade selection cannot use the private blbl&mini branch");
+    const decision: TradeDecision = manualCandidate
+      ? { ...automated, selected: manualCandidate, manualSelectionRequired: false, reasons: ["人工指定当前深绘叶子类目；已保留自动推荐与来源证据供审计。", ...automated.reasons] }
+      : automated;
     const fields = templateFields(rawFields);
     const template = { tradeDecision: decision, tradeId: decision.selected?.tradeId ?? "", fields, hash: fingerprint(JSON.stringify(fields)), syncedAt: new Date().toISOString() };
     if (decision.manualSelectionRequired || fields.length === 0) {
@@ -108,7 +116,11 @@ export class BalabalaWorkflowEngine {
     const audit = {
       ...current.audit,
       fields: deduped,
-      aiPlan: { ...this.plugin.buildAiPlan(current.normalized, deduped), fields: (template.fields as JsonRecord[]).map(record).map((field) => ({ fieldId: field.fieldId, fieldName: field.fieldName, active: true, options: field.options })) },
+      aiPlan: {
+        ...this.plugin.buildAiPlan(current.normalized, deduped),
+        ...buildLocalVisionReviewPlan(current.normalized.images, deduped),
+        fields: deduped.map((field) => ({ fieldId: field.fieldId, fieldName: field.fieldName, active: field.active !== false, manualOverride: field.manualOverride === true, options: (template.fields as JsonRecord[]).map(record).find((templateField) => compact(templateField.fieldName) === compact(field.fieldName))?.options ?? [] })),
+      },
       assembledAt: new Date().toISOString(),
     };
     return this.store.write({ ...current, template, draft, audit, state: blockers.length ? "review_required" : "ready", blocking: blockers.map((field) => ({ code: field.staleReason ?? "required_field_missing", message: `字段 ${field.fieldName} ${field.validationStatus === "invalid" ? "与当前模板不匹配" : "需要补充或人工确认"}` })), manual: manual.map((field) => ({ code: field.staleReason ?? "manual_required", message: `字段 ${field.fieldName} 需要人工确认` })) });
@@ -118,7 +130,14 @@ export class BalabalaWorkflowEngine {
     const current = await this.snapshot();
     const result = auditAiResponses(record(current.audit.aiPlan), responses);
     const auditedValues = record(current.normalized.auditedValues);
-    for (const item of result.accepted) auditedValues[text(item.fieldName)] = { valueText: text(item.value), sourceType: "ai", confidence: item.confidence, evidence: item.evidence };
+    const images = Array.isArray(current.normalized.images) ? current.normalized.images.map(record) : [];
+    for (const item of result.accepted) {
+      const image = images.find((candidate) => text(candidate.sha256) === text(item.imageSha256 ?? item.image_sha256));
+      auditedValues[text(item.fieldName)] = {
+        valueText: text(item.value), sourceType: "ai", confidence: item.confidence, evidence: item.evidence,
+        ...(image ? { sourceRef: { path: text(image.path), sha256: text(image.sha256), role: text(image.role) } } : {}),
+      };
+    }
     return this.assemble({ ...current, normalized: { ...current.normalized, auditedValues }, audit: { ...current.audit, ai: result } });
   }
 
