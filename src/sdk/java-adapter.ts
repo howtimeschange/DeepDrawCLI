@@ -84,6 +84,10 @@ export async function callJavaSdkApi(input: CallJavaSdkInput): Promise<DeepdrawR
   const api = findApiDefinition(input.apiName);
   if (!api) throw new Error(`Unknown DeepDraw API: ${input.apiName}`);
 
+  if (input.apiName === "dp.product.incremental.update") {
+    const fields = (input.body as { fields?: Record<string, unknown> } | undefined)?.fields;
+    if (typeof fields?.尺码 === "string" && fields.尺码.includes("*")) throw new Error("带备注的销售尺码不兼容普通增量接口；必须使用经过计划的 dp.product.update，防止尺码/SKU 被重映射。");
+  }
   const cwd = input.cwd ?? process.cwd();
   const env = input.env ?? process.env;
   const classpath = await resolveJavaClasspath(cwd, env, input.spawnImpl);

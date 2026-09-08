@@ -1,3 +1,4 @@
+import { BUILTIN_SHOE_ROWS, SIZE_REFERENCE_SOURCE } from "./size-reference-data.js";
 import type { WorkflowField } from "../../workflow/types.js";
 import { buildPlmSizeChartForTemplate, isBalabalaShoeOnlySizeTableName, normalizeDeepdrawApparelSize } from "./size-chart-rules.js";
 
@@ -48,7 +49,7 @@ function table(template: JsonRecord | undefined, columns: string[], rows: Array<
   return [workflowField(template, { title: columns.join(","), ...Object.fromEntries(rows.map((row) => [row.key, row.cells.join(",")])) }, "derived", staleReason)];
 }
 
-interface ShoeRow { size: string; footRange: string; foot: string; inner: string; remark: string; platformRemark: string; }
+interface ShoeRow { size: string; footRange: string; foot: string; inner: string; footMm: string; innerMm: string; remark: string; platformRemark: string; }
 
 function innerForChart(row: JsonRecord, chartCode: string): string {
   if (chartCode === "open_sandal") return text(row.openSandalInnerLength ?? row.open_sandal_inner_length ?? row.inner_length_mm ?? row.innerLength);
@@ -62,14 +63,19 @@ function normalizeShoeRows(context: JsonRecord, chartCode: string, skuSizes: str
   return rawRows.map((row) => {
     const size = sizeNumber(row.size ?? row.size_value);
     const rawFoot = text(row.footLength ?? row.foot_length ?? row.foot_length_mm);
-    const footRange = normalizeFootRange(rawFoot);
-    const foot = row.foot_length_mm !== undefined ? numberText(Number(rawFoot) / 10) : footRange;
+    const footRange = normalizeFootRange(row.footRange ?? rawFoot);
+    const range = footRange.match(/^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/);
+    const foot = row.foot_length_mm !== undefined ? numberText(Number(rawFoot) / 10)
+      : range ? numberText((Number(range[1]) + Number(range[2])) / 2) : footRange;
+    const footMm = row.foot_length_mm !== undefined ? numberText(rawFoot) : numberText(Number(foot) * 10);
+    const prefix = chartCode === "open_sandal" ? "openSandal" : chartCode === "closed_sandal" ? "closedSandal" : "sport";
     const rawInner = innerForChart(row, chartCode);
     const inner = row.inner_length_mm !== undefined ? numberText(Number(rawInner) / 10) : numberText(rawInner);
-    const remark = text(row.general_mapping_text ?? row.sportRemark ?? row.douyin_mapping_text) || `脚长${footRange}/内长${inner}`;
+    const innerMm = row[`${prefix}InnerLengthMm`] !== undefined ? numberText(row[`${prefix}InnerLengthMm`]) : row.inner_length_mm !== undefined ? numberText(rawInner) : numberText(Number(inner) * 10);
+    const remark = text(row[`${prefix}Douyin`] ?? row[`${prefix}Remark`] ?? row.general_mapping_text ?? row.douyin_mapping_text).replace(/^[（(]|[）)]$/g, "") || `脚长${footRange}/内长${inner}`;
     const display = size ? `${size}码` : "";
-    const platformRemark = text(row.video_pdd_vip_mapping_text ?? row.sportMulti ?? row.sportVip ?? row.sportPdd).match(/[（(].*[）)]/)?.[0] ?? `${display}（${remark}）`;
-    return { size, footRange, foot, inner, remark, platformRemark };
+    const platformRemark = (prefix === "sport" ? text(row.video_pdd_vip_mapping_text ?? row.sportMulti) : "") || `${display}（${remark}）`;
+    return { size, footRange, foot, inner, footMm, innerMm, remark, platformRemark };
   }).filter((row) => skuSizes.includes(row.size)).sort((left, right) => Number(left.size) - Number(right.size));
 }
 function sandalMatch(classification: unknown): { chartCode: string; templateType: string; shoeSizeTableType: string; legacyShoeType: string } | undefined {
@@ -102,11 +108,11 @@ function shoeSizeSegment(rows: ShoeRow[], template: JsonRecord): string {
 }
 function shoeTables(context: JsonRecord, template: JsonRecord): WorkflowField[] {
   const skuSizes = [...new Set((Array.isArray(context.skus) ? context.skus : []).map(record).map((sku) => sizeNumber(sku.size ?? sku.sizeName ?? sku.size_name)).filter(Boolean))];
-  if (skuSizes.some((size) => size.includes("."))) return [{ fieldName: "尺码", fieldType: "", sourceType: "skip", sourceRefs: [], active: false, validationStatus: "invalid", staleReason: "shoe_half_size_not_supported" }];
+  if (skuSizes.some((size) => size.includes("."))) return [{ fieldName: "尺码", fieldType: "", sourceType: "skip", sourceRefs: [], active: true, validationStatus: "invalid", staleReason: "shoe_half_size_not_supported" }];
   const match = shoeMatch(context);
-  if (match.status === "needs_visual_classification") return [{ fieldName: "凉鞋结构", fieldType: "", sourceType: "skip", sourceRefs: [], active: false, validationStatus: "missing", staleReason: "needs_visual_classification" }];
-  const rows = normalizeShoeRows(context, match.chartCode, skuSizes);
-  if (rows.length !== skuSizes.length) return [{ fieldName: "尺码表", fieldType: "", sourceType: "skip", sourceRefs: [], active: false, validationStatus: "missing", staleReason: "shoe_size_chart_missing_sku_size" }];
+  if (match.status === "needs_visual_classification") return [{ fieldName: "凉鞋结构", fieldType: "", sourceType: "skip", sourceRefs: [], active: true, validationStatus: "missing", staleReason: "needs_visual_classification" }];
+  const rows = text(record(context.sizeChart ?? context.size_chart).source) === "shoe_size_chart" ? normalizeShoeRows(context, match.chartCode, skuSizes) : [];
+  if (rows.length !== skuSizes.length || new Set(rows.map((row) => row.size)).size !== skuSizes.length || rows.some((row) => ![row.foot, row.inner].every((value) => /^\d+(?:\.\d+)?$/.test(value) && Number(value) > 0))) return [{ fieldName: "尺码表", fieldType: "", sourceType: "skip", sourceRefs: [], active: true, validationStatus: "missing", staleReason: "shoe_size_chart_missing_sku_size" }];
   const output: WorkflowField[] = [];
   const display = (row: ShoeRow) => `${row.size}码`;
   const main = field(template, "尺码表");
@@ -114,7 +120,7 @@ function shoeTables(context: JsonRecord, template: JsonRecord): WorkflowField[] 
   output.push(...table(main, mainColumns, rows.map((row) => ({ key: display(row), cells: mainColumns.map((column) => compact(column) === compact("尺码") ? row.size : compact(column) === compact("脚长") ? row.foot : row.inner) }))));
   const vip = field(template, "唯品会尺码表");
   const vipColumns = supportedColumns(vip, ["欧洲码", "脚长", "鞋内长"], { 鞋内长: ["鞋长"] });
-  output.push(...table(vip, vipColumns, rows.map((row) => ({ key: display(row), cells: vipColumns.map((column) => compact(column) === compact("欧洲码") ? row.size : compact(column) === compact("脚长") ? row.foot : row.inner) }))));
+  output.push(...table(vip, vipColumns, rows.map((row) => ({ key: display(row), cells: vipColumns.map((column) => compact(column) === compact("欧洲码") ? row.size : compact(column) === compact("脚长") ? row.footMm : row.innerMm) }))));
   const tmall = field(template, "天猫尺码表");
   const tmallColumns = supportedColumns(tmall, ["脚长", "鞋内长"]);
   output.push(...table(tmall, tmallColumns, rows.map((row) => ({ key: display(row), cells: tmallColumns.map((column) => compact(column) === compact("脚长") ? row.foot : row.inner) }))));
@@ -178,6 +184,16 @@ function apparelTables(context: JsonRecord, template: JsonRecord): WorkflowField
     ? record(context.apparelSizeReference ?? context.apparel_size_reference).rows as unknown[]
     : [];
   const output: WorkflowField[] = [];
+  const measurements = new Map<string, Set<string>>();
+  for (const row of rows.map(record)) {
+    const identity = `${text(row.测量点 ?? row.measurementPoint)}|${normalizeDeepdrawApparelSize(row.尺码 ?? row.size)}`;
+    const value = text(row.尺码值 ?? row.sizeValue);
+    if (!value) continue;
+    const values = measurements.get(identity) ?? new Set<string>();
+    values.add(value); measurements.set(identity, values);
+  }
+  const conflicts = [...measurements].filter(([, values]) => values.size > 1).map(([identity]) => identity);
+  if (conflicts.length) output.push({ fieldName: "PLM量点冲突", sourceType: "skip", sourceRefs: [], active: true, validationStatus: "invalid", staleReason: `plm_measurements_conflict:${conflicts.join(";")}` });
   for (const item of templateFields(template)) {
     const name = fieldName(item);
     const key = compact(name);
@@ -192,13 +208,39 @@ function apparelTables(context: JsonRecord, template: JsonRecord): WorkflowField
     }
     const mappings = context.sizeChartMappings ?? context.size_chart_mappings;
     const result = buildPlmSizeChartForTemplate({ rows: hasPlmMeasurements ? rows : [], spuCode: context.spu, template: item, mappings: Array.isArray(mappings) ? mappings : [], allowedSizes, gender: launch.gender, garmentType: `${text(launch.subcategory)} ${text(launch.category)}`, apparelProduct: true, apparelSizeReferenceRows: referenceRows });
-    if (Object.keys(result.valueJson).length > 1) output.push(workflowField(item, result.valueJson));
+    if (Object.keys(result.valueJson).length > 1) {
+      const built = workflowField(item, result.valueJson);
+      if (apparelMainSizeTable(name)) {
+        const columns = text(result.valueJson.title).split(",");
+        const missing = allowedSizes.some((size) => {
+          const row = result.valueJson[size];
+          return row === undefined || text(row).split(",").some((cell, index) => !cell && !/充绒|填充/.test(columns[index] ?? ""));
+        });
+        if (missing) { built.validationStatus = "missing"; built.staleReason = "plm_measurements_missing"; }
+      }
+      output.push(built);
+    } else if (apparelMainSizeTable(name)) output.push(missingPlmMainTable(item));
   }
-  return output.length ? output : [{ fieldName: "尺码表", fieldType: "", sourceType: "skip", sourceRefs: [], active: false, validationStatus: "missing", staleReason: "plm_size_chart_mapping_required" }];
+  return output;
 }
 
 export function buildBalabalaSizeTables(contextInput: Record<string, unknown>, templateInput: Record<string, unknown>): WorkflowField[] {
-  const context = record(contextInput);
+  let context = record(contextInput);
+  if (isShoe(context) && !context.sizeChart && !context.size_chart) context = { ...context, sizeChart: { source: "shoe_size_chart", rows: BUILTIN_SHOE_ROWS, reference: SIZE_REFERENCE_SOURCE.shoe } };
   const template = record(templateInput);
-  return isShoe(context) ? shoeTables(context, template) : apparelTables(context, template);
+  const result = isShoe(context) ? shoeTables(context, template) : apparelTables(context, template);
+  const shoe = isShoe(context);
+  const chart = record(shoe ? context.sizeChart ?? context.size_chart : context.plmSizeChart);
+  const refChart = shoe ? chart : record(context.apparelSizeReference ?? context.apparel_size_reference);
+  const refs: WorkflowField["sourceRefs"] = [];
+  for (const source of shoe ? [chart] : [chart, refChart]) {
+    const external = record(source.sourceRef);
+    if (text(external.path) && text(external.sha256)) refs.push(external as unknown as WorkflowField["sourceRefs"][number]);
+  }
+  if (refChart.reference || (!shoe && !Object.keys(refChart).length)) {
+    const reference = record(refChart.reference ?? SIZE_REFERENCE_SOURCE.apparel);
+    refs.push({ path: text(reference.file), sha256: text(reference.sha256), sheet: text(reference.sheet), range: text(reference.range), role: "builtin_size_reference" });
+  }
+  for (const field of result) field.sourceRefs = [...field.sourceRefs, ...refs];
+  return result;
 }

@@ -85,3 +85,34 @@ test("protects nested merchant-SKU color-and-size keys and normalizes structured
   });
   assert.equal(comparison.status, "readback_verified");
 });
+
+test("real form tables and SKU cells verify values, not merely row identities", () => {
+  const expected = {fields:{颜色:"蓝色,蓝色调00388",商家SKU:{title:"价格,零售价",蓝色调00388:{"26码":"359.9,359.9"}},唯品会尺码表:{title:"脚长,鞋内长","26码":"160,170.32"},功能:"防滑;耐磨"}};
+  const remote = {fields:[{field:{name:"功能",type:"MULTI_CHOICE"},texts:["耐磨","防滑"]}],colors:{options:["蓝色"],optionAliases:{蓝色:"蓝色调00388"}},sizeTables:[{field:{name:"唯品会尺码表"},sizeTableItems:[{size:"26",values:{脚长:"160",鞋内长:"170.32"}}]}],skus:{skuItems:[{color:"蓝色",size:"26",values:{价格:"359.9",零售价:"359.9"}}]}};
+  assert.equal(compareBalabalaReadback(expected,remote).status,"readback_verified");
+  remote.skus.skuItems[0].values.零售价="1";
+  assert.ok(compareBalabalaReadback(expected,remote).mismatches.some(x=>x.field==="商家SKU"));
+  remote.sizeTables[0].sizeTableItems[0].values.鞋内长="17.032";
+  assert.ok(compareBalabalaReadback(expected,remote).mismatches.some(x=>x.field==="唯品会尺码表"));
+  remote.skus.skuItems=[];
+  assert.ok(compareBalabalaReadback(expected,remote).mismatches.some(x=>x.field==="商家SKU"));
+});
+
+test("omitted empty fields do not conceal missing nonempty fields",()=>{
+  const result=compareBalabalaReadback({fields:{空值:"",品牌:"巴拉巴拉"}},{fields:[]});
+  assert.deepEqual(result.mismatches.map(x=>x.field),["品牌"]);
+});
+
+test("quantity-price wire rows decode only valid numeric pairs",()=>{
+  const remote=(texts:string[])=>({fields:[{field:{name:'价格区间',type:'MULTI_TEXT'},texts}]});
+  assert.equal(compareBalabalaReadback({fields:{价格区间:'1,359.9'}},remote([':','1:359.9'])).status,'readback_verified');
+  assert.equal(compareBalabalaReadback({fields:{价格区间:'1,359.9'}},remote([':','1:359.9:'])).status,'readback_mismatch');
+  assert.equal(compareBalabalaReadback({fields:{价格区间:'1,359.9'}},remote([':','1:399.9'])).status,'readback_mismatch');
+});
+
+test("top-level form SKU projection preserves the full-update intersection gate",()=>{
+ const remote={fields:[],colors:{options:['红色'],optionAliases:{红色:'红色调001'}},skus:{skuItems:[{color:'红色',size:'26',values:{价格:'359.9'}}]},sizeTables:[{field:{name:'尺码表',id:'table'},sizeTableItems:[{size:'26',values:{脚长:'16'}}]}]};
+ const hydrated=hydrateBalabalaRemoteDraft(remote);
+ assert.ok((hydrated.fields as Array<{field_name:string}>).some(x=>x.field_name==='尺码表'));
+ assert.equal(prepareBalabalaExistingUpdate(local,remote).blocking[0]?.code,'sku_intersection_required');
+});

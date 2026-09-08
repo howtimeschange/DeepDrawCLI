@@ -1,3 +1,4 @@
+import { BUILTIN_APPAREL_ROWS } from "../brands/balabala/size-reference-data.js";
 export type ProductPayloadStage = "create" | "update";
 export type ProductKind = "shoe" | "apparel" | "generic";
 
@@ -122,25 +123,7 @@ const UNSUPPORTED_SPECIAL_FIELDS = new Set([
   "颜色备注",
 ]);
 
-const BALABALA_APPAREL_WEIGHT_KG: Record<string, string> = {
-  "52": "3",
-  "59": "5",
-  "66": "7.5",
-  "73": "8",
-  "80": "9.5",
-  "90": "10.5",
-  "100": "13.5",
-  "110": "17",
-  "120": "20.5",
-  "130": "25",
-  "140": "31",
-  "150": "37",
-  "160": "45",
-  "165": "52.5",
-  "170": "57.5",
-  "175": "62.5",
-  "180": "67.5",
-};
+const BALABALA_APPAREL_WEIGHT_KG: Record<string, string> = Object.fromEntries(BUILTIN_APPAREL_ROWS.map((row) => [String(row[0]), String(row[1])]));
 
 const BALABALA_MERCHANT_SKU_COLUMNS = [
   "价格",
@@ -422,6 +405,8 @@ function fieldValue(fields: JsonRecord[], names: string[]): unknown {
 
 function isStructuredField(name: unknown): boolean {
   const key = compactKey(name);
+  // This template selector is SINGLE_CHOICE, not a measurement table.
+  if (key === compactKey("25鞋子尺码表")) return false;
   return key === compactKey("多平台尺码") || key.includes("尺码表");
 }
 
@@ -451,8 +436,8 @@ function inferKind(source: JsonRecord, fields: JsonRecord[]): ProductKind {
     source.title,
     fieldValue(fields, ["商品类目", "产品类别", "类目"]),
   ].map(text).join(" ");
-  if (source.shoeSizes === true || /鞋|靴/.test(category)) return "shoe";
-  if (/服装|服饰|童装|羽绒服|外套|卫衣|裤|裙|上装|下装|牛仔/.test(category)) return "apparel";
+  if (source.shoeSizes === true || /\bshoe\b|鞋|靴/i.test(category)) return "shoe";
+  if (/\bapparel\b|服装|服饰|童装|羽绒服|外套|卫衣|裤|裙|上装|下装|牛仔/i.test(category)) return "apparel";
   return "generic";
 }
 
@@ -684,7 +669,7 @@ function normalizeMainTableLocal(value: unknown, identities: SizeIdentity[], kin
       const sourceCell = findSourceCell(sourceCells, column);
       let cell = cleanMeasurement(sourceCell.value);
       if (kind === "apparel" && targetKey === compactKey("身高") && !cell) cell = identity.canonical;
-      if (kind === "apparel" && targetKey === compactKey("体重")) cell = BALABALA_APPAREL_WEIGHT_KG[identity.canonical] ?? cell;
+      if (kind === "apparel" && targetKey === compactKey("体重")) cell = cell || BALABALA_APPAREL_WEIGHT_KG[identity.canonical] || "";
       cell = doubleHalfMeasurement(cell, sourceCell.sourceColumn, column);
       return cleanMeasurement(cell);
     });
@@ -739,7 +724,7 @@ function normalizeMultiPlatformLocal(value: unknown, identities: SizeIdentity[],
     const sourceCells = splitCells(rawRow);
     const remark = remarkForSize(identity.canonical, remarks, identities);
     const values = SHOE_MULTI_PLATFORM_COLUMNS.map((platform) => {
-      if (kind === "apparel") return platform === "京东" ? identity.canonical : "";
+      if (kind === "apparel") return platform === "京东" ? identity.canonical : remark && ["拼多多", "微信视频小店", "小红书"].includes(platform) ? `${identity.alias}（${remark}）` : "";
       const sourceIndex = platformColumnIndex(sourceTitle, platform);
       return normalizeShoePlatformCell(identity, platform, sourceIndex >= 0 ? sourceCells[sourceIndex] ?? "" : "", remark);
     });
@@ -751,7 +736,14 @@ function normalizeMultiPlatformLocal(value: unknown, identities: SizeIdentity[],
 function normalizeStructuredLocal(name: string, value: unknown, identities: SizeIdentity[], kind: ProductKind, garment: string, remarks: Record<string, string>): JsonRecord {
   if (compactKey(name) === compactKey("多平台尺码")) return normalizeMultiPlatformLocal(value, identities, kind, remarks);
   if (isMainSizeTable(name)) return normalizeMainTableLocal(value, identities, kind, garment);
-  return normalizeGenericTableLocal(value, identities, kind);
+  const normalized = normalizeGenericTableLocal(value, identities, kind);
+  if (kind === "apparel" && compactKey(name) === compactKey("唯品会尺码表")) {
+    for (const [size, row] of tableRows(normalized)) {
+      const remark = remarkForSize(size, remarks, identities);
+      if (remark && /^充绒量/.test(remark)) { delete normalized[size]; normalized[`${stripSizeRemark(size)}（${remark}）`] = row; }
+    }
+  }
+  return normalized;
 }
 
 function sdkShoeTable(value: unknown): JsonRecord {
@@ -776,7 +768,7 @@ function sdkShoeVipTable(value: unknown): JsonRecord {
   const output: JsonRecord = { ...source };
   for (const [size, row] of tableRows(source)) {
     const cells = splitCells(row);
-    if (europeanIndex < cells.length) cells[europeanIndex] = stripSizeRemark(cells[europeanIndex]);
+    if (europeanIndex < cells.length) cells[europeanIndex] = canonicalSizeKey(cells[europeanIndex]).replace(/码$/, "");
     output[size] = cells.join(",");
   }
   return output;

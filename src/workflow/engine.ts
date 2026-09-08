@@ -1,3 +1,5 @@
+import { balabalaListPrice, balabalaPriceEvidence } from "../brands/balabala/prices.js";
+import { applyBalabalaDownFill } from "../brands/balabala/down-fill.js";
 import { auditAiResponses, auditOcrFacts, buildLocalVisionReviewPlan } from "../brands/balabala/ai-audit.js";
 import { balabalaPlugin } from "../brands/balabala/index.js";
 import type { BrandPlugin } from "../brands/types.js";
@@ -85,11 +87,15 @@ export class BalabalaWorkflowEngine {
     const template = record(current.template);
     const decision = record(template.tradeDecision);
     const selected = record(decision.selected);
+    // Source identities select local facts; only the output envelope targets -test.
+    const buildContext = { ...current.normalized, spu: text(current.normalized.sourceSpu) || current.normalized.spu };
     const fields = [
-      ...this.plugin.buildFields(current.normalized, template),
-      ...this.plugin.buildSizeTables(current.normalized, template),
+      ...this.plugin.buildFields(buildContext, template),
+      ...this.plugin.buildSizeTables(buildContext, template),
     ];
-    const deduped = [...new Map(fields.map((field) => [compact(field.fieldName), field])).values()];
+    const downFill = applyBalabalaDownFill([...new Map(fields.map((field) => [compact(field.fieldName), field])).values()], Array.isArray(current.normalized.skus) ? current.normalized.skus : [], Array.isArray(template.fields) ? template.fields as JsonRecord[] : []);
+    const deduped = downFill.fields;
+    if (Array.isArray(current.normalized.skus) && current.normalized.skus.length && !balabalaListPrice(current.normalized)) deduped.push({ fieldName: "MDM 导入表挂牌单价（缺失或同款不一致）", sourceType: "mdm", sourceRefs: [], active: true, validationStatus: "missing", staleReason: "mdm_spu_price_required" });
     const missing = deduped.filter((field) => field.active !== false && (field.validationStatus === "missing" || field.validationStatus === "invalid"));
     // A template field which has no safe automatic representation is not merely
     // informational.  Leaving it out of the SDK payload would silently drop a
@@ -106,7 +112,8 @@ export class BalabalaWorkflowEngine {
       tradeId: text(template.tradeId ?? selected.tradeId),
       productId: text(current.normalized.productId),
       productType: productType(current.normalized),
-      retailPrice: text(plan.retailPrice),
+      retailPrice: balabalaListPrice(current.normalized),
+      sizeRemarks: downFill.sizeRemarks,
       date: text(plan.launchDate),
       skus: current.normalized.skus ?? [],
       sizeChart: current.normalized.sizeChart ?? current.normalized.plmSizeChart,
@@ -121,6 +128,7 @@ export class BalabalaWorkflowEngine {
         ...buildLocalVisionReviewPlan(current.normalized.images, deduped),
         fields: deduped.map((field) => ({ fieldId: field.fieldId, fieldName: field.fieldName, active: field.active !== false, manualOverride: field.manualOverride === true, options: (template.fields as JsonRecord[]).map(record).find((templateField) => compact(templateField.fieldName) === compact(field.fieldName))?.options ?? [] })),
       },
+      priceEvidence: balabalaPriceEvidence(current.normalized),
       assembledAt: new Date().toISOString(),
     };
     return this.store.write({ ...current, template, draft, audit, state: blockers.length ? "review_required" : "ready", blocking: blockers.map((field) => ({ code: field.staleReason ?? "required_field_missing", message: `字段 ${field.fieldName} ${field.validationStatus === "invalid" ? "与当前模板不匹配" : "需要补充或人工确认"}` })), manual: manual.map((field) => ({ code: field.staleReason ?? "manual_required", message: `字段 ${field.fieldName} 需要人工确认` })) });
@@ -170,13 +178,14 @@ export class BalabalaWorkflowEngine {
       draft,
       audit: { ...current.audit, remoteSyncAt: now, remoteFieldCount: Array.isArray(draft.fields) ? draft.fields.length : 0, ...(operation ? { remoteOperation: operation } : {}) },
       readbacks: [...current.readbacks, { at: now, kind: "remote_sync", ...(operation ? { operation } : {}), resource: remote }],
-      blocking: [],
-      manual: [],
+      blocking: current.blocking,
+      manual: current.manual,
     });
   }
 
   async overrideDraftField(fieldName: string, value: string): Promise<WorkflowSnapshot> {
     const current = await this.snapshot();
+    if (["充绒量", "充绒量文本"].includes(compact(fieldName))) throw new Error("充绒量影响尺码表；请通过带来源的 review OCR 后全量更新");
     if (isStructuredField(fieldName) || ["颜色", "尺码"].includes(compact(fieldName))) throw new Error(`本地覆盖不允许修改 ${fieldName}；颜色、尺码和结构化字段必须走受控更新流程。`);
     const rawFields = Array.isArray(current.draft.fields) ? current.draft.fields.map(record) : [];
     const index = rawFields.findIndex((field) => compact(field.field_name ?? field.fieldName ?? field.name) === compact(fieldName));
@@ -193,14 +202,14 @@ export class BalabalaWorkflowEngine {
       normalized: { ...current.normalized, manualOverrides: overrides },
       draft: { ...current.draft, fields: rawFields },
       audit: { ...current.audit, manualOverrides: [...(Array.isArray(current.audit.manualOverrides) ? current.audit.manualOverrides : []), { fieldName: exactName, before, value, at: now }] },
-      blocking: [],
+      blocking: current.blocking,
     });
   }
 
   async prepareExistingUpdate(remote: JsonRecord): Promise<{ payload: JsonRecord; blocking: Array<{ code: string; message: string }> }> {
     const current = await this.snapshot();
     const result = this.plugin.prepareExistingUpdate(current.draft, remote) as { payload: JsonRecord; blocking: Array<{ code: string; message: string }> };
-    await this.store.write({ ...current, draft: result.payload, blocking: result.blocking, state: result.blocking.length ? "review_required" : "ready" });
+    await this.store.write({ ...current, draft: result.payload, blocking: [...current.blocking, ...result.blocking], state: (current.blocking.length || result.blocking.length) ? "review_required" : "ready" });
     return result;
   }
 
@@ -212,18 +221,22 @@ export class BalabalaWorkflowEngine {
     for (const requested of requestedFields) {
       const name = actual.get(compact(requested));
       if (!name) throw new Error(`增量字段 ${requested} 不在当前草稿或模板中`);
+      if (["充绒量", "充绒量文本"].includes(compact(name))) throw new Error("充绒量影响尺码表，必须使用全量更新");
       if (isStructuredField(name) || compact(name) === "颜色" || compact(name) === "尺码") throw new Error(`巴拉上新流程不允许通过普通增量更新写入 ${name}；请使用全量更新或颜色/SKU 专用接口。`);
       names.push(name);
     }
     const color = actual.get("颜色");
     const size = actual.get("尺码");
     if (!color || !size || !text(existing[color]) || !text(existing[size])) throw new Error("巴拉上新流程的普通增量更新必须携带有效的颜色和尺码字段。");
+    if (text(existing[size]).includes("*")) throw new Error("带备注的销售尺码不兼容普通增量接口，可能重映射尺码和 SKU；请使用经过计划的 full-update。");
     return { fields: Object.fromEntries([...new Set([...names, color, size])].map((name) => [name, existing[name]])) };
   }
 
   async compareReadback(remote: JsonRecord, operation?: RemoteOperationContext): Promise<WorkflowSnapshot> {
     const current = await this.snapshot();
-    const comparison = this.plugin.compareReadback(current.draft, remote, current.draft) as unknown as ReadbackComparison;
+    const sent = record(current.audit.sentPayload);
+    const expected = Object.keys(record(sent.body)).length && text(sent.targetSpu) === current.spu ? record(sent.body) : current.draft;
+    const comparison = this.plugin.compareReadback(current.draft, remote, expected) as unknown as ReadbackComparison;
     const state = comparison.status;
     const readback = { at: new Date().toISOString(), comparison, ...(operation ? { operation } : {}), resource: remote };
     return this.store.write({ ...current, state, readbacks: [...current.readbacks, readback], blocking: comparison.mismatches.map((mismatch) => ({ code: "readback_mismatch", message: `回读字段 ${mismatch.field} 与发送值不一致` })), manual: comparison.uiVerification.map((field) => ({ code: "needs_ui_verification", message: `资源回读未完整返回 ${field}，需要 UI 复核` })) });

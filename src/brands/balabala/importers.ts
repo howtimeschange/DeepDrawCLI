@@ -1,3 +1,4 @@
+import { BUILTIN_APPAREL_ROWS, BUILTIN_SHOE_ROWS, SIZE_REFERENCE_SOURCE } from "./size-reference-data.js";
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
@@ -253,7 +254,16 @@ function shoeSizeRows(path: string): JsonRecord[] {
     if (!/^\d+$/.test(size)) continue;
     rows.push({
       size,
-      footLength: cells.get(`H${row}`) ?? "",
+      footLength: cells.get(`G${row}`) ?? "",
+      foot_length_mm: cells.get(`F${row}`) ?? "",
+      footRange: cells.get(`H${row}`) ?? "",
+      sportInnerLengthMm: cells.get(`S${row}`) ?? "",
+      openSandalInnerLengthMm: cells.get(`I${row}`) ?? "",
+      closedSandalInnerLengthMm: cells.get(`N${row}`) ?? "",
+      openSandalRemark: cells.get(`K${row}`) ?? "",
+      openSandalDouyin: cells.get(`L${row}`) ?? "",
+      closedSandalRemark: cells.get(`P${row}`) ?? "",
+      closedSandalDouyin: cells.get(`Q${row}`) ?? "",
       sportInnerLength: cells.get(`T${row}`) ?? "",
       sportRemark: cells.get(`U${row}`) ?? "",
       sportDouyin: cells.get(`V${row}`) ?? "",
@@ -332,7 +342,7 @@ function imageRole(path: string): string {
   return "reference";
 }
 
-async function imageManifest(path: string): Promise<JsonRecord[]> {
+async function imageManifest(path: string, sourceSpu: string): Promise<JsonRecord[]> {
   // OCR evidence in the real Balabala material packages is often a print-ready
   // PDF (合格证/洗标), not only a flattened image.  Store its original bytes and
   // hash in the same evidence manifest so a reviewed OCR fact is traceable to
@@ -343,7 +353,10 @@ async function imageManifest(path: string): Promise<JsonRecord[]> {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const item = resolve(directory, entry.name);
       if (entry.isDirectory()) await visit(item);
-      else if (entry.isFile() && accepted.has(extname(entry.name).toLowerCase())) files.push(item);
+      else if (entry.isFile() && accepted.has(extname(entry.name).toLowerCase())) {
+        const styleIds = item.match(/(?<!\d)\d{12}(?!\d)/g) ?? [];
+        if (styleIds.length === 0 || styleIds.every((id) => id === sourceSpu)) files.push(item);
+      }
     }
   };
   await visit(path);
@@ -387,20 +400,22 @@ export async function importBalabalaSources(input: BalabalaImportInput): Promise
   const sources = await Promise.all(sourceFiles.map((path) => sourceReference(path)));
   const sizeChart = input.shoeSizeChartPath ? {
     source: "shoe_size_chart",
-    group: "sport_leisure",
+    sourceRef: await sourceReference(input.shoeSizeChartPath),
     rows: shoeSizeRows(input.shoeSizeChartPath).filter((row) => skus.some((sku) => text(sku.size) === text(row.size))),
-  } : undefined;
+  } : /鞋|靴/.test(launchRows.map(row => `${text(row.category)} ${text(row.productLine)}`).join(" ")) ? { source: "shoe_size_chart", rows: BUILTIN_SHOE_ROWS, reference: SIZE_REFERENCE_SOURCE.shoe } : undefined;
   const plmSizeChart = input.plmSizeChartPath ? {
     source: "plm_size_chart",
+    sourceRef: await sourceReference(input.plmSizeChartPath),
     rows: await plmSizeRows(input.plmSizeChartPath, sourceSpu),
   } : undefined;
-  const importedApparelSizeReference = input.apparelSizeReferencePath ? apparelSizeReference(input.apparelSizeReferencePath) : undefined;
+  const importedApparelSizeReference = input.apparelSizeReferencePath ? { ...apparelSizeReference(input.apparelSizeReferencePath), sourceRef: await sourceReference(input.apparelSizeReferencePath) } : { source: "apparel_size_reference", reference: SIZE_REFERENCE_SOURCE.apparel, rows: BUILTIN_APPAREL_ROWS.map(([size, weightKg, age, douyinWeightJin, maleTop, maleBottom, femaleTop, femaleBottom, neutralTop, neutralBottom]) => ({ size, weightKg, age, douyinWeightJin, maleTop, maleBottom, femaleTop, femaleBottom, neutralTop, neutralBottom })) };
   const configuredMappings = input.fieldMappingsPath ? await fieldMappings(input.fieldMappingsPath) : undefined;
-  const images = input.imagesPath ? await imageManifest(input.imagesPath) : [];
+  const images = input.imagesPath ? await imageManifest(input.imagesPath, sourceSpu) : [];
   return {
     spu,
     ...(sourceSpu !== spu ? { sourceSpu } : {}),
     sources,
+    sizeReferenceVersion: SIZE_REFERENCE_SOURCE,
     skus,
     mdm: { title: text(skus[0]?.title), colors: [...new Set(skus.map((sku) => text(sku.color)).filter(Boolean))], rows: skus.map((sku) => sku.raw && typeof sku.raw === "object" && !Array.isArray(sku.raw) ? sku.raw : {}) },
     launchPlan: { ...preferredLaunchPlanRow(launchRows), rows: launchRows },

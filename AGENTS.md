@@ -250,7 +250,7 @@ deepdraw balabala publish incremental --mode test --spu 204426140121-test --fiel
 
 先用 `deepdraw call dp.trade.fields --execute --param merchantId=1162 --param tradeId=TRADE_ID` 读取当前模板，再把响应 body 放进 `templateFields`。读取不是写入授权，仍要遵守本文件的频控要求。
 
-输入证据按事实来源传入：`mdm`（类目、SKU 颜色和销售尺码）、`launchPlan`（日期/价格）、`copywriting`（标题/材质/卖点）、`ocrEvidence`（吊牌/洗唛文本），字段必须用 `source_type` 表明来源。传了 SKU、尺码表或商家 SKU 后，当前模板中全部 `isSaleProp=true` 的字段都是必填，缺失会阻断计划。
+输入证据按事实来源传入：`mdm`（类目、SKU 颜色和销售尺码）、`launchPlan`（日期/上市信息）、`copywriting`（标题/材质/卖点）、`ocrEvidence`（吊牌/洗唛文本），字段必须用 `source_type` 表明来源。传了 SKU、尺码表或商家 SKU 后，当前模板中全部 `isSaleProp=true` 的字段都是必填，缺失会阻断计划。
 
 鞋品需要 `sizeChart.source=shoe_size_chart` 且每个 SKU 尺码有对应行；服饰需要 `sizeChart.source=plm_size_chart`。尺码表只接受这两类可追溯来源，绝不能让 AI 或图片生成；服饰缺 PLM 量点时留空并阻断，不能填 `0`。输出仍按鞋品整数销售尺码/六码多平台列，以及服饰 `cm` 展示尺码/裸数字量点来组装。
 
@@ -359,3 +359,20 @@ deepdraw config doctor --dry-run
 deepdraw call dp.colors.get --dry-run
 deepdraw call dp.product.resource --dry-run
 ```
+
+
+## 巴拉本地参考与字段审查（2026-09-08）
+
+本地 SKU Excel 的 `挂牌单价` 是默认价格来源：全部 SKU 有效且同款一致才归并，缺失/冲突阻断，不回退上市计划价。无需 MDM 接口或额外 SPU JSON。
+
+`服饰尺码数据.xlsx` 的 balabala 页与 `巴拉鞋品尺码表.xlsx` 已内化到 `src/brands/balabala/size-reference-data.ts`，带源文件 SHA256、sheet、区域和版本。鞋品默认使用内置整数鞋表；显式本地鞋表优先。服饰参考只提供年龄、体重与号型，实际量点仍必须导入 PLM。鞋主表为 cm，唯品会为原始 mm；凉鞋结构不明、半码、缺行均阻断。
+
+充绒量须使用逐尺码实证，经 review 联动销售备注和尺码表后 full-update；普通 incremental/override 禁止孤立修改充绒字段。混合图包按来源款号隔离。
+
+逐字段对照、已修复范围与未确认项见 [巴拉字段对照说明](docs/audits/balabala-field-parity.md) 和 [23 品类逐字段 CSV](docs/audits/balabala-field-matrix.csv)。历史字段目录不替代本次 `dp.trade.fields` 模板。
+
+### 2026-09-08 复测发现的新增边界
+
+- 普通增量接口携带含 `*` 备注的销售尺码可能重映射鞋码并改变 SKU 集合，CLI 在 Java 调用前阻断。遇到此类商品，使用经过完整计划的 full-update，不能去掉备注后继续增量。
+- 当前 `价格区间` 写入格式为数量和单价用逗号分隔，例如 `1,359.9`；resource=form 为 `1:359.9`。不可把回读的冒号行或 Java Map 文本直接写回。
+- 回读比较必须使用实际发送的 SDK body，检查顶层 sizeTables、skuItems 的逐列值。未返回的必填字段不能当作已保存；销售尺码备注和多文本顺序可能需要 UI 复核。

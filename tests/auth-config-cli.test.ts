@@ -16,8 +16,12 @@ async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   }
 }
 
-test("auth login --stdin-json returns redacted tenant summary", async () => {
+test("auth login --stdin-json returns redacted tenant summary", async (t) => {
+  const homeDir = await mkdtemp(join(tmpdir(), "deepdraw-auth-home-"));
+  t.after(() => rm(homeDir, { recursive: true, force: true }));
   const result = await runCli(["auth", "login", "--stdin-json"], {
+    homeDir,
+    credentialStore: new FakeCredentialStore(),
     env: {},
     stdin: JSON.stringify({
       tenantName: "电商巴拉巴拉",
@@ -99,8 +103,12 @@ test("auth login --stdin-json writes stored config and credential refs without l
   });
 });
 
-test("auth login --stdin-json reports invalid JSON as CLI error", async () => {
+test("auth login --stdin-json reports invalid JSON as CLI error", async (t) => {
+  const homeDir = await mkdtemp(join(tmpdir(), "deepdraw-auth-home-"));
+  t.after(() => rm(homeDir, { recursive: true, force: true }));
   const result = await runCli(["auth", "login", "--stdin-json"], {
+    homeDir,
+    credentialStore: new FakeCredentialStore(),
     env: {},
     stdin: "{",
   });
@@ -110,8 +118,12 @@ test("auth login --stdin-json reports invalid JSON as CLI error", async () => {
   assert.match(result.stderr, /Invalid JSON from stdin/);
 });
 
-test("auth login --stdin-json rejects non-object JSON input", async () => {
+test("auth login --stdin-json rejects non-object JSON input", async (t) => {
+  const homeDir = await mkdtemp(join(tmpdir(), "deepdraw-auth-home-"));
+  t.after(() => rm(homeDir, { recursive: true, force: true }));
   const result = await runCli(["auth", "login", "--stdin-json"], {
+    homeDir,
+    credentialStore: new FakeCredentialStore(),
     env: {},
     stdin: JSON.stringify([]),
   });
@@ -137,8 +149,12 @@ test("auth login --stdin-json rejects unknown trailing args", async () => {
   assert.match(result.stderr, /Unknown auth login option: --bogus/);
 });
 
-test("auth login --stdin-json coerces defaultTenant to boolean", async () => {
+test("auth login --stdin-json coerces defaultTenant to boolean", async (t) => {
+  const homeDir = await mkdtemp(join(tmpdir(), "deepdraw-auth-home-"));
+  t.after(() => rm(homeDir, { recursive: true, force: true }));
+  const credentialStore = new FakeCredentialStore();
   const missingDefaultTenant = await runCli(["auth", "login", "--stdin-json"], {
+    homeDir, credentialStore,
     env: {},
     stdin: JSON.stringify({
       tenantName: "未设默认租户",
@@ -149,6 +165,7 @@ test("auth login --stdin-json coerces defaultTenant to boolean", async () => {
     }),
   });
   const stringDefaultTenant = await runCli(["auth", "login", "--stdin-json"], {
+    homeDir, credentialStore,
     env: {},
     stdin: JSON.stringify({
       tenantName: "字符串默认租户",

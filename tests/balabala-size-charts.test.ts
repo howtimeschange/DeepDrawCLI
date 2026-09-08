@@ -22,7 +22,7 @@ test("builds sports-shoe tables only for actual integer SKU sizes", () => {
   }, template);
   const main = fields.find((field) => field.fieldName === "尺码表");
   const multi = fields.find((field) => field.fieldName === "多平台尺码");
-  assert.deepEqual(main?.valueJson, { title: "尺码,脚长,鞋内长", "26码": "26,15.8-16.2,17", "27码": "27,16.3-16.7,17.7" });
+  assert.deepEqual(main?.valueJson, { title: "尺码,脚长,鞋内长", "26码": "26,16,17", "27码": "27,16.5,17.7" });
   assert.equal(multi?.valueJson?.["26码"], ",26,26码（脚长15.8-16.2/内长17）,26码（脚长15.8-16.2/内长17）,26码（脚长15.8-16.2/内长17）,"
   );
 });
@@ -54,8 +54,8 @@ test("selects open and closed sandal tables and emits the Listingify shoe enums"
   };
   const open = buildBalabalaSizeTables({ ...input, sandalClassification: "前后空凉鞋" }, sandalTemplate);
   const closed = buildBalabalaSizeTables({ ...input, sandalClassification: "中空凉鞋（前后包鞋面）" }, sandalTemplate);
-  assert.equal(open.find((field) => field.fieldName === "尺码表")?.valueJson?.["26码"], "26,15.8-16.2,16.7");
-  assert.equal(closed.find((field) => field.fieldName === "尺码表")?.valueJson?.["26码"], "26,15.8-16.2,17.4");
+  assert.equal(open.find((field) => field.fieldName === "尺码表")?.valueJson?.["26码"], "26,16,16.7");
+  assert.equal(closed.find((field) => field.fieldName === "尺码表")?.valueJson?.["26码"], "26,16,17.4");
   assert.equal(open.find((field) => field.fieldName === "25鞋子模板类型")?.valueText, "休闲");
   assert.equal(open.find((field) => field.fieldName === "25鞋子尺码表")?.valueText, "凉鞋");
   assert.equal(open.find((field) => field.fieldName === "22Q4-童鞋尺码表")?.valueText, "凉鞋");

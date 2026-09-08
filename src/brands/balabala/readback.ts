@@ -24,13 +24,19 @@ function formFieldValue(field: JsonRecord): unknown {
   const type = text(meta.type ?? field.type).toUpperCase();
   const options = list(field.options).map(optionValue).filter(Boolean);
   const texts = list(field.texts).map(optionValue).filter(Boolean);
-  if (type.includes("CHOICE") && options.length) return options.join(";");
+  // Quantity-price rows are comma-separated on write and colon-separated
+  // on form readback. A blank ':' row is the provider's empty header.
+  if (text(meta.name) === "价格区间") {
+    const rows = texts.filter(value => value !== ":");
+    if (rows.length && rows.every(value => /^\d+(?:\.\d+)?:\d+(?:\.\d+)?$/.test(value))) return rows.map(value => value.replace(":", ",")).join("*");
+  }
+  if (type.includes("CHOICE")) return (options.length ? options : texts).join(";");
   if (texts.length === 1) return texts[0];
   if (texts.length > 1) return texts.join("\n");
   return options.join(";");
 }
 function formFields(root: JsonRecord): JsonRecord[] {
-  return list(root.fields).map(record).flatMap((item) => {
+  const projected = list(root.fields).map(record).flatMap((item) => {
     const meta = record(item.field);
     if (Object.keys(meta).length === 0) return [];
     const name = text(meta.name ?? item.name ?? item.fieldName ?? item.field_name);
@@ -43,6 +49,24 @@ function formFields(root: JsonRecord): JsonRecord[] {
       ...(Object.keys(valueJson).length ? { value_json: valueJson } : { value_text: formFieldValue(item) }),
     }];
   });
+  const addTable = (name: string, rows: Array<{ key: string; values: JsonRecord }>, field: JsonRecord) => {
+    if (!rows.length || projected.some(item => compact(item.field_name) === compact(name))) return;
+    const columns = [...new Set(rows.flatMap(row => Object.keys(row.values)))];
+    projected.push({ field_name: name, field_id: text(field.id), field_type: "MULTI_TEXT", value_json: { title: columns.join(","), ...Object.fromEntries(rows.map(row => [row.key, columns.map(column => text(row.values[column])).join(",")])) } });
+  };
+  for (const table of list(root.sizeTables).map(record)) addTable(text(record(table.field).name), list(table.sizeTableItems).map(record).map(row => ({ key: text(row.size), values: record(row.values) })), record(table.field));
+  const skuItems = list(record(root.skus).skuItems).map(record);
+  if (skuItems.length && !projected.some(item => compact(item.field_name) === "商家sku")) {
+    const columns = [...new Set(skuItems.flatMap(item => Object.keys(record(item.values))))];
+    const aliases = record(record(root.colors).optionAliases);
+    const value: JsonRecord = { title: columns.join(",") };
+    for (const item of skuItems) {
+      const color = text(aliases[text(item.color)]) || text(item.color);
+      value[color] = { ...record(value[color]), [text(item.size)]: columns.map(column => text(record(item.values)[column])).join(",") };
+    }
+    projected.push({ field_name: "商家SKU", field_id: text(record(record(root.skus).field).id), field_type: "MULTI_TEXT", value_json: value });
+  }
+  return projected;
 }
 function selectionField(name: string, input: JsonRecord): JsonRecord | undefined {
   const meta = record(input.field);
@@ -160,26 +184,96 @@ export function prepareBalabalaExistingUpdate(localInput: Record<string, unknown
   return { payload: { ...localInput, fields: merged }, blocking };
 }
 
+function tableCells(value: unknown): JsonRecord {
+  const source = record(value);
+  const columns = text(source.title).split(",");
+  return Object.fromEntries(Object.entries(source).filter(([key]) => key !== "title").map(([size, row]) => [skuSizeKey(size), Object.fromEntries(columns.map((column, index) => [column, text(row).split(",")[index] ?? ""]))]));
+}
+
+function skuCells(value: unknown, aliases: Map<string, string>): JsonRecord {
+  const source = record(value);
+  const columns = text(source.title).split(",");
+  const output: JsonRecord = {};
+  const add = (color: string, size: string, row: unknown) => {
+    const key = `${aliases.get(compact(color)) ?? aliases.get(compact(color.split(",").at(-1))) ?? color}\u0000${skuSizeKey(size)}`;
+    output[key] = Object.fromEntries(columns.map((column, index) => [column, text(row).split(",")[index] ?? ""]));
+  };
+  for (const [color, rows] of Object.entries(source)) {
+    if (color === "title") continue;
+    if (Object.keys(record(rows)).length) for (const [size, row] of Object.entries(record(rows))) add(color, size, row);
+    else { const parts = color.split(","); const size = parts.pop() ?? ""; add(parts.join(","), size, rows); }
+  }
+  return output;
+}
+
+/** Compare named cells, including prices; tolerate only unrequested remote columns. */
+function sameCells(expected: JsonRecord, actual: JsonRecord): boolean {
+  if (!equal(Object.keys(expected).sort(), Object.keys(actual).sort())) return false;
+  return Object.entries(expected).every(([key, values]) => Object.entries(record(values)).every(([column, value]) => text(record(actual[key])[column] ?? (column === "脚长" ? record(actual[key])["脚长(cm)"] : undefined)) === text(value)));
+}
+
 export function compareBalabalaReadback(expectedInput: Record<string, unknown>, remoteInput: Record<string, unknown>): ReadbackComparison {
   const expected = fields(expectedInput);
   const actual = fields(remoteInput);
+  const root = productRoot(remoteInput);
   const saleColors = saleColorAliases(fieldValue(expected, "颜色"));
+  const types = new Map(list(root.fields).map(record).map(item => [text(record(item.field).name), text(record(item.field).type)]));
   const mismatches: Array<{ field: string; expected: unknown; actual: unknown }> = [];
   const uiVerification: string[] = [];
   for (const [name, expectedValue] of Object.entries(expected)) {
-    const actualValue = fieldValue(actual, name);
-    if (actualValue === undefined || actualValue === null || actualValue === "") {
-      // The resource API can omit multi-platform rows even when the UI still
-      // holds them.  Other structured fields are safety-critical and must be
-      // mismatches rather than silently treated as verified.
-      if (compact(name) === compact("多平台尺码")) uiVerification.push(name);
+    let actualValue = fieldValue(actual, name);
+    let matches: boolean | undefined;
+    const table = list(root.sizeTables).map(record).find(item => text(record(item.field).name) === name);
+    if (table) {
+      actualValue = Object.fromEntries(list(table.sizeTableItems).map(record).map(item => [skuSizeKey(item.size), record(item.values)]));
+      matches = sameCells(tableCells(expectedValue), record(actualValue));
+    } else if (compact(name) === "商家sku" && Array.isArray(record(root.skus).skuItems)) {
+      actualValue = Object.fromEntries(list(record(root.skus).skuItems).map(record).map(item => [`${saleColors.get(compact(item.color)) ?? text(item.color)}\u0000${skuSizeKey(item.size)}`, record(item.values)]));
+      matches = sameCells(skuCells(expectedValue, saleColors), record(actualValue));
+    } else if (name === "多平台尺码" && list(record(root.sizes).texts).length) {
+      const texts = list(record(root.sizes).texts).map(text);
+      const ids = new Map(texts.map(item => item.split(",")).filter(parts => parts.length === 2).map(parts => [parts[0], skuSizeKey(parts[1])]));
+      const cells: JsonRecord = {};
+      for (const item of texts) {
+        const parts = item.split(",");
+        if (parts.length !== 3 || !ids.has(parts[0])) continue;
+        const size = ids.get(parts[0])!;
+        cells[size] = { ...record(cells[size]), [parts[2]]: parts[1] };
+      }
+      if (Object.keys(cells).length) { actualValue = cells; matches = sameCells(tableCells(expectedValue), cells); }
+    }
+    if (matches === undefined && (actualValue === undefined || actualValue === null || actualValue === "")) {
+      if (expectedValue === "" || expectedValue === null || expectedValue === undefined) continue;
+      if (name === "多平台尺码") uiVerification.push(name);
       else mismatches.push({ field: name, expected: expectedValue, actual: actualValue });
       continue;
     }
-    const merchantSku = compact(name) === compact("商家SKU");
-    const left = merchantSku ? normalizeSkuKey(expectedValue, saleColors) : structured(name) ? tableValue(expectedValue) : expectedValue;
-    const right = merchantSku ? normalizeSkuKey(actualValue, saleColors) : structured(name) ? tableValue(actualValue) : actualValue;
-    if (!equal(left, right)) mismatches.push({ field: name, expected: expectedValue, actual: actualValue });
+    if (matches === undefined) {
+      if (name === "尺码" && Object.keys(record(root.sizes)).length) {
+        const requested = text(expectedValue).split(";").map(value => value.split("*"));
+        const remoteSizes = record(root.sizes);
+        const aliases = record(remoteSizes.optionAliases);
+        matches = equal(requested.map(parts => skuSizeKey(parts[0])).sort(), list(remoteSizes.options).map(skuSizeKey).sort())
+          && requested.every(([alias]) => (text(aliases[skuSizeKey(alias)]) || list(remoteSizes.options).map(optionValue).find(option => skuSizeKey(option) === skuSizeKey(alias))) === alias);
+        // Sales remarks are not separately exposed by form; do not infer
+        // their persistence from platform-specific display remarks.
+        if (matches && requested.some(parts => parts.length > 1)) uiVerification.push("销售尺码备注");
+      }
+      const choice = types.get(name)?.includes("CHOICE") || name === "颜色";
+      const normalize = (value: unknown) => choice ? text(value).split(/[;\n]/).filter(Boolean).sort() : value;
+      const left = name === "商家SKU" ? skuCells(expectedValue, saleColors) : structured(name) ? tableValue(expectedValue) : normalize(expectedValue);
+      const right = name === "商家SKU" ? skuCells(actualValue, saleColors) : structured(name) ? tableValue(actualValue) : normalize(actualValue);
+      if (matches === undefined) matches = equal(left, right);
+      if (!matches && types.get(name) === "MULTI_TEXT" && typeof expectedValue === "string" && expectedValue.includes("*")) {
+        const expectedParts = expectedValue.split("*");
+        const actualParts = text(actualValue).split("\n");
+        if (equal([...expectedParts].sort(), [...actualParts].sort())) { matches = true; uiVerification.push(`${name}顺序`); }
+      }
+    }
+    if (!matches) mismatches.push({ field: name, expected: expectedValue, actual: actualValue });
+  }
+  for (const name of ["code", "title", "retailPrice"]) {
+    if (expectedInput[name] !== undefined && text(expectedInput[name]) !== text(root[name])) mismatches.push({ field: name, expected: expectedInput[name], actual: root[name] });
   }
   return { status: mismatches.length ? "readback_mismatch" : uiVerification.length ? "needs_ui_verification" : "readback_verified", mismatches, uiVerification };
 }

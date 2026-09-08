@@ -14,7 +14,7 @@ test("template sync assembles current-template fields and retains all imported M
     spu: "204426140121", mdm: { title: "儿童户外鞋" },
     launchPlan: { productLine: "鞋品", category: "运动鞋", subcategory: "户外鞋", retailPrice: "359.9", launchDate: "2026-09-04", officialTrade: "童鞋>>运动鞋" },
     copywriting: { rows: [{ title: "巴拉巴拉儿童户外鞋" }] },
-    skus: [{ color: "蓝色调00388", size: "26", skuCode: "a" }, { color: "白绿色调00414", size: "26", skuCode: "b" }],
+    skus: [{ color: "蓝色调00388", size: "26", skuCode: "a", price: "359.9" }, { color: "白绿色调00414", size: "26", skuCode: "b", price: "359.9" }],
     sizeChart: { source: "shoe_size_chart", rows: [{ size: "26", footLength: "15.8-16.2", sportInnerLength: "17", sportRemark: "脚长15.8-16.2/内长17" }] },
   }, []);
   const result = await engine.syncTemplate([

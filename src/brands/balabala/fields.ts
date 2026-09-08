@@ -1,3 +1,4 @@
+import { balabalaListPrice, money } from "./prices.js";
 import type { WorkflowField } from "../../workflow/types.js";
 import { balabalaApparelAgeTextForSizeRange } from "./size-chart-rules.js";
 
@@ -22,10 +23,7 @@ function optionText(value: unknown): string { const item = record(value); return
 function options(field: JsonRecord): string[] { const source = field.options ?? field.options_json ?? field.optionsJson; return Array.isArray(source) ? source.map(optionText).filter(Boolean) : []; }
 function sourceRefs(...values: unknown[]): WorkflowField["sourceRefs"] { return values.map(record).map((value) => record(value.sourceRef)).filter((value) => text(value.path) && text(value.sha256)) as WorkflowField["sourceRefs"]; }
 
-function decimal(value: unknown, adjustment = 0): string {
-  const number = Number(text(value));
-  return Number.isFinite(number) ? String(Number((number + adjustment).toFixed(2))) : "";
-}
+const decimal = money;
 
 function productKind(context: JsonRecord): "shoe" | "apparel" | "generic" {
   const plan = record(context.launchPlan);
@@ -210,6 +208,10 @@ function optionMatch(name: string, value: string, permitted: string[], multi = f
     if (/原产国/.test(key) && /中国|china/i.test(input)) return pick((option) => option === "中国", (option) => /中国/.test(option));
     if (key === "产地" && /浙江杭州|杭州|中国/.test(input)) return pick((option) => option === "浙江杭州", (option) => option.includes("杭州"), (option) => option.includes("中国"));
     if (key === "品牌单选" || key === "品牌") return /巴拉巴拉|balabala/i.test(input) ? pick((option) => /巴拉巴拉|balabala/i.test(option)) : "";
+    if (key === "是否带帽") {
+      if (/不带帽|不连帽|无帽/.test(input)) return pick((option) => option === "不带帽", (option) => option === "不连帽", (option) => option === "无帽", (option) => option === "无帽子", (option) => option === "否");
+      if (/连帽|带帽|有帽/.test(input)) return pick((option) => option === "连帽", (option) => option === "带帽", (option) => option === "是");
+    }
     if (key === "性别多选" || key === "性别") {
       if (/男/.test(input) && !/女/.test(input)) return pick((option) => option === "男童", (option) => option === "男", (option) => option.includes("男") && !option.includes("女"));
       if (/女/.test(input) && !/男/.test(input)) return pick((option) => option === "女童", (option) => option === "女", (option) => option.includes("女") && !option.includes("男"));
@@ -690,7 +692,7 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   const copyRows = record(context.copywriting).rows;
   const copy = Array.isArray(copyRows) ? record(copyRows[0]) : {};
   const titles = titleValues(context);
-  const price = decimal(plan.retailPrice);
+  const price = balabalaListPrice(context);
   const source = (value: unknown, sourceType: WorkflowField["sourceType"], ref: unknown) => ({ value: text(value), source: sourceType, refs: sourceRefs(ref) });
   const kind = productKind(context);
   const shoe = kind === "shoe";
@@ -723,12 +725,13 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   const mainPictureLines = sourceValue(context, ["设计师说——主图4"]);
   const mainPictureParts = mainPictureLines.value.split(/\r?\n/).map((part) => part.trim()).filter(Boolean);
   const compatiblePlatforms = "1688;天猫;京东;唯品会;有赞;拼多多;小红书;抖音;快手;微信视频小店";
+  if (["充绒量", "充绒量文本"].includes(key)) return sourceValue(context, ["充绒量文本", "充绒量"]);
   if (key === "羽绒服洗涤说明") return source(hasDownEvidence(context) ? "羽绒服洗涤说明" : "", "derived", copy);
   if ((shoe || apparel) && (key.includes("洗涤说明") || key.includes("洗护说明") || key.includes("洗涤方法") || key.includes("洗护方法"))) return source("请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签", "derived", copy);
   if (apparel && key === "唯品会温馨提示" && ([...templatePlatforms(template)].some((item) => /^(?:VIP|VIPSHOP|唯品会)$/i.test(item)) || templatePlatforms(template).size === 0)) return source("手工测量难免存在误差，常规款袖长肩点到袖口，插肩袖(无明确肩点)款后领中量至袖口", "derived", copy);
   if (apparel && isVipUsageSceneField(name, template)) return source("日常", "derived", plan);
   if (key === "发货方式" && shoe) return source("快递发货", "derived", plan);
-  if (key === "单位" || key === "计量单位") return source("件", "derived", plan);
+  if (key === "单位" || key === "计量单位") return source(shoe ? "双" : "件", "derived", plan);
   if (key === "库存计数") return source("买家拍下减库存", "derived", plan);
   if (key === "会员打折") return source("不参与会员打折", "derived", plan);
   if (shoe && ["货源类别"].includes(key)) return source("现货", "derived", plan);
@@ -813,7 +816,11 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   if (apparel && ["填充物", "填充物多选", "填充物种类", "填充物文本"].includes(key)) return source(fillerMaterialText || sourceValue(context, ["填充物", "填充物备注"]).value, materialComposition.source, record(context.copywriting));
   if (apparel && ["充绒量多选", "填充物含量", "填充物含量多选", "含绒量", "含绒量多选", "含绒量文本", "绒子含量", "绒子含量多选", "绒子含量文本"].includes(key)) return source(downContentText ? `${downContentText}%` : "", materialComposition.source, record(context.copywriting));
   if (key === "性别多选") return sourceValue(context, ["性别", "适用性别"], [plan.gender]);
-  if (key === "是否带帽") return source("连帽", "derived", plan);
+  if (key === "是否带帽") {
+    const hood = sourceValue(context, ["是否带帽", "帽型", "领型", "领口"], [copy.detail, copy.fab, copy.name, text(record(copy.raw)["细节文案（不限定8个字，细节数量3-4个，字数尽量不超过12字）"])]);
+    const value = /不连帽|不带帽|无帽|圆领/.test(hood.value) ? "不带帽" : /连帽|带帽|有帽/.test(hood.value) ? "连帽" : "";
+    return { ...hood, value };
+  }
   if (key === "是否库存") return source("否", "derived", plan);
   if (key === "是否跨境出口专供货源" || key === "是否加绒" || key === "是否可开档" || key === "是否开裆") return source("否", "derived", plan);
   if (key === "是否可定制") return source("不可定制", "derived", plan);
@@ -824,7 +831,11 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   if (apparel && key === "袖长多选") return source("长袖", "derived", plan);
   if (apparel && key === "袖长") return source("长袖", "derived", plan);
   if (apparel && key === "衣长") return source("常规", "derived", plan);
-  if (apparel && (key === "腰型" || key === "裤长" || key === "裤门襟")) return source("不适用", "derived", plan);
+  if (apparel && key === "裤长") {
+    const length = sourceValue(context, ["裤长类型", "裤长"], [plan.category, copy.category]);
+    return { ...length, value: length.value.match(/九分裤|七分裤|五分裤|长裤|短裤/)?.[0] ?? "" };
+  }
+  if (apparel && (key === "腰型" || key === "裤门襟")) return source("不适用", "derived", plan);
   if (apparel && key === "主图4样式") return source("225", "derived", plan);
   if (apparel && key === "功能多选") return source(sourceValue(context, ["面料三个关键词", "推荐理由"]).value, "copywriting", copy);
   if (!shoe && key === "适用场合") return source("日常", "derived", plan);
@@ -854,10 +865,10 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   if (/唯品.*标题/.test(key)) return source(titles.vipTitle || titles.title, "copywriting", copy);
   if (/抖音|小红书|视频号|快手/.test(key) && /标题/.test(key)) return source(titles.guideTitle || titles.title, "copywriting", copy);
   if (/推荐理由|商品卖点|产品卖点|销售卖点|^商品详情$|^详情$/.test(key)) return source(titles.sellingPoint || titles.detail, "copywriting", copy);
-  if (/吊牌价|零售价|市场价|京东价|划线价|^价格$/.test(key)) return source(price, "launch_plan", plan);
-  if (/拼多多.*单买价/.test(key)) return source(decimal(price, -1), "derived", plan);
-  if (/拼多多.*团购价/.test(key)) return source(decimal(price, -2), "derived", plan);
-  if (/1688.*价格区间|价格区间.*1688/.test(key)) return source(price ? `1*${price}` : "", "derived", plan);
+  if (/吊牌价|专柜价|零售价|市场价|京东价|划线价|^价格$/.test(key)) return { value: price, source: "mdm", refs: sourceRefs(...(Array.isArray(context.skus) ? context.skus : [])) };
+  if (/拼多多.*单买价/.test(key)) return { value: decimal(price, -1), source: "derived", refs: sourceRefs(...(Array.isArray(context.skus) ? context.skus : [])) };
+  if (/拼多多.*团购价/.test(key)) return { value: decimal(price, -2), source: "derived", refs: sourceRefs(...(Array.isArray(context.skus) ? context.skus : [])) };
+  if (/^(?:1688)?价格区间(?:1688)?$/.test(key)) return { value: price ? `1,${price}` : "", source: "derived", refs: sourceRefs(...(Array.isArray(context.skus) ? context.skus : [])) };
   if (/款号|型号|货号/.test(key)) return source(context.spu, "mdm", record(context.mdm));
   if (key === "品牌" || key.includes("品牌名称")) return brand;
   if (/性别|适用人群/.test(key)) return source(plan.gender, "launch_plan", plan);
@@ -883,7 +894,7 @@ function merchantSkuColorKey(value: string): string {
 function buildMerchantSku(context: JsonRecord, template: JsonRecord, colorMap: Map<string, string>): WorkflowField {
   const plan = record(context.launchPlan);
   const kind = productKind(context);
-  const price = decimal(plan.retailPrice);
+  const price = balabalaListPrice(context);
   const allColumns = MERCHANT_SKU_COLUMNS.filter((allowed) => options(template).some((column) => compact(allowed) === compact(column)));
   const columns = options(template).length === 0 ? MERCHANT_SKU_BASE_COLUMNS : allColumns;
   const rows = (Array.isArray(context.skus) ? context.skus : []).map(record);
@@ -941,7 +952,7 @@ function buildMerchantSku(context: JsonRecord, template: JsonRecord, colorMap: M
 
 export function buildBalabalaFields(contextInput: Record<string, unknown>, templateInput: Record<string, unknown>): WorkflowField[] {
   const context = record(contextInput);
-  const templates = templateFields(record(templateInput));
+  const templates: JsonRecord[] = templateFields(record(templateInput)).map((field) => ({ ...field, required: required(field) || ((Array.isArray(context.skus) && context.skus.length > 0) && saleProp(field)) }));
   const manualOverrides = record(context.manualOverrides ?? context.manual_overrides);
   const auditedValues = record(context.auditedValues ?? context.audited_values);
   const skus = (Array.isArray(context.skus) ? context.skus : []).map(record);

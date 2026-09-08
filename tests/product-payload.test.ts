@@ -236,8 +236,8 @@ test("Balabala apparel payload keeps cm display identities, bare table values, a
   });
   assert.deepEqual(fields["多平台尺码"], {
     title: "天猫,京东,拼多多,微信视频小店,小红书,快手",
-    "140cm": ",140,,,,",
-    "150cm": ",150,,,,",
+    "140cm": ",140,140cm（充绒量32g）,140cm（充绒量32g）,140cm（充绒量32g）,",
+    "150cm": ",150,150cm（充绒量37g）,150cm（充绒量37g）,150cm（充绒量37g）,",
   });
   assert.match(result.sizes.texts.join("\n"), /s140,140cm（充绒量32g）,拼多多/);
   assert.match(result.sizes.texts.join("\n"), /s140,140,京东/);

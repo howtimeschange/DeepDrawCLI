@@ -69,7 +69,7 @@ test("production plans exactly one explicit formal target and cannot publish wit
       { field_name: "颜色", field_type: "MULTI_CHOICE", value_text: "黑色,黑色" },
       { field_name: "尺码", field_type: "MULTI_CHOICE", value_text: "140cm" },
     ],
-  }, template: { tradeId: "9680", tradeDecision: { selected: { tradeId: "9680", tradePath: "童装>>男童>>羽绒服" } } } });
+  }, template: { fields: [{ name: "商品展示标题", type: "TEXT", required: true }], tradeId: "9680", tradeDecision: { selected: { tradeId: "9680", tradePath: "童装>>男童>>羽绒服" } } } });
   let fetchCalls = 0;
   let javaCalls = 0;
   const noRemote = {
@@ -135,7 +135,7 @@ test("production full-update plan records category, sales facts, size-table summ
   t.after(() => rm(directory, { recursive: true, force: true }));
   const spu = "202426107129";
   const store = WorkflowStore.open("balabala", spu, directory);
-  await store.write({ ...createWorkflowSnapshot("balabala", spu), state: "ready", template: { tradeId: "9680", tradeDecision: { selected: { tradeId: "9680", tradePath: "童装>>女童>>卫衣" } } }, draft: {
+  await store.write({ ...createWorkflowSnapshot("balabala", spu), state: "ready", template: { fields: [{ name: "商品展示标题", type: "TEXT", required: true }], tradeId: "9680", tradeDecision: { selected: { tradeId: "9680", tradePath: "童装>>女童>>卫衣" } } }, draft: {
     code: spu, productId: "6516010", tradeId: "9680", title: "女童卫衣", productType: "apparel", skus: [{ skuCode: "sku-140", color: "粉红调", size: "140cm", price: "299" }], fields: [
       { field_name: "商品展示标题", field_type: "TEXT", value_text: "女童卫衣" },
       { field_name: "颜色", field_type: "MULTI_CHOICE", value_text: "粉红色,粉红调" },
@@ -193,7 +193,7 @@ test("stateful template --tenant selects the requested stored tenant instead of 
     spu: "202426107128",
     launchPlan: { productLine: "童装", category: "羽绒服", officialTrade: "童装婴幼儿服装>>男童>>羽绒服" },
     copywriting: { rows: [] },
-    skus: [{ color: "蓝色调00388", size: "140" }],
+    skus: [{ color: "蓝色调00388", size: "140", price: "299" }],
   } });
   const configPath = join(directory, "deepdraw-config.json");
   await writeFile(configPath, JSON.stringify({
@@ -271,13 +271,13 @@ test("stateful full-update sends the post-readback merged payload, including rem
       calls.push({ className, input: JSON.parse(input) as Record<string, unknown> });
       if (className === "DeepdrawProductResourceCli") {
         return { exitCode: 0, stdout: JSON.stringify({ status: 200, response: { code: 10200, response: "success", requestId: "read-6515908", body: {
-          id: "resource-6515908", productId: "6515908", code: "204426140121-test", fields: [
+          id: "resource-6515908", productId: "6515908", code: "204426140121-test", title: "", retailPrice: "359.9", fields: [
             { field: { id: "title", name: "商品展示标题", type: "TEXT" }, texts: ["本地标题"] },
             { field: { id: "retained", name: "远端保留字段", type: "TEXT" }, texts: ["仅远端已有值"] },
             { field: { id: "merchant-sku", name: "商家SKU", type: "MULTI_TEXT" }, value_json: { title: "价格", "蓝色调00388": { "26码": "359.9" } } },
           ],
           colors: { field: { id: "color", type: "MULTI_CHOICE" }, options: ["蓝色"], optionAliases: { 蓝色: "蓝色调00388" } },
-          sizes: { field: { id: "size", type: "MULTI_CHOICE" }, options: ["26"] },
+          sizes: { field: { id: "size", type: "MULTI_CHOICE" }, options: ["26"], optionAliases: {"26":"26码"} },
         } } }), stderr: "" };
       }
       if (className === "DeepdrawProductUpdateCli") return { exitCode: 0, stdout: JSON.stringify({ status: 200, response: { code: 10200, response: "success", requestId: "write-6515908", body: { productId: "6515908" } } }), stderr: "" };
@@ -298,7 +298,8 @@ test("stateful full-update sends the post-readback merged payload, including rem
   assert.match(String(updateExecution?.details?.planHash), /^[a-f0-9]{64}$/);
   const readback = audited?.readbacks.at(-1) as { comparison?: { status?: string }; operation?: { targetSpu?: string } } | undefined;
   assert.equal(readback?.operation?.targetSpu, "204426140121-test");
-  assert.equal(readback?.comparison?.status, "readback_verified");
+  assert.equal(readback?.comparison?.status, "needs_ui_verification");
+  assert.ok(audited?.manual.some(item => item.message.includes("多平台尺码")));
 });
 
 test("a reviewed production create performs form merge, required full-update, and final readback", async (t) => {
@@ -315,7 +316,7 @@ test("a reviewed production create performs form merge, required full-update, an
       { field_name: "尺码", field_type: "MULTI_CHOICE", value_text: "140cm" },
     ],
   };
-  await store.write({ ...createWorkflowSnapshot("balabala", spu), state: "ready", draft, template: { tradeId: "9652", tradeDecision: { selected: { tradeId: "9652", tradePath: "童装婴幼儿服装>>中大童>>卫衣" } } } });
+  await store.write({ ...createWorkflowSnapshot("balabala", spu), state: "ready", draft, template: { fields: [{ name: "商品展示标题", type: "TEXT", required: true }], tradeId: "9652", tradeDecision: { selected: { tradeId: "9652", tradePath: "童装婴幼儿服装>>中大童>>卫衣" } } } });
   const environment = { DEEPDRAW_TENANT_NAME: "电商巴拉巴拉", DEEPDRAW_APP_KEY: "app-key", DEEPDRAW_APP_SECRET: "app-secret", DEEPDRAW_DOP_KEY: "dop-key", DEEPDRAW_MERCHANT_ID: "1162", DEEPDRAW_SDK_CLASSPATH: "/tmp/fake-sdk/*" };
   const plan = await runCli(["balabala", "plan", "create", "--mode", "production", "--spu", spu, "--execute", "--plan"], { cwd: directory, env: environment, stdin: "" });
   const planBody = JSON.parse(plan.stdout);
@@ -330,7 +331,7 @@ test("a reviewed production create performs form merge, required full-update, an
       if (className === "DeepdrawProductCreateCli") return { exitCode: 0, stdout: JSON.stringify({ status: 200, response: { code: 10200, response: "success", requestId: "create", body: { productId: "6517001" } } }), stderr: "" };
       if (className === "DeepdrawProductUpdateCli") return { exitCode: 0, stdout: JSON.stringify({ status: 200, response: { code: 10200, response: "success", requestId: "update", body: { productId: "6517001" } } }), stderr: "" };
       if (className === "DeepdrawProductResourceCli") return { exitCode: 0, stdout: JSON.stringify({ status: 200, response: { code: 10200, response: "success", requestId: `resource-${calls.length}`, body: {
-        id: "resource-6517001", productId: "6517001", code: spu,
+        id: "resource-6517001", productId: "6517001", code: spu, title: draft.title, retailPrice: draft.retailPrice,
         fields: [
           { field: { name: "商品展示标题", type: "TEXT" }, texts: ["巴拉巴拉女童卫衣"] },
           { field: { name: "商家SKU", type: "MULTI_TEXT" }, value_json: { title: "价格", "米白10302": { "140cm": "299" } } },
@@ -345,5 +346,6 @@ test("a reviewed production create performs form merge, required full-update, an
   assert.deepEqual(calls, ["DeepdrawProductCreateCli", "DeepdrawProductResourceCli", "DeepdrawProductUpdateCli", "DeepdrawProductResourceCli"]);
   const saved = await store.read();
   assert.ok(saved?.executions.some((entry) => entry.operation === "post-create-full-update"));
-  assert.equal(saved?.state, "readback_verified");
+  assert.equal(saved?.state, "needs_ui_verification");
+  assert.ok(saved?.manual.some(item => item.message.includes("多平台尺码")));
 });

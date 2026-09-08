@@ -769,3 +769,14 @@ javac -encoding UTF-8 \
 - 深绘接口参考：[docs/reference/deepdraw-openapi.md](docs/reference/deepdraw-openapi.md)
 - Agent 调用指南：[AGENTS.md](AGENTS.md)
 - 接口注册表：[src/core/api-registry.ts](src/core/api-registry.ts)
+
+
+## 巴拉本地参考与字段审查（2026-09-08）
+
+本地 SKU Excel 的 `挂牌单价` 是默认价格来源：全部 SKU 有效且同款一致才归并，缺失/冲突阻断，不回退上市计划价。无需 MDM 接口或额外 SPU JSON。
+
+`服饰尺码数据.xlsx` 的 balabala 页与 `巴拉鞋品尺码表.xlsx` 已内化到 `src/brands/balabala/size-reference-data.ts`，带源文件 SHA256、sheet、区域和版本。鞋品默认使用内置整数鞋表；显式本地鞋表优先。服饰参考只提供年龄、体重与号型，实际量点仍必须导入 PLM。鞋主表为 cm，唯品会为原始 mm；凉鞋结构不明、半码、缺行均阻断。
+
+充绒量须使用逐尺码实证，经 review 联动销售备注和尺码表后 full-update；普通 incremental/override 禁止孤立修改充绒字段。混合图包按来源款号隔离。
+
+逐字段对照、已修复范围与未确认项见 [巴拉字段对照说明](docs/audits/balabala-field-parity.md) 和 [23 品类逐字段 CSV](docs/audits/balabala-field-matrix.csv)。历史字段目录不替代本次 `dp.trade.fields` 模板。

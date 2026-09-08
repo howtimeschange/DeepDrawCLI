@@ -5,7 +5,7 @@ export interface AuditResult {
   rejected: Array<JsonRecord & { reason: string }>;
 }
 
-const FACT_FIELD = /执行(?:标准|规范)|安全(?:等级|类别)|^(?:产品|商品)?(?:名称|品名|货号|款号|型号|编码|条码)$|生产|制造|产地|原产|上市日期|生产日期|价格|重量|容量|尺寸|规格|尺码表|充绒量|商家sku/i;
+const FACT_FIELD = /执行(?:标准|规范)|安全(?:等级|类别)|^(?:产品|商品)?(?:名称|品名|货号|款号|型号|编码|条码)$|生产|制造|产地|原产|上市日期|生产日期|价格|重量|容量|尺寸|规格|尺码表|充绒量|填充|含绒|绒子|商家sku/i;
 const IMAGE_ROLE_ORDER: Record<string, number> = { flat_image: 0, main_image: 1, model_image: 2, reference: 3, hangtag: 4, washlabel: 5 };
 
 function record(value: unknown): JsonRecord { return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {}; }

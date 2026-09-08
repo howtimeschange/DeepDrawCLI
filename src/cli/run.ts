@@ -1,3 +1,4 @@
+import { assertWorkflowPublishable } from "../workflow/validation.js";
 import { createHash } from "node:crypto";
 import { spawn as spawnChild } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -902,6 +903,7 @@ function assertResourceFormTarget(value: unknown, target: BalabalaRemoteTarget):
 }
 
 function workflowPayload(snapshot: Awaited<ReturnType<BalabalaWorkflowEngine["snapshot"]>>, stage: StatefulBalabalaStage) {
+  assertWorkflowPublishable(snapshot, stage);
   const result = buildProductPayload(snapshot.draft, { stage: stage === "create" ? "create" : "update" });
   if (!result.ok) throw new Error(result.diagnostics.errors.join("；"));
   return result;
@@ -1128,6 +1130,7 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
   try {
     let snapshot = await engine.snapshot();
     const stage = args.stage!;
+    assertWorkflowPublishable(snapshot, stage);
     const apiName = stage === "create" ? "dp.product.create" : stage === "full-update" ? "dp.product.update" : "dp.product.incremental.update";
     let query: Record<string, string>;
     let body: Record<string, unknown>;
@@ -1169,13 +1172,13 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
       snapshot = await engine.replace({ ...snapshot, state: "planned", plans: [...snapshot.plans, workflowPlan] });
       return { ...planned, stdout: jsonLine({ workflow: "balabala-listing", action: "plan", stage, spu: target.targetSpu, state: snapshot.state, ...remoteOperationContext(target, planHash), ...payload, plan: workflowPlan }) };
     }
-    if (args.mode === "production") {
+    if (args.mode === "production" || args.planHash) {
       const reviewed = snapshot.plans.some((plan) => text(plan.planHash) === args.planHash
         && text(plan.stage) === stage
         && text(plan.targetSpu) === target.targetSpu
         && text(plan.api) === apiName);
-      if (!reviewed) throw new Error("balabala production publish requires a matching reviewed plan in this workflow state");
-      if (args.planHash !== planHash) throw new Error("balabala production publish plan hash does not match the current payload; generate and review a new plan");
+      if (!reviewed) throw new Error("balabala publish requires a matching reviewed plan in this workflow state");
+      if (args.planHash !== planHash) throw new Error("balabala publish plan hash does not match the current payload; generate and review a new plan");
     }
     // Incremental writes do not otherwise need a full merge.  Still verify the
     // saved numeric productId resolves to this exact configured code before
@@ -1192,6 +1195,7 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
       const verifyRequestId = text(verifyPayload.requestId) || null;
       await store.recordExecution({ operation: "incremental-target-verify", status: "verified", api: "dp.product.resource", requestId: verifyRequestId, details: { ...remoteOperationContext(target, planHash, verifyRequestId), productId: query.productId } });
     }
+    snapshot = await engine.replace({ ...snapshot, audit: { ...snapshot.audit, sentPayload: { body, planHash, stage, targetSpu: target.targetSpu, at: new Date().toISOString() } } });
     const command = ["call", apiName, "--execute", "--yes", ...Object.entries(query).flatMap(([key, value]) => ["--param", `${key}=${value}`]), "--json", JSON.stringify(body)];
     const write = await runCli(command, { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
     const writePayload = resultRecord(write.stdout);
@@ -1218,6 +1222,7 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
       const postCreateBody = workflowPayload(snapshot, "full-update").sdkInput.product;
       const postCreateHash = planHashFor({ target, stage: "full-update", api: "dp.product.update", query: { productId }, body: postCreateBody });
       const postCreateSummary = writePlanSummary({ snapshot, target, stage: "full-update", api: "dp.product.update", query: { productId }, body: postCreateBody });
+      snapshot = await engine.replace({ ...snapshot, audit: { ...snapshot.audit, sentPayload: { body: postCreateBody, planHash: postCreateHash, parentPlanHash: planHash, stage: "full-update", targetSpu: target.targetSpu, at: new Date().toISOString() } } });
       const postCreateWrite = await runCli(["call", "dp.product.update", "--execute", "--yes", "--param", `productId=${productId}`, "--json", JSON.stringify(postCreateBody)], { ...options, tenantName: args.tenantName, env: { ...options.env, ...(args.tenantName ? { DEEPDRAW_TENANT_NAME: args.tenantName } : {}), DEEPDRAW_MERCHANT_ID: args.merchantId } });
       const postCreatePayload = resultRecord(postCreateWrite.stdout);
       const postCreateRequestId = text(postCreatePayload.requestId) || null;
