@@ -51,15 +51,17 @@ test("marks unsupported special fields manual-required instead of synthesizing t
   assert.equal(fields[0]?.staleReason, "manual_required_special_format");
 });
 
-test("blocks unsupported Tmall guide-title schema until an operator supplies a manual value", () => {
+test("builds Tmall guide-title category slots from local copywriting", () => {
   const fields = buildBalabalaFields({
     spu: "202426107128",
     launchPlan: { productLine: "童装", category: "羽绒服", subcategory: "中羽绒服" },
     copywriting: { rows: [{ guideTitle: "巴拉巴拉男童羽绒服" }] },
     skus: [],
   }, { fields: [{ fieldName: "天猫导购标题", fieldType: "TEXT", required: true }] });
-  assert.equal(fields[0]?.validationStatus, "missing");
-  assert.equal(fields[0]?.staleReason, "manual_required_special_format");
+  assert.equal(fields[0]?.validationStatus, "valid");
+  const row = JSON.parse(fields[0]!.valueText!)[0];
+  assert.equal(row["interest7,利益点"], "巴拉巴拉男童羽绒服");
+  assert.equal(row["316102,衣长"], "");
 });
 
 test("accepts a reviewed manual value for a special-format field", () => {
@@ -203,7 +205,7 @@ test("derives apparel and cross-platform defaults without borrowing shoe-only ru
   ] });
   const values = Object.fromEntries(fields.map((field) => [field.fieldName, field.valueText]));
   assert.deepEqual(values, {
-    销售渠道类型: "纯电商", 是否商场同款: "否", 报价方式: "按产品数量报价", 件重尺: "按规格设置", "1688供货方式": "现货", 所在地: "浙江,杭州", 面料: "纯棉", 面料多选: "棉", 选择期数: "326", 厚薄: "加厚", 服装版型: "宽松型", 主图4文案1: "第一句", 主图4文案2: "第二句", "25服饰细节文案": "裤型利落*日常百搭", "25版型指数": "宽松", "25服装面料文案": "防风-透气", 性别多选: "女童", 是否带帽: "", 是否可开档: "不开裆", 是否可定制: "不可定制", 货源类别: "订货", 腰型: "自然腰", 裤门襟: "松紧", 适用场合: "日常", 适用年龄: "7-16岁", 适用人群: "青少年", 适用季节: "2026年秋季", 面料工艺: "涂层", 领型: "连帽", 风格: "休闲", 尺码表兼容平台: "天猫;京东;抖音",
+    销售渠道类型: "纯电商", 是否商场同款: "否", 报价方式: "按产品数量报价", 件重尺: "按规格设置", "1688供货方式": "现货", 所在地: "浙江,杭州", 面料: "纯棉", 面料多选: "棉", 选择期数: "326", 厚薄: "加厚", 服装版型: "宽松型", 主图4文案1: "第一句", 主图4文案2: "第二句", "25服饰细节文案": "裤型利落*日常百搭", "25版型指数": "宽松", "25服装面料文案": "防风-透气", 性别多选: "女童", 是否带帽: "", 是否可开档: "不开裆", 是否可定制: "不可定制", 货源类别: "现货", 腰型: "自然腰", 裤门襟: "松紧", 适用场合: "日常", 适用年龄: "7-16岁", 适用人群: "青少年", 适用季节: "2026年秋季", 面料工艺: "涂层", 领型: "连帽", 风格: "休闲", 尺码表兼容平台: "天猫;京东;抖音",
   });
 });
 
@@ -244,7 +246,7 @@ test("derives the remaining Listingify shoe source-rule and platform fields", ()
     "流行元素(多选)": "反光;旋钮扣;字母",
     单用户累计限购件: "5",
     每次限购件: "5",
-    京东发货地: "杭州",
+    京东发货地: "浙江杭州",
     京东商品重量: "1",
     抖音商品重量: "1",
     京东包装宽: "100",
@@ -290,7 +292,7 @@ test("uses Listingify provenance order for apparel enterprise and titles, while 
     厂家地址: "宁波市示例路1号",
     产地: "中国大陆",
     商品展示标题: "巴拉巴拉女童7-16岁牛仔裤",
-    快手标题: "女童牛仔裤 202426107129",
+    快手标题: "女童牛仔裤",
     拼多多标题: undefined,
     天猫推荐理由: "舒适百搭",
     主图4样式: "225",
@@ -416,4 +418,60 @@ test("supports Listingify sale-size aliases and base merchant-SKU columns", () =
   ] });
   assert.equal(fields.find((field) => field.fieldName === "尺寸")?.valueText, "S;140cm");
   assert.equal((fields.find((field) => field.fieldName === "商家SKU")?.valueJson as Record<string, string>)?.title, "价格,货号,上市时间,数量,商家编码,条形码,零售价,供货价,唯品会货号,唯品会条形码");
+});
+
+test("formal 108035 and 121024 compositions preserve sections and exact fiber facts regardless of enum order", () => {
+  const cases = [
+    { material: "成分\n面料:42.3%聚酯纤维 40.6%棉 15.9%莱赛尔 1.2%氨纶\n脚口面料:100%聚酯纤维\n(配料除外)", expected: "聚酯纤维,42.3;棉,40.6;莱赛尔纤维(莱赛尔),15.9;聚氨酯弹性纤维(氨纶),1.2", band: "41%(含)-60%(含)" },
+    { material: "成分\n面料:37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶\n罗纹:97.1%棉 2.9%氨纶\n(配料除外）", expected: "棉,37.6;聚酯纤维,29.8;莫代尔纤维(莫代尔),23.8;聚氨酯弹性纤维(氨纶),8.8", band: "30%（含）-40%" },
+  ];
+  for (const item of cases) {
+    const fields = buildBalabalaFields({ ...context, launchPlan: { productLine: "童装", category: "卫衣" }, copywriting: { rows: [{ raw: { 面料成分: item.material } }] } }, { fields: [
+      { fieldName: "材质成分", fieldType: "TEXT", required: true, options: ["石棉(石绵)", "蚕丝棉", "驼绒棉", "棉", "聚酯纤维", "莱赛尔纤维(莱赛尔)", "莫代尔纤维(莫代尔)", "聚氨酯弹性纤维(氨纶)"] },
+      { fieldName: "材质", options: ["纯棉（95%以上）", "石棉", "棉混纺布", "其它"] },
+      { fieldName: "成分含量", options: ["96%及以上", "41%(含)-60%(含)", "30%（含）-40%"] },
+    ] });
+    assert.equal(fields[0]?.valueText, item.expected);
+    assert.equal(fields[0]?.validationStatus, "valid");
+    assert.equal(fields[1]?.valueText, item.material.includes("42.3%") ? "其它" : "棉混纺布");
+    assert.equal(fields[2]?.valueText, item.band);
+  }
+});
+
+test("invalid main material percentages block even optional fields without enum constraints", () => {
+  for (const material of ["面料:120%棉", "面料:70%棉 50%聚酯纤维", "面料:60%棉 40%棉"]) {
+    const fields = buildBalabalaFields({ ...context, launchPlan: { category: "卫衣" }, copywriting: { rows: [{ raw: { 面料成分: material } }] } }, { fields: [{ fieldName: "材质成分", fieldType: "TEXT" }] });
+    assert.equal(fields[0]?.valueText, "");
+    assert.equal(fields[0]?.validationStatus, "invalid");
+    assert.equal(fields[0]?.staleReason, "invalid_source_material_percentages");
+  }
+});
+
+test("raw workbook aliases, prices and Listingify defaults produce local fields", () => {
+  const fields = buildBalabalaFields({ ...context, launchPlan: { category: "卫衣" }, copywriting: { rows: [{ raw: {
+    主图4: "温暖冬日\n柔软亲肤\n日常百搭", "细节文案（不限定8个字，细节数量3-4个，字数尽量不超过12字）": "1.罗纹袖口\n2.舒适领口", 弹性: "弹力", 导购标题: "巴拉巴拉儿童舒适保暖百搭卫衣", 内容平台标题: "完整内容平台标题",
+  } }] } }, { fields: [
+    ...["主图4文案1", "主图4文案2", "25服饰细节文案", "导购短标题", "快手标题", "小红书标题", "奥莱店折扣价", "抖音参考价", "京东产地"].map((fieldName) => ({ fieldName })),
+    { fieldName: "弹力", options: ["高弹", "微弹"] }, { fieldName: "主图4样式", options: ["主图4样式225"] },
+  ] });
+  const values = Object.fromEntries(fields.map((f) => [f.fieldName, f.valueText]));
+  assert.equal(values.主图4文案1, "温暖冬日");
+  assert.equal(values.主图4文案2, "柔软亲肤\n日常百搭");
+  assert.equal(values['25服饰细节文案'], "罗纹袖口*舒适领口");
+  assert.equal(values.导购短标题, "巴拉巴拉儿童卫衣");
+  assert.equal(values.快手标题, "完整内容平台标题");
+  assert.equal(values.小红书标题, "完整内容平台标题");
+  assert.equal(values.奥莱店折扣价, "359.9");
+  assert.equal(values.抖音参考价, "359.9");
+  assert.equal(values.京东产地, "中国大陆");
+  assert.equal(values.弹力, "微弹");
+  assert.equal(values.主图4样式, "主图4样式225");
+});
+
+test("JD local size subattributes retain SKU order and reviewed special values override derived values", () => {
+  const local = { ...context, skus: [{ size: "140cm" }, { size: "130cm" }, { size: "140cm" }] };
+  const template = { fields: [{ fieldName: "京东规格子属性" }, { fieldName: "京东自营子属性" }] };
+  assert.deepEqual(buildBalabalaFields(local, template).map((f) => f.valueText), ["140;130", "140;130"]);
+  const preserved = buildBalabalaFields({ ...local, manualOverrides: { 京东规格子属性: { valueText: "existing" }, 京东自营子属性: { valueText: "" } } }, template);
+  assert.deepEqual(preserved.map((f) => f.valueText), ["existing", ""]);
 });

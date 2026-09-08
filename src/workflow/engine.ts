@@ -1,3 +1,4 @@
+import { DATABASE_RULE_VERSION } from "../brands/balabala/database-rules.js";
 import { balabalaListPrice, balabalaPriceEvidence } from "../brands/balabala/prices.js";
 import { applyBalabalaDownFill } from "../brands/balabala/down-fill.js";
 import { auditAiResponses, auditOcrFacts, buildLocalVisionReviewPlan } from "../brands/balabala/ai-audit.js";
@@ -128,6 +129,7 @@ export class BalabalaWorkflowEngine {
         ...buildLocalVisionReviewPlan(current.normalized.images, deduped),
         fields: deduped.map((field) => ({ fieldId: field.fieldId, fieldName: field.fieldName, active: field.active !== false, manualOverride: field.manualOverride === true, options: (template.fields as JsonRecord[]).map(record).find((templateField) => compact(templateField.fieldName) === compact(field.fieldName))?.options ?? [] })),
       },
+      databaseRuleSnapshot: { version: DATABASE_RULE_VERSION, tenantName: "电商巴拉巴拉", merchantId: "1162", mode: "bundled_offline_snapshot" },
       priceEvidence: balabalaPriceEvidence(current.normalized),
       assembledAt: new Date().toISOString(),
     };

@@ -1,0 +1,1070 @@
+sourceSpu,category,field,source,value,status,missing_handling,active,stage
+202426107129,羽绒服,颜色,derived,"灰色,蓝灰色调00382",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,尺码,mdm,180cm;175cm;170cm;165cm;160cm;150cm;140cm,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,尺码表,derived,"{""title"": ""尺码,衣长,肩宽,胸围,袖长,身高,体重"", ""140cm"": ""140,51.5,34,88,48.5,140,31"", ""150cm"": ""150,56,36.5,93,52.5,150,37"", ""160cm"": ""160,60.5,39,98,56.5,160,45"", ""165cm"": ""165,63.5,41.5,103,59,165,52.5"", ""170cm"": ""170,66.5,44,108,61.5,170,57.5"", ""175cm"": ""175,69.5,46.5,113,64,175,62.5"", ""180cm"": ""180,72.5,49,118,66.5,180,67.5""}",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,多平台尺码,derived,"{""title"": ""天猫,京东,拼多多,微信视频小店,小红书,快手"", ""140cm"": "",140,,,,"", ""150cm"": "",150,,,,"", ""160cm"": "",160,,,,"", ""165cm"": "",165,,,,"", ""170cm"": "",170,,,,"", ""175cm"": "",175,,,,"", ""180cm"": "",180,,,,""}",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会尺码表,derived,"{""title"": ""号型,适合年龄,身高,肩宽,胸围,衣长,袖长,体重"", ""140cm"": ""140/68,8-11岁,140,34,88,51.5,48.5,31"", ""150cm"": ""150/72,11-13岁,150,36.5,93,56,52.5,37"", ""160cm"": ""160/80,13-14岁,160,39,98,60.5,56.5,45"", ""165cm"": ""165/84A,14-15岁,165,41.5,103,63.5,59,52.5"", ""170cm"": ""170/88A,15-16岁,170,44,108,66.5,61.5,57.5"", ""175cm"": ""175/92A,16-17岁,175,46.5,113,69.5,64,62.5"", ""180cm"": ""180/96A,17-18岁,180,49,118,72.5,66.5,67.5""}",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,抖音尺码表,derived,"{""title"": ""身高(cm),体重(斤),衣长(cm),肩宽(cm),胸围(cm),袖长(cm)"", ""140cm"": ""140,62,51.5,34,88,48.5"", ""150cm"": ""150,74,56,36.5,93,52.5"", ""160cm"": ""160,90,60.5,39,98,56.5"", ""165cm"": ""165,105,63.5,41.5,103,59"", ""170cm"": ""170,115,66.5,44,108,61.5"", ""175cm"": ""175,125,69.5,46.5,113,64"", ""180cm"": ""180,135,72.5,49,118,66.5""}",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,天猫尺码表,derived,"{""title"": ""身高,体重,肩宽,胸围,袖长,衣长"", ""140cm"": ""140,31,34,88,48.5,51.5"", ""150cm"": ""150,37,36.5,93,52.5,56"", ""160cm"": ""160,45,39,98,56.5,60.5"", ""165cm"": ""165,52.5,41.5,103,59,63.5"", ""170cm"": ""170,57.5,44,108,61.5,66.5"", ""175cm"": ""175,62.5,46.5,113,64,69.5"", ""180cm"": ""180,67.5,49,118,66.5,72.5""}",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,淘宝尺码表,derived,"{""title"": ""身高,体重,肩宽,胸围,袖长,衣长"", ""140cm"": ""140,31,34,88,48.5,51.5"", ""150cm"": ""150,37,36.5,93,52.5,56"", ""160cm"": ""160,45,39,98,56.5,60.5"", ""165cm"": ""165,52.5,41.5,103,59,63.5"", ""170cm"": ""170,57.5,44,108,61.5,66.5"", ""175cm"": ""175,62.5,46.5,113,64,69.5"", ""180cm"": ""180,67.5,49,118,66.5,72.5""}",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,好衣库尺码表,derived,"{""title"": ""身高(cm),体重(kg),肩宽(cm),胸围(cm),袖长(cm),衣长(cm)"", ""140cm"": ""140,31,34,88,48.5,51.5"", ""150cm"": ""150,37,36.5,93,52.5,56"", ""160cm"": ""160,45,39,98,56.5,60.5"", ""165cm"": ""165,52.5,41.5,103,59,63.5"", ""170cm"": ""170,57.5,44,108,61.5,66.5"", ""175cm"": ""175,62.5,46.5,113,64,69.5"", ""180cm"": ""180,67.5,49,118,66.5,72.5""}",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商家SKU,derived,"{""title"": ""价格,货号,上市时间,数量,商家编码,条形码,零售价,供货价,唯品会货号,唯品会条形码,京东价,划线价,拼多多单买价,拼多多团购价,天猫特卖折扣价,天猫特卖专柜价,采购价,京东自营市场价,有赞标准价,有赞价格,原价,小红书市场价,抖音结算价格,抖音价,快手价,爱库存供货价,爱库存最低价,好衣库结算价,好衣库供货价,好衣库价,好衣库原价,微信视频小店价格,单品货号,1688件重尺-重(g),小红书商家编码,天猫SKU搜索标题"", ""蓝灰色调00382"": {""180cm"": ""799.9,202426107129,2026-09,0,6914678673876,,799.9,799.9,20242610712900382,6914678673876,799.9,799.9,798.9,797.9,799.9,799.9,799.9,799.9,799.9,,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,,6914678673876,1000,20242610712900382180,巴拉巴拉童装羽绒马甲男童两件套"", ""175cm"": ""799.9,202426107129,2026-09,0,6914678673869,,799.9,799.9,20242610712900382,6914678673869,799.9,799.9,798.9,797.9,799.9,799.9,799.9,799.9,799.9,,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,,6914678673869,1000,20242610712900382175,巴拉巴拉童装羽绒马甲男童两件套"", ""170cm"": ""799.9,202426107129,2026-09,0,6914678673852,,799.9,799.9,20242610712900382,6914678673852,799.9,799.9,798.9,797.9,799.9,799.9,799.9,799.9,799.9,,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,,6914678673852,1000,20242610712900382170,巴拉巴拉童装羽绒马甲男童两件套"", ""165cm"": ""799.9,202426107129,2026-09,0,6914678673845,,799.9,799.9,20242610712900382,6914678673845,799.9,799.9,798.9,797.9,799.9,799.9,799.9,799.9,799.9,,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,,6914678673845,1000,20242610712900382165,巴拉巴拉童装羽绒马甲男童两件套"", ""160cm"": ""799.9,202426107129,2026-09,0,6914678673838,,799.9,799.9,20242610712900382,6914678673838,799.9,799.9,798.9,797.9,799.9,799.9,799.9,799.9,799.9,,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,,6914678673838,1000,20242610712900382160,巴拉巴拉童装羽绒马甲男童两件套"", ""150cm"": ""799.9,202426107129,2026-09,0,6914678673821,,799.9,799.9,20242610712900382,6914678673821,799.9,799.9,798.9,797.9,799.9,799.9,799.9,799.9,799.9,,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,,6914678673821,1000,20242610712900382150,巴拉巴拉童装羽绒马甲男童两件套"", ""140cm"": ""799.9,202426107129,2026-09,0,6914678673814,,799.9,799.9,20242610712900382,6914678673814,799.9,799.9,798.9,797.9,799.9,799.9,799.9,799.9,799.9,,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,799.9,,6914678673814,1000,20242610712900382140,巴拉巴拉童装羽绒马甲男童两件套""}}",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,小红书标题,copywriting,【商场同款】巴拉巴拉童装儿童羽绒马甲男童两件套2026新款冬装暖,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商品简称,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商品特色,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,净重（g）,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,毛重（g）,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,保质期（天）,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,小红书商品描述,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商品详情,copywriting,两件套一衣两穿，防泼水羽绒温暖过冬,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,快手标题,copywriting,【商场同款】巴拉巴拉童装儿童羽绒马甲男童两件套2026新款冬装暖,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,小红书计量单位,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,件数,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,小红书发货时间,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,相对发货时间,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,固定发货时间,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会款号,mdm,202426107129,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,好衣库标题,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,好衣库重量,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,爱库存标题,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会标题,copywriting,巴拉巴拉童装儿童羽绒马甲男童两件套2026新款冬装校服神器暖,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商品展示标题,derived,巴拉巴拉男中童羽绒服,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会副标题,copywriting,两件套一衣两穿,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东商品标语,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,标语加链接的文字,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,标语链接地址,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东标题,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东市场价,mdm,799.9,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会核心描述,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会市场价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,无线短标题,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,拼多多标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,详情页标题,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商品短标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,宝贝卖点,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,天猫商品卖点,copywriting,两件套一衣两穿，防泼水羽绒温暖过冬,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,天猫推荐理由,copywriting,两件套一衣两穿,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,奥莱店折扣价,mdm,799.9,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商品描述,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,商品市场价,mdm,799.9,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,微信视频小店标题,copywriting,【商场同款】巴拉巴拉童装儿童羽绒马甲男童两件套2026新款冬装暖,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,微信视频小店副标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,微信视频小店商品编码,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,发货方式,derived,快递发货,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,淘宝货号,mdm,202426107129,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,天猫货号,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,抖音标题,copywriting,【商场同款】巴拉巴拉童装儿童羽绒马甲男童两件套2026新款冬装暖,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,导购短标题,copywriting,巴拉巴拉男童羽绒马甲,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,抖音小时达标题,copywriting,巴拉巴拉童装羽绒马甲男童两件套,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,爱库存全网最低价链接,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,单位,derived,件,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,爱库存款号,mdm,202426107129,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,抖音商品重量,derived,1,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,抖音商家推荐语,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,抖音参考价,mdm,799.9,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,抖音参考价格类型,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,单用户累计限购(件),derived,5,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,每次限购(件),derived,5,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,售后服务承诺,derived,不设置,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商家编码,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,商家条形码,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,淘宝导购标题,manual,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,天猫导购标题,manual,"[{""200001,品牌"":"""",""316102,衣长"":"""",""16269273,厚薄"":"""",""205484,适用性别"":"""",""1000240545,亮点"":"""",""2165044216,品类词"":"""",""interest7,利益点"":""巴拉巴拉童装羽绒马甲男童两件套""}]",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否新品,derived,是,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,拼多多货源地,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,快手商品卖点,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,有赞商品卖点,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,划线价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会温馨提示,derived,手工测量难免存在误差，常规款袖长肩点到袖口，插肩袖(无明确肩点)款后领中量至袖口,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,尺寸推荐表,derived,禁用,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,尺码推荐表兼容平台,derived,1688;天猫;京东;唯品会;有赞;拼多多;小红书;抖音;快手;微信视频小店,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,试穿报告表,derived,禁用,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,试穿报告表兼容平台,derived,1688;天猫;京东;唯品会;有赞;拼多多;小红书;抖音;快手;微信视频小店,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东规格子属性,manual,"165
+180
+170
+160
+150
+140
+175",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东自营子属性,manual,"165
+180
+170
+160
+150
+140
+175",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,详情页面料,copywriting,缺水洗,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,报价方式,derived,按产品数量报价,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,价格区间,derived,"1,799.9",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,件重尺,derived,按规格设置,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,1688供货方式,derived,现货,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,面料(多选),copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,销售渠道类型(单选),skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否商场同款,derived,是,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,材质成分,copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东材质成分,copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,抖音面料材质,copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,面料,copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,充绒量(文本),skip,,missing,,True,local assemble; create/full-update gate
+202426107129,羽绒服,材质成分(文本),copywriting,缺水洗,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,材质,copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,成分及含量,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,材质成分(多选),copywriting,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,里料,copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,安全等级,skip,,missing,,True,local assemble; create/full-update gate
+202426107129,羽绒服,适用季节,launch_plan,冬季,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,上市时间,launch_plan,2026年冬季,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,材质(多选),copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,适用场景,derived,日常,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,适用性别,launch_plan,男,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,适用性别(多选),launch_plan,男,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,填充物,copywriting,鸭绒,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,填充物(多选),copywriting,鸭绒,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,充绒量(多选),copywriting,,missing,,True,local assemble; create/full-update gate
+202426107129,羽绒服,充绒量,skip,,missing,,True,local assemble; create/full-update gate
+202426107129,羽绒服,功能(多选),copywriting,保暖,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,产地,derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否申请新品,derived,是,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,专柜价,derived,10000,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东商品重量,derived,1,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,[包装]长,derived,100,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,[包装]宽,derived,100,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,[包装]高,derived,100,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,衣门襟,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,平车针距12~14针/3cm,derived,否,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,填充物含量,copywriting,,missing,,True,local assemble; create/full-update gate
+202426107129,羽绒服,款式,derived,其他,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否带帽,derived,,missing,,True,local assemble; create/full-update gate
+202426107129,羽绒服,面料工艺,derived,涂层,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品【包装】长,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,唯品【包装】宽,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,唯品【包装】高,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,唯品重量,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,图案,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,适用年龄,launch_plan,中大童(8岁以上，140cm以上),valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,风格,derived,休闲,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,服装版型,copywriting,合体,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,适用人群(多选),launch_plan,中大童,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,风格(多选),derived,休闲,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,款式(单选),derived,短款羽绒服,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,流行元素(多选),skip,,missing,,True,local assemble; create/full-update gate
+202426107129,羽绒服,含绒量(多选),copywriting,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,袖长,derived,长袖,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,厚薄,copywriting,普通,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,里料材质(多选),copywriting,羊剪绒毛皮革,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,里料材质成分含量(多选),copywriting,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,上市时间(文本),launch_plan,2026年冬季,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,含绒量(文本),copywriting,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,模板柔软度,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,模板弹力,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,包装种类,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,模板透气度,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,图案(多选),skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,领型,derived,连帽,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否有毛领,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,毛领材质,copywriting,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426107129,羽绒服,袖型,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,模板厚度,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,衣长,derived,常规,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,模板长度,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,模板版型,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,洗涤,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会产地,derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,衣长(多选),skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,介绍,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,适用季节(多选),launch_plan,冬季,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,适用年龄(多选),launch_plan,9岁;9周岁（含）-12周岁（不含）;9-10 岁;8岁（含）—14岁（不含）;8岁;8-9 岁;7-8岁;6岁（含）—8岁（不含）;6周岁（含）-9周岁（不含）;6周岁（含）-12周岁（不含）;6-12岁;18周岁（含）-29周岁（不含）;16 岁;15岁;15-16岁;14岁;14周岁（含）-18周岁（不含）;14-15岁;13岁;13-14 岁;12岁;12周岁（含）-14周岁（不含）;11岁;11-12 岁;10岁;10-11岁,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否可定制,derived,不可定制,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,绒子含量,copywriting,,missing,,True,local assemble; create/full-update gate
+202426107129,羽绒服,绒子含量(文本),copywriting,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,生产企业名称,derived,浙江森马服饰股份有限公司,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,生产/经销厂家,derived,浙江森马服饰股份有限公司,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,厂家地址,derived,温州市瓯海区娄桥工业园南汇路98号,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,执行标准,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,货源类别,derived,现货,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否库存,derived,否,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否跨境出口专供货源,derived,否,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,主要销售地区,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,有可授权的自有品牌,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,主要下游平台,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,详细材质信息(VIP),copywriting,缺水洗,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,体积,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,原产国(AKC),derived,中国,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,洗涤说明,derived,请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,尺码类型,derived,身型,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,吊牌价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,品牌,mdm,巴拉巴拉,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,品牌(单选),mdm,balabala/巴拉巴拉,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会洗涤说明,derived,请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会配件信息,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东产地,derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东自营商品重量,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,童装产地(多选),derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,规格参数,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,退款规则,derived,支持7天无理由退货,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,库存计数,derived,买家拍下减库存,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,包装清单,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,售后服务,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,会员打折,derived,不参与会员打折,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,发货时效,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,大于48小时发货,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,唯品会售后信息,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,所在地,derived,"浙江,杭州",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,京东发货地,derived,浙江杭州,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,原产国,derived,中国,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,设计师说,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版品名,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版年龄,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版材质,copywriting,缺水洗,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版重量,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版产品功能,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版产品规格,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版面料,copywriting,缺水洗,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版容量,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版口径,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版耐温度,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版产品材质,copywriting,缺水洗,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版款式,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版适用年龄,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配件版尺寸,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版默认文案,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版模块,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版卖点1,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版卖点2,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版卖点3,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版卖点4,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版卖点5,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版卖点6,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,文胸无尺码,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,婴童内着详情页,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,是否婴童,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,幼童90-130牛仔选,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,文胸图标,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,25服装母婴标准,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25服装尺码推荐,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25鞋子模板类型,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,25鞋子尺码表,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,25实拍文案,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,楦型,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,主图1,copywriting,两件套,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,主图2,copywriting,两件套,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,主图4文案1,copywriting,仿棉平纹烫膜,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,主图4文案2,copywriting,"防泼水功能
+温暖两件套",valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,主图4样式,derived,主图4样式225,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25产品名称,copywriting,缺吊牌,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25面料成分,copywriting,缺水洗,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25服装面料文案,copywriting,仿棉平纹烫膜-防泼水功能，拼接奥粒绒，穿着舒适保暖*防泼水-保暖-舒适,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25柔软指数,copywriting,适中,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25厚薄指数,copywriting,适中,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25弹力指数,copywriting,无弹,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25版型指数,copywriting,合体,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25服装质检标题,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25服饰细节文案,copywriting,连帽设计，防风护颈*拉链口袋，实用美观*反光印花，夜间更安全*顺滑拉链，穿脱方便,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,25服饰吊牌样式,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,balaone仅专供新品勾选,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,羽绒服洗涤说明,derived,羽绒服洗涤说明,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,详情页AI标注,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,单色平台AI标,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,多色平台AI,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,奥特曼IP,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,婴童A标,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,配饰版棒球帽,skip,,valid,,True,local assemble; create/full-update gate
+202426107129,羽绒服,水杯说明,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426107129,羽绒服,PLM量点冲突,skip,{},invalid,plm_measurements_conflict:肩宽|140cm;肩宽|150cm;肩宽|160cm;肩宽|165cm;肩宽|170cm;肩宽|175cm;肩宽|180cm;全胸围（夹下1CM|140cm;全胸围（夹下1CM|150cm;全胸围（夹下1CM|160cm;全胸围（夹下1CM|165cm;全胸围（夹下1CM|170cm;全胸围（夹下1CM|175cm;全胸围（夹下1CM|180cm;下摆全围平量|140cm;下摆全围平量|150cm;下摆全围平量|160cm;下摆全围平量|165cm;下摆全围平量|170cm;下摆全围平量|175cm;下摆全围平量|180cm;领围（全围，不量拉链|140cm;领围（全围，不量拉链|150cm;领围（全围，不量拉链|160cm;领围（全围，不量拉链|165cm;领围（全围，不量拉链|170cm;领围（全围，不量拉链|175cm;领围（全围，不量拉链|180cm;前胸花肩缝顶点垂直|140cm;前胸花肩缝顶点垂直|150cm;前胸花肩缝顶点垂直|160cm;前胸花肩缝顶点垂直|165cm;前胸花肩缝顶点垂直|170cm;前胸花肩缝顶点垂直|175cm;前胸花肩缝顶点垂直|180cm;前胸花距门襟边|140cm;前胸花距门襟边|150cm;前胸花距门襟边|160cm;前胸花距门襟边|165cm;前胸花距门襟边|170cm;前胸花距门襟边|175cm;前胸花距门襟边|180cm,True,local assemble; create/full-update gate
+202426108035,长裤,颜色,derived,"浅灰,牛仔浅灰28201",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,尺码,mdm,175cm;170cm;165cm;160cm;150cm;140cm,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,尺码表,derived,"{""title"": ""尺码,裤长,腰围,臀围,脚口,身高,体重"", ""140cm"": ""140,82,55,80,46.4,140,31"", ""150cm"": ""150,89,58,85,48.8,150,37"", ""160cm"": ""160,96,61,90,51.2,160,45"", ""165cm"": ""165,99,63.5,94,53.6,165,52.5"", ""170cm"": ""170,102,66,98,56,170,57.5"", ""175cm"": ""175,105,68.5,102,58.4,175,62.5""}",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,多平台尺码,derived,"{""title"": ""天猫,京东,拼多多,微信视频小店,小红书,快手"", ""140cm"": "",140,,,,"", ""150cm"": "",150,,,,"", ""160cm"": "",160,,,,"", ""165cm"": "",165,,,,"", ""170cm"": "",170,,,,"", ""175cm"": "",175,,,,""}",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会尺码表,derived,"{""title"": ""号型,适合年龄,身高,腰围,臀围,裤长,体重"", ""140cm"": ""140/55,8-11岁,140,55,80,82,31"", ""150cm"": ""150/61,11-13岁,150,58,85,89,37"", ""160cm"": ""160/64A,13-14岁,160,61,90,96,45"", ""165cm"": ""165/68A,14-15岁,165,63.5,94,99,52.5"", ""170cm"": ""170/72A,15-16岁,170,66,98,102,57.5"", ""175cm"": ""175/76A,16-17岁,175,68.5,102,105,62.5""}",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,抖音尺码表,derived,"{""title"": ""身高(cm),体重(斤),腰围(cm),臀围(cm),裤长(cm)"", ""140cm"": ""140,62,55,80,82"", ""150cm"": ""150,74,58,85,89"", ""160cm"": ""160,90,61,90,96"", ""165cm"": ""165,105,63.5,94,99"", ""170cm"": ""170,115,66,98,102"", ""175cm"": ""175,125,68.5,102,105""}",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,天猫尺码表,derived,"{""title"": ""身高,体重,腰围,臀围,裤长"", ""140cm"": ""140,31,55,80,82"", ""150cm"": ""150,37,58,85,89"", ""160cm"": ""160,45,61,90,96"", ""165cm"": ""165,52.5,63.5,94,99"", ""170cm"": ""170,57.5,66,98,102"", ""175cm"": ""175,62.5,68.5,102,105""}",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,淘宝尺码表,derived,"{""title"": ""身高,体重,腰围,臀围,裤长"", ""140cm"": ""140,31,55,80,82"", ""150cm"": ""150,37,58,85,89"", ""160cm"": ""160,45,61,90,96"", ""165cm"": ""165,52.5,63.5,94,99"", ""170cm"": ""170,57.5,66,98,102"", ""175cm"": ""175,62.5,68.5,102,105""}",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,好衣库尺码表,derived,"{""title"": ""身高(cm),体重(kg),腰围(cm),臀围(cm),裤长(cm)"", ""140cm"": ""140,31,55,80,82"", ""150cm"": ""150,37,58,85,89"", ""160cm"": ""160,45,61,90,96"", ""165cm"": ""165,52.5,63.5,94,99"", ""170cm"": ""170,57.5,66,98,102"", ""175cm"": ""175,62.5,68.5,102,105""}",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商家SKU,derived,"{""title"": ""价格,货号,上市时间,数量,商家编码,条形码,零售价,供货价,唯品会货号,唯品会条形码,京东价,划线价,拼多多单买价,拼多多团购价,天猫特卖折扣价,天猫特卖专柜价,采购价,京东自营市场价,有赞标准价,有赞价格,原价,小红书市场价,抖音结算价格,抖音价,快手价,爱库存供货价,爱库存最低价,好衣库结算价,好衣库供货价,好衣库价,好衣库原价,微信视频小店价格,单品货号,1688件重尺-重(g),小红书商家编码,天猫SKU搜索标题"", ""牛仔浅灰28201"": {""175cm"": ""359.9,202426108035,2026-09,0,6914678680409,,359.9,359.9,20242610803528201,6914678680409,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678680409,1000,20242610803528201175,巴拉巴拉童装女童牛仔裤儿童裤子"", ""170cm"": ""359.9,202426108035,2026-09,0,6914678680393,,359.9,359.9,20242610803528201,6914678680393,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678680393,1000,20242610803528201170,巴拉巴拉童装女童牛仔裤儿童裤子"", ""165cm"": ""359.9,202426108035,2026-09,0,6914678680386,,359.9,359.9,20242610803528201,6914678680386,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678680386,1000,20242610803528201165,巴拉巴拉童装女童牛仔裤儿童裤子"", ""160cm"": ""359.9,202426108035,2026-09,0,6914678680379,,359.9,359.9,20242610803528201,6914678680379,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678680379,1000,20242610803528201160,巴拉巴拉童装女童牛仔裤儿童裤子"", ""150cm"": ""359.9,202426108035,2026-09,0,6914678680362,,359.9,359.9,20242610803528201,6914678680362,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678680362,1000,20242610803528201150,巴拉巴拉童装女童牛仔裤儿童裤子"", ""140cm"": ""359.9,202426108035,2026-09,0,6914678680355,,359.9,359.9,20242610803528201,6914678680355,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678680355,1000,20242610803528201140,巴拉巴拉童装女童牛仔裤儿童裤子""}}",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,小红书标题,copywriting,【商场同款】巴拉巴拉童装女童牛仔裤儿童加绒裤子2026冬装直筒裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商品简称,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商品特色,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,净重（g）,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,毛重（g）,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,保质期（天）,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,小红书商品描述,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商品详情,copywriting,底抓毛保暖舒适，直筒裤型穿搭有型,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,快手标题,copywriting,【商场同款】巴拉巴拉童装女童牛仔裤儿童加绒裤子2026冬装直筒裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,小红书计量单位,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,件数,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,小红书发货时间,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,相对发货时间,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426108035,长裤,固定发货时间,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426108035,长裤,唯品会款号,mdm,202426108035,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,好衣库标题,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,好衣库重量,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,爱库存标题,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会标题,copywriting,巴拉巴拉童装女童牛仔裤儿童加绒裤子2026冬装保暖直筒裤百搭,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商品展示标题,derived,巴拉巴拉女中童长裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会副标题,copywriting,底抓毛保暖舒适,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东商品标语,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,标语加链接的文字,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,标语链接地址,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东标题,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东市场价,mdm,359.9,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会核心描述,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会市场价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,无线短标题,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,拼多多标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,详情页标题,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商品短标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,宝贝卖点,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,天猫商品卖点,copywriting,底抓毛保暖舒适，直筒裤型穿搭有型,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,天猫推荐理由,copywriting,底抓毛保暖舒适,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,奥莱店折扣价,mdm,359.9,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商品描述,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,商品市场价,mdm,359.9,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,微信视频小店标题,copywriting,【商场同款】巴拉巴拉童装女童牛仔裤儿童加绒裤子2026冬装直筒裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,微信视频小店副标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,微信视频小店商品编码,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,发货方式,derived,快递发货,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,淘宝货号,mdm,202426108035,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,天猫货号,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,抖音标题,copywriting,【商场同款】巴拉巴拉童装女童牛仔裤儿童加绒裤子2026冬装直筒裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,导购短标题,copywriting,巴拉巴拉女童牛仔裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,抖音小时达标题,copywriting,巴拉巴拉童装女童牛仔裤儿童裤子,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,爱库存全网最低价链接,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,单位,derived,件,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,爱库存款号,mdm,202426108035,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,抖音商品重量,derived,1,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,抖音商家推荐语,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,抖音参考价,mdm,359.9,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,抖音参考价格类型,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,单用户累计限购(件),derived,5,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,每次限购(件),derived,5,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,售后服务承诺,derived,不设置,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商家编码,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,商家条形码,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,淘宝导购标题,manual,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,天猫导购标题,manual,"[{""200001,品牌"":"""",""232612,裤长"":"""",""205513,面料"":"""",""1222762104,裤子分类"":"""",""1000240545,亮点"":"""",""2165044216,品类词"":"""",""interest7,利益点"":""巴拉巴拉童装女童牛仔裤儿童裤子""}]",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否新品,derived,是,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,拼多多货源地,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,快手商品卖点,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,有赞商品卖点,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,划线价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,唯品会温馨提示,derived,手工测量难免存在误差，常规款袖长肩点到袖口，插肩袖(无明确肩点)款后领中量至袖口,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,尺寸推荐表,derived,禁用,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,尺码推荐表兼容平台,derived,1688;天猫;京东;唯品会;有赞;拼多多;小红书;抖音;快手;微信视频小店,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,试穿报告表,derived,禁用,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,试穿报告表兼容平台,derived,1688;天猫;京东;唯品会;有赞;拼多多;小红书;抖音;快手;微信视频小店,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东规格子属性,manual,"165
+170
+160
+150
+140
+175",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东自营子属性,manual,"165
+170
+160
+150
+140
+175",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,详情页面料,copywriting,"面料：42.3%聚酯纤维 40.6%棉 15.9%莱赛尔 1.2%氨纶
+脚口面料：100%聚酯纤维
+(配料除外)",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,报价方式,derived,按产品数量报价,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,价格区间,derived,"1,359.9",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,件重尺,derived,按规格设置,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,1688供货方式,derived,现货,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,型号,mdm,202426108035,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,模特实拍,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,销售渠道类型(单选),skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否商场同款,derived,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426108035,长裤,京东材质成分,copywriting,"涤纶(聚酯纤维),42.3;棉,40.6;莱赛尔,15.9;氨纶(聚氨酯弹性纤维),1.2",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,抖音面料材质,copywriting,"聚酯纤维,42.3;棉,40.6;莱赛尔,15.9;氨纶,1.2",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,面料,copywriting,混纺,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,面料(多选),copywriting,聚酯纤维;天丝;氨纶,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,成分及含量,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,材质,copywriting,其它,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,主面料成分含量,copywriting,"面料：42.3%聚酯纤维 40.6%棉 15.9%莱赛尔 1.2%氨纶
+脚口面料：100%聚酯纤维
+(配料除外)",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,材质(多选),copywriting,聚酯纤维;棉;莱赛尔;氨纶,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,里料,copywriting,涤棉平纹布(黑色/白色),valid,,True,local assemble; create/full-update gate
+202426108035,长裤,安全等级,skip,,missing,,True,local assemble; create/full-update gate
+202426108035,长裤,上市时间,launch_plan,2026年冬季,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,弹力,copywriting,微弹,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,选购热点,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,适用性别,launch_plan,女,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,成分含量,copywriting,41%(含)-60%(含),valid,,True,local assemble; create/full-update gate
+202426108035,长裤,面料俗称,copywriting,涤纶,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,填充物,copywriting,无填充物,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否可开档,derived,不开裆,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否开裆,derived,否,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,适用人群(多选),launch_plan,青少年;小童;小学生;儿童;中学生;中大童,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,腰型,derived,自然腰,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,裤门襟,derived,松紧,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否申请新品,derived,是,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,专柜价,derived,10000,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,款式,derived,牛仔裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东商品重量,derived,1,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,[包装]长,derived,100,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,[包装]宽,derived,100,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,[包装]高,derived,100,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,平车针距12~14针/3cm,derived,否,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,AQL抽检标准,derived,无,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,面料工艺,derived,涂层,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,风格,derived,休闲,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品【包装】长,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,唯品【包装】宽,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,唯品【包装】高,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,唯品重量,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,图案,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,适用年龄,launch_plan,中大童(8岁以上，140cm以上),valid,,True,local assemble; create/full-update gate
+202426108035,长裤,服装版型,copywriting,合体,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,风格(多选),derived,休闲,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,款式(多选),derived,直筒裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,款式(单选),derived,牛仔裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,流行元素(多选),skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否有腰带,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,厚薄,copywriting,偏厚,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,里料材质(多选),copywriting,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426108035,长裤,上市时间(文本),launch_plan,2026年冬季,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,图案(多选),skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,裤长,derived,长裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,成分含量(文本),copywriting,42.3%,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,类型,launch_plan,牛仔裤,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,模板厚度,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,模板柔软度,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,模板弹力,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,模板透气度,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,模板长度,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,模板版型,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,洗涤,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会产地,derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,裤长(多选),skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,介绍,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,适用年龄(多选),launch_plan,新生-8岁;9岁-12岁;9岁;9周岁（含）-12周岁（不含）;9-25周岁;9-12岁;9-10周岁;8岁（含）—14岁（不含）;8岁;8-9周岁;7岁-10岁;7-9周岁;7-8周岁;7-14周岁;7-12岁;6岁（含）—8岁（不含）;6岁-9岁;6岁-12岁;6周岁（含）-9周岁（不含）;6-9岁;6-18周岁;6-12岁;6-12周岁;4-12周岁;3-80周岁;3-12岁;3-12周岁;17周岁以下;15-19周岁;14岁以下;14岁;13岁;13-19周岁;12岁;12周岁（含)-14周岁（不含);12-18岁;12-13周岁;11岁-14岁;11岁;11-12周岁;10岁;10-11周岁;1-10周岁;0-16周岁;0-12周岁,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,适用季节(多选),launch_plan,冬季,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,适用性别(多选),launch_plan,女,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,适用季节,launch_plan,冬季,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否可定制,derived,不可定制,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,生产/经销厂家,derived,浙江森马服饰股份有限公司,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,厂家地址,derived,温州市瓯海区娄桥工业园南汇路98号,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,执行标准,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,货源类别,derived,现货,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否库存,derived,否,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否跨境出口专供货源,derived,否,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,主要销售地区,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426108035,长裤,有可授权的自有品牌,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426108035,长裤,主要下游平台,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426108035,长裤,详细材质信息(VIP),copywriting,"成分
+面料:42.3%聚酯纤维 40.6%棉 15.9%莱赛尔 1.2%氨纶
+脚口面料:100%聚酯纤维
+(配料除外)",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,体积,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,原产国(AKC),derived,中国,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,洗涤说明,derived,请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,尺码类型,derived,身型,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,吊牌价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,品牌,mdm,巴拉巴拉,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,品牌(单选),mdm,balabala/巴拉巴拉,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会洗涤说明,derived,请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会配件信息,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,唯品会售后信息,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东产地,derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东自营商品重量,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,童装产地,derived,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426108035,长裤,规格参数,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,退款规则,derived,支持7天无理由退货,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,库存计数,derived,买家拍下减库存,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,包装清单,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,售后服务,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,会员打折,derived,不参与会员打折,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,发货时效,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,大于48小时发货,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426108035,长裤,所在地,derived,"浙江,杭州",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,京东发货地,derived,浙江杭州,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,原产国,derived,中国,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,设计师说,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版品名,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版年龄,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版材质,copywriting,"成分
+面料:42.3%聚酯纤维 40.6%棉 15.9%莱赛尔 1.2%氨纶
+脚口面料:100%聚酯纤维
+(配料除外)",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版重量,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版产品功能,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版产品规格,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版面料,copywriting,"成分
+面料:42.3%聚酯纤维 40.6%棉 15.9%莱赛尔 1.2%氨纶
+脚口面料:100%聚酯纤维
+(配料除外)",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版容量,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版口径,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版耐温度,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版产品材质,copywriting,"成分
+面料:42.3%聚酯纤维 40.6%棉 15.9%莱赛尔 1.2%氨纶
+脚口面料:100%聚酯纤维
+(配料除外)",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版款式,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版适用年龄,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配件版尺寸,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配饰版默认文案,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,配饰版模块,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配饰版卖点1,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配饰版卖点2,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配饰版卖点3,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配饰版卖点4,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配饰版卖点5,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配饰版卖点6,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,文胸无尺码,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,婴童内着详情页,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,是否婴童,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,幼童90-130牛仔选,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,文胸图标,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,25服装母婴标准,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25服装尺码推荐,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25鞋子模板类型,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,25鞋子尺码表,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,25实拍文案,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,楦型,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,主图1,copywriting,内里加绒,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,主图2,copywriting,内里加绒,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,主图4文案1,copywriting,牛仔底抓毛面料,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,主图4文案2,copywriting,"内里加绒温暖
+直筒裤型好搭",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,主图4样式,derived,主图4样式225,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25产品名称,copywriting,缺吊牌,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25面料成分,copywriting,"成分
+面料:42.3%聚酯纤维 40.6%棉 15.9%莱赛尔 1.2%氨纶
+脚口面料:100%聚酯纤维
+(配料除外)",valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25服装面料文案,copywriting,牛仔底抓毛面料-粗斜纹时尚有质感，底抓毛牛仔，贴肤保暖，冬日舒适活动*质感-亲肤-舒适,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25柔软指数,copywriting,适中,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25厚薄指数,copywriting,偏厚,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25弹力指数,copywriting,微弹,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25版型指数,copywriting,合体,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25服装质检标题,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25服饰细节文案,copywriting,弹力裤腰，不勒小肚肚*翻脚口拼接，设计感足*植绒印花，精致不脱落*内里加绒，温暖舒适*斜插口袋，附小口袋,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,25服饰吊牌样式,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,balaone仅专供新品勾选,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,羽绒服洗涤说明,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426108035,长裤,详情页AI标注,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,单色平台AI标,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,多色平台AI,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,奥特曼IP,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,婴童A标,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,配饰版棒球帽,skip,,valid,,True,local assemble; create/full-update gate
+202426108035,长裤,水杯说明,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,颜色,derived,"粉红,梦幻粉60356;米白,米白10302",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,尺码,mdm,170cm;165cm;160cm;150cm;140cm;130cm;120cm;110cm,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,尺码表,derived,"{""title"": ""尺码,衣长,肩宽,胸围,袖长,身高,体重"", ""110cm"": ""110,37,,75,51,110,17"", ""120cm"": ""120,40,,80,56,120,20.5"", ""130cm"": ""130,43,,85,61,130,25"", ""140cm"": ""140,46,,90,66,140,31"", ""150cm"": ""150,49.5,,95,71.5,150,37"", ""160cm"": ""160,53,,100,77,160,45"", ""165cm"": ""165,55.5,,105,80,165,52.5"", ""170cm"": ""170,58,,110,83,170,57.5""}",missing,plm_measurements_missing,True,local assemble; create/full-update gate
+202426121024,卫衣,多平台尺码,derived,"{""title"": ""天猫,京东,拼多多,微信视频小店,快手"", ""110cm"": "",110,,,"", ""120cm"": "",120,,,"", ""130cm"": "",130,,,"", ""140cm"": "",140,,,"", ""150cm"": "",150,,,"", ""160cm"": "",160,,,"", ""165cm"": "",165,,,"", ""170cm"": "",170,,,""}",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会尺码表,derived,"{""title"": ""号型,适合年龄,身高,胸围,衣长,袖长,下摆围,体重"", ""110cm"": ""110/56,3-5岁,110,75,37,51,68,17"", ""120cm"": ""120/60,5-6岁,120,80,40,56,72,20.5"", ""130cm"": ""130/64,6-8岁,130,85,43,61,76,25"", ""140cm"": ""140/64,8-11岁,140,90,46,66,80,31"", ""150cm"": ""150/72,11-13岁,150,95,49.5,71.5,84,37"", ""160cm"": ""160/80A,13-14岁,160,100,53,77,88,45"", ""165cm"": ""165/84A,14-15岁,165,105,55.5,80,92,52.5"", ""170cm"": ""170/88A,15-16岁,170,110,58,83,96,57.5""}",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,抖音尺码表,derived,"{""title"": ""身高(cm),体重(斤),胸围(cm),袖长(cm),衣长(cm),下摆围(cm)"", ""110cm"": ""110,34,75,51,37,68"", ""120cm"": ""120,41,80,56,40,72"", ""130cm"": ""130,50,85,61,43,76"", ""140cm"": ""140,62,90,66,46,80"", ""150cm"": ""150,74,95,71.5,49.5,84"", ""160cm"": ""160,90,100,77,53,88"", ""165cm"": ""165,105,105,80,55.5,92"", ""170cm"": ""170,115,110,83,58,96""}",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,天猫尺码表,derived,"{""title"": ""身高,体重,胸围,袖长,衣长"", ""110cm"": ""110,17,75,51,37"", ""120cm"": ""120,20.5,80,56,40"", ""130cm"": ""130,25,85,61,43"", ""140cm"": ""140,31,90,66,46"", ""150cm"": ""150,37,95,71.5,49.5"", ""160cm"": ""160,45,100,77,53"", ""165cm"": ""165,52.5,105,80,55.5"", ""170cm"": ""170,57.5,110,83,58""}",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,淘宝尺码表,derived,"{""title"": ""身高,体重,胸围,袖长,衣长"", ""110cm"": ""110,17,75,51,37"", ""120cm"": ""120,20.5,80,56,40"", ""130cm"": ""130,25,85,61,43"", ""140cm"": ""140,31,90,66,46"", ""150cm"": ""150,37,95,71.5,49.5"", ""160cm"": ""160,45,100,77,53"", ""165cm"": ""165,52.5,105,80,55.5"", ""170cm"": ""170,57.5,110,83,58""}",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,好衣库尺码表,derived,"{""title"": ""身高(cm),体重(kg),胸围(cm),袖长(cm),衣长(cm)"", ""110cm"": ""110,17,75,51,37"", ""120cm"": ""120,20.5,80,56,40"", ""130cm"": ""130,25,85,61,43"", ""140cm"": ""140,31,90,66,46"", ""150cm"": ""150,37,95,71.5,49.5"", ""160cm"": ""160,45,100,77,53"", ""165cm"": ""165,52.5,105,80,55.5"", ""170cm"": ""170,57.5,110,83,58""}",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,商家SKU,derived,"{""title"": ""价格,货号,上市时间,数量,商家编码,条形码,零售价,供货价,唯品会货号,唯品会条形码,京东价,划线价,拼多多单买价,拼多多团购价,天猫特卖折扣价,天猫特卖专柜价,采购价,京东自营市场价,有赞标准价,有赞价格,原价,小红书市场价,抖音结算价格,抖音价,快手价,爱库存供货价,爱库存最低价,好衣库结算价,好衣库供货价,好衣库价,好衣库原价,微信视频小店价格,单品货号,1688件重尺-重(g),小红书商家编码,天猫SKU搜索标题"", ""梦幻粉60356"": {""170cm"": ""239.9,202426121024,2026-09,0,6914678693492,,239.9,239.9,20242612102460356,6914678693492,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693492,1000,20242612102460356170,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""165cm"": ""239.9,202426121024,2026-09,0,6914678693485,,239.9,239.9,20242612102460356,6914678693485,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693485,1000,20242612102460356165,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""160cm"": ""239.9,202426121024,2026-09,0,6914678693478,,239.9,239.9,20242612102460356,6914678693478,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693478,1000,20242612102460356160,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""150cm"": ""239.9,202426121024,2026-09,0,6914678693461,,239.9,239.9,20242612102460356,6914678693461,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693461,1000,20242612102460356150,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""140cm"": ""239.9,202426121024,2026-09,0,6914678693454,,239.9,239.9,20242612102460356,6914678693454,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693454,1000,20242612102460356140,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""130cm"": ""239.9,202426121024,2026-09,0,6914678693447,,239.9,239.9,20242612102460356,6914678693447,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693447,1000,20242612102460356130,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""120cm"": ""239.9,202426121024,2026-09,0,6914678693430,,239.9,239.9,20242612102460356,6914678693430,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693430,1000,20242612102460356120,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""110cm"": ""239.9,202426121024,2026-09,0,6914678693423,,239.9,239.9,20242612102460356,6914678693423,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693423,1000,20242612102460356110,巴拉巴拉儿童加绒卫衣女童上衣潮""}, ""米白10302"": {""170cm"": ""239.9,202426121024,2026-09,0,6914678693416,,239.9,239.9,20242612102410302,6914678693416,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693416,1000,20242612102410302170,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""165cm"": ""239.9,202426121024,2026-09,0,6914678693409,,239.9,239.9,20242612102410302,6914678693409,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693409,1000,20242612102410302165,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""160cm"": ""239.9,202426121024,2026-09,0,6914678693393,,239.9,239.9,20242612102410302,6914678693393,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693393,1000,20242612102410302160,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""150cm"": ""239.9,202426121024,2026-09,0,6914678693386,,239.9,239.9,20242612102410302,6914678693386,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693386,1000,20242612102410302150,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""140cm"": ""239.9,202426121024,2026-09,0,6914678693379,,239.9,239.9,20242612102410302,6914678693379,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693379,1000,20242612102410302140,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""130cm"": ""239.9,202426121024,2026-09,0,6914678693362,,239.9,239.9,20242612102410302,6914678693362,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693362,1000,20242612102410302130,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""120cm"": ""239.9,202426121024,2026-09,0,6914678693355,,239.9,239.9,20242612102410302,6914678693355,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693355,1000,20242612102410302120,巴拉巴拉儿童加绒卫衣女童上衣潮"", ""110cm"": ""239.9,202426121024,2026-09,0,6914678693348,,239.9,239.9,20242612102410302,6914678693348,239.9,239.9,238.9,237.9,239.9,239.9,239.9,239.9,239.9,,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,239.9,,6914678693348,1000,20242612102410302110,巴拉巴拉儿童加绒卫衣女童上衣潮""}}",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,商品详情,copywriting,企鹅绣花可爱精致，异材质拼接潮流有型,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,快手标题,copywriting,【商场同款】巴拉巴拉童装儿童加绒卫衣女童上衣2026新款冬装舒适,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会款号,mdm,202426121024,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,好衣库标题,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,好衣库重量,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,爱库存标题,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会标题,copywriting,巴拉巴拉童装儿童加绒卫衣女童上衣2026新款冬装衣服舒适百搭,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,商品展示标题,derived,巴拉巴拉女中童卫衣,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会副标题,copywriting,企鹅绣花可爱精致,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东商品标语,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,标语加链接的文字,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,标语链接地址,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东标题,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东市场价,mdm,239.9,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会核心描述,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会市场价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,无线短标题,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,拼多多标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,商品短标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,宝贝卖点,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,天猫商品卖点,copywriting,企鹅绣花可爱精致，异材质拼接潮流有型,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,天猫推荐理由,copywriting,企鹅绣花可爱精致,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,奥莱店折扣价,mdm,239.9,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,商品描述,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,商品市场价,mdm,239.9,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,微信视频小店标题,copywriting,【商场同款】巴拉巴拉童装儿童加绒卫衣女童上衣2026新款冬装舒适,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,微信视频小店副标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,微信视频小店商品编码,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,发货方式,derived,快递发货,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,淘宝货号,mdm,202426121024,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,天猫货号,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,抖音标题,copywriting,【商场同款】巴拉巴拉童装儿童加绒卫衣女童上衣2026新款冬装舒适,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,导购短标题,copywriting,巴拉巴拉女童卫衣,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,抖音小时达标题,copywriting,巴拉巴拉儿童加绒卫衣女童上衣潮,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,爱库存全网最低价链接,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,单位,derived,件,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,爱库存款号,mdm,202426121024,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,抖音商品重量,derived,1,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,抖音商家推荐语,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,抖音参考价,mdm,239.9,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,抖音参考价格类型,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,单用户累计限购(件),derived,5,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,每次限购(件),derived,5,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,售后服务承诺,derived,不设置,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,商家编码,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,商家条形码,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,淘宝导购标题,manual,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,天猫导购标题,manual,"[{""200001,品牌"":"""",""308962,适用季节"":"""",""205483,适用性别"":"""",""205514,面料"":"""",""206085,风格"":"""",""1000240546,亮点"":"""",""2165044217,品类词"":"""",""interest8,利益点"":""巴拉巴拉儿童加绒卫衣女童上衣潮""}]",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,是否新品,derived,是,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,拼多多货源地,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,快手商品卖点,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,有赞商品卖点,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,划线价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,唯品会温馨提示,derived,手工测量难免存在误差，常规款袖长肩点到袖口，插肩袖(无明确肩点)款后领中量至袖口,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,尺寸推荐表,derived,禁用,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,尺码推荐表兼容平台,derived,1688;天猫;京东;唯品会;有赞;拼多多;小红书;抖音;快手;微信视频小店,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,试穿报告表,derived,禁用,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,试穿报告表兼容平台,derived,1688;天猫;京东;唯品会;有赞;拼多多;小红书;抖音;快手;微信视频小店,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东规格子属性,manual,"110
+165
+170
+160
+150
+140
+130
+120",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东自营子属性,manual,"110
+165
+170
+160
+150
+140
+130
+120",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,详情页面料,copywriting,"面料：37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶
+罗纹：97.1%棉 2.9%氨纶
+(配料除外）",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,报价方式,derived,按产品数量报价,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,价格区间,derived,"1,239.9",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,件重尺,derived,按规格设置,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,1688供货方式,derived,现货,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,模特实拍,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,是否商场同款,derived,是,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,材质成分,copywriting,"棉,37.6;聚酯纤维,29.8;莫代尔纤维(莫代尔),23.8;聚氨酯弹性纤维(氨纶),8.8",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东材质成分,copywriting,"棉,37.6;涤纶(聚酯纤维),29.8;莫代尔,23.8;氨纶(聚氨酯弹性纤维),8.8",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,抖音面料材质,copywriting,"棉,37.6;聚酯纤维,29.8;莫代尔纤维,23.8;氨纶,8.8",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,材质成分(多选),copywriting,棉;聚酯纤维;莫代尔纤维(莫代尔),valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,面料,copywriting,棉混纺,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,面料(多选),copywriting,聚酯纤维,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,成分及含量,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,材质成分(文本),copywriting,"面料：37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶
+罗纹：97.1%棉 2.9%氨纶
+(配料除外）",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,材质,copywriting,棉混纺布,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,主面料成分含量,copywriting,"面料：37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶
+罗纹：97.1%棉 2.9%氨纶
+(配料除外）",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,里料,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,里绒情况,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,安全等级,skip,,missing,,True,local assemble; create/full-update gate
+202426121024,卫衣,上市时间,launch_plan,2026年冬季,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,弹力,copywriting,微弹,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,适用性别,launch_plan,女,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,成分含量,copywriting,30%（含）-50%,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,面料俗称,copywriting,棉,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,功能(多选),copywriting,舒适,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,是否申请新品,derived,是,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,专柜价,derived,10000,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,款式,derived,套头,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东商品重量,derived,1,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,[包装]长,derived,100,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,[包装]宽,derived,100,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,[包装]高,derived,100,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,衣门襟,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,AQL抽检标准,derived,无,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,平车针距12~14针/3cm,derived,否,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,面料工艺,derived,涂层,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,风格,derived,休闲,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,版型,copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品【包装】长,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,唯品【包装】宽,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,唯品【包装】高,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,风格(多选),derived,休闲,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品重量,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,图案,skip,,missing,,True,local assemble; create/full-update gate
+202426121024,卫衣,适用年龄,launch_plan,2-16岁,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,适用人群(多选),launch_plan,中大童,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,袖长(多选),derived,长袖,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,流行元素(多选),skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,是否带帽,derived,,missing,,True,local assemble; create/full-update gate
+202426121024,卫衣,袖长,derived,长袖,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,厚薄,copywriting,适中,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,里料材质(多选),copywriting,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426121024,卫衣,里料材质成分含量(多选),copywriting,30%(含)-50%(含),valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,上市时间(文本),launch_plan,2026年冬季,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,衣长,derived,常规,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,领型,derived,连帽,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,袖型,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,模板厚度,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,模板柔软度,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,模板弹力,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,模板透气度,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,模板长度,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,模板版型,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,洗涤,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会产地,derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,介绍,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,适用季节(多选),launch_plan,冬季,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,性别(多选),copywriting,女,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,适用年龄(多选),launch_plan,9岁;9周岁（含）-12周岁（不含）;9-12岁;8岁（含）—14岁（不含）;8岁;7岁;6岁（含）—8岁（不含）;6岁;6周岁（含）-9周岁（不含）;6-9岁;6-12岁;5岁;4岁;3岁（含）—6岁（不含）;3岁;3周岁（含）-6周岁（不含）;3周岁以下;3-6岁;16岁;15岁;14岁;13岁;12岁;12周岁（含）-14周岁（不含）;12-14岁;11岁;10岁;1-3岁;0—3岁（不含）,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,年龄阶段(多选),skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,适用季节,launch_plan,冬季,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,是否可定制,derived,不可定制,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,生产/经销厂家,derived,浙江森马服饰股份有限公司,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,厂家地址,derived,温州市瓯海区娄桥工业园南汇路98号,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,执行标准,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,货源类别,derived,现货,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,是否库存,derived,否,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,是否跨境出口专供货源,derived,否,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,主要销售地区,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426121024,卫衣,有可授权的自有品牌,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426121024,卫衣,主要下游平台,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426121024,卫衣,详细材质信息(VIP),copywriting,"成分
+面料:37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶
+罗纹:97.1%棉 2.9%氨纶
+(配料除外）",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,体积,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,原产国(AKC),derived,中国,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,穿着方式,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,洗涤说明,derived,请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,尺码类型,derived,身型,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,吊牌价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,品牌,mdm,巴拉巴拉,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会洗涤说明,derived,请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,唯品会配件信息,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东产地,derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东自营商品重量,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,童装产地,derived,中国大陆,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,规格参数,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,退款规则,derived,支持7天无理由退货,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,库存计数,derived,买家拍下减库存,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,包装清单,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,售后服务,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,会员打折,derived,不参与会员打折,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,发货时效,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,大于48小时发货,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+202426121024,卫衣,唯品会售后信息,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,所在地,derived,"浙江,杭州",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,京东发货地,derived,浙江杭州,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,设计师说,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版品名,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版年龄,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版材质,copywriting,"成分
+面料:37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶
+罗纹:97.1%棉 2.9%氨纶
+(配料除外）",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版重量,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版产品功能,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版产品规格,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版面料,copywriting,"成分
+面料:37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶
+罗纹:97.1%棉 2.9%氨纶
+(配料除外）",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版容量,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版口径,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版耐温度,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版产品材质,copywriting,"成分
+面料:37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶
+罗纹:97.1%棉 2.9%氨纶
+(配料除外）",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版款式,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版适用年龄,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配件版尺寸,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配饰版默认文案,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,配饰版模块,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配饰版卖点1,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配饰版卖点2,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配饰版卖点3,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配饰版卖点4,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配饰版卖点5,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配饰版卖点6,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,文胸无尺码,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,婴童内着详情页,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,是否婴童,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,幼童90-130牛仔选,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,文胸图标,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,25服装母婴标准,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25服装尺码推荐,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25鞋子模板类型,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,25鞋子尺码表,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,25实拍文案,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,楦型,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,主图1,copywriting,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426121024,卫衣,主图2,copywriting,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+202426121024,卫衣,主图4文案1,copywriting,密暖绒面料,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,主图4文案2,copywriting,"绒感软糯亲肤
+贴身穿着舒适",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,主图4样式,derived,主图4样式225,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25产品名称,copywriting,女童圆领卫衣,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25面料成分,copywriting,"成分
+面料:37.6%棉 29.8%聚酯纤维 23.8%莫代尔 8.8%氨纶
+罗纹:97.1%棉 2.9%氨纶
+(配料除外）",valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25服装面料文案,copywriting,密暖绒面料-密暖绒亲肤，贴身穿着保暖舒适，日常百搭好穿*亲肤-舒适-百搭,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25柔软指数,copywriting,适中,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25厚薄指数,copywriting,适中,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25弹力指数,copywriting,弹力,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25版型指数,copywriting,合体,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25服装质检标题,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25服饰细节文案,copywriting,异材质拼接，潮流有型*企鹅绣花，可爱精致*罗纹袖口，不易钻风*贴肤里布，亲肤舒适,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,25服饰吊牌样式,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,balaone仅专供新品勾选,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,羽绒服洗涤说明,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+202426121024,卫衣,详情页AI标注,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,单色平台AI标,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,多色平台AI,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,奥特曼IP,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,婴童A标,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,配饰版棒球帽,skip,,valid,,True,local assemble; create/full-update gate
+202426121024,卫衣,水杯说明,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,颜色,derived,"绿色,白绿色调00414;蓝色,蓝色调00388",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,尺码,mdm,40码;39码;38码;37码;36码;35码;34码;33码;32码;31码;30码;29码;28码;27码;26码,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,尺码表,derived,"{""title"": ""脚长,鞋内长"", ""26码"": ""16,17"", ""27码"": ""16.5,17.7"", ""28码"": ""17,18.4"", ""29码"": ""18,19"", ""30码"": ""18.5,19.7"", ""31码"": ""19,20.4"", ""32码"": ""20,21"", ""33码"": ""20.5,21.7"", ""34码"": ""21,22.4"", ""35码"": ""22,23"", ""36码"": ""22.5,23.7"", ""37码"": ""23,24.4"", ""38码"": ""24,25"", ""39码"": ""24.5,25.7"", ""40码"": ""25,26.4""}",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,多平台尺码,derived,"{""title"": ""天猫,京东,拼多多,微信视频小店,小红书,快手"", ""26码"": "",26,26码(脚长15.8-16.2/内长17),26码(脚长15.8-16.2/内长17),26码(脚长15.8-16.2/内长17),"", ""27码"": "",27,27码(脚长16.3-16.7/内长17.7),27码(脚长16.3-16.7/内长17.7),27码(脚长16.3-16.7/内长17.7),"", ""28码"": "",28,28码(脚长16.8-17.2/内长18.4),28码(脚长16.8-17.2/内长18.4),28码(脚长16.8-17.2/内长18.4),"", ""29码"": "",29,29码(脚长17.8-18.2/内长19),29码(脚长17.8-18.2/内长19),29码(脚长17.8-18.2/内长19),"", ""30码"": "",30,30码(脚长18.3-18.7/内长19.7),30码(脚长18.3-18.7/内长19.7),30码(脚长18.3-18.7/内长19.7),"", ""31码"": "",31,31码(脚长18.8-19.2/内长20.4),31码(脚长18.8-19.2/内长20.4),31码(脚长18.8-19.2/内长20.4),"", ""32码"": "",32,32码(脚长19.8-20.2/内长21),32码(脚长19.8-20.2/内长21),32码(脚长19.8-20.2/内长21),"", ""33码"": "",33,33码(脚长20.3-20.7/内长21.7),33码(脚长20.3-20.7/内长21.7),33码(脚长20.3-20.7/内长21.7),"", ""34码"": "",34,34码(脚长20.8-21.2/内长22.4),34码(脚长20.8-21.2/内长22.4),34码(脚长20.8-21.2/内长22.4),"", ""35码"": "",35,35码(脚长21.8-22.2/内长23),35码(脚长21.8-22.2/内长23),35码(脚长21.8-22.2/内长23),"", ""36码"": "",36,36码(脚长22.3-22.7/内长23.7),36码(脚长22.3-22.7/内长23.7),36码(脚长22.3-22.7/内长23.7),"", ""37码"": "",37,37码(脚长22.8-23.2/内长24.4),37码(脚长22.8-23.2/内长24.4),37码(脚长22.8-23.2/内长24.4),"", ""38码"": "",38,38码(脚长23.8-24.2/内长25),38码(脚长23.8-24.2/内长25),38码(脚长23.8-24.2/内长25),"", ""39码"": "",39,39码(脚长24.3-24.7/内长25.7),39码(脚长24.3-24.7/内长25.7),39码(脚长24.3-24.7/内长25.7),"", ""40码"": "",40,40码(脚长24.8-25.2/内长26.4),40码(脚长24.8-25.2/内长26.4),40码(脚长24.8-25.2/内长26.4),""}",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,唯品会尺码表,derived,"{""title"": ""欧洲码,脚长,鞋内长"", ""26码"": ""26,160,170.32"", ""27码"": ""27,165,176.98"", ""28码"": ""28,170,183.64"", ""29码"": ""29,180,190.3"", ""30码"": ""30,185,196.96"", ""31码"": ""31,190,203.62"", ""32码"": ""32,200,210.28"", ""33码"": ""33,205,216.94"", ""34码"": ""34,210,223.6"", ""35码"": ""35,220,230.26"", ""36码"": ""36,225,236.92"", ""37码"": ""37,230,243.58"", ""38码"": ""38,240,250.24"", ""39码"": ""39,245,256.9"", ""40码"": ""40,250,263.56""}",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,抖音尺码表,derived,"{""title"": ""脚长(cm),备注"", ""26码"": ""16,脚长15.8-16.2/内长17"", ""27码"": ""16.5,脚长16.3-16.7/内长17.7"", ""28码"": ""17,脚长16.8-17.2/内长18.4"", ""29码"": ""18,脚长17.8-18.2/内长19"", ""30码"": ""18.5,脚长18.3-18.7/内长19.7"", ""31码"": ""19,脚长18.8-19.2/内长20.4"", ""32码"": ""20,脚长19.8-20.2/内长21"", ""33码"": ""20.5,脚长20.3-20.7/内长21.7"", ""34码"": ""21,脚长20.8-21.2/内长22.4"", ""35码"": ""22,脚长21.8-22.2/内长23"", ""36码"": ""22.5,脚长22.3-22.7/内长23.7"", ""37码"": ""23,脚长22.8-23.2/内长24.4"", ""38码"": ""24,脚长23.8-24.2/内长25"", ""39码"": ""24.5,脚长24.3-24.7/内长25.7"", ""40码"": ""25,脚长24.8-25.2/内长26.4""}",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,天猫尺码表,derived,"{""title"": ""脚长,鞋内长"", ""26码"": ""16,17"", ""27码"": ""16.5,17.7"", ""28码"": ""17,18.4"", ""29码"": ""18,19"", ""30码"": ""18.5,19.7"", ""31码"": ""19,20.4"", ""32码"": ""20,21"", ""33码"": ""20.5,21.7"", ""34码"": ""21,22.4"", ""35码"": ""22,23"", ""36码"": ""22.5,23.7"", ""37码"": ""23,24.4"", ""38码"": ""24,25"", ""39码"": ""24.5,25.7"", ""40码"": ""25,26.4""}",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,淘宝尺码表,derived,"{""title"": ""脚长"", ""26码"": ""15.8-16.2"", ""27码"": ""16.3-16.7"", ""28码"": ""16.8-17.2"", ""29码"": ""17.8-18.2"", ""30码"": ""18.3-18.7"", ""31码"": ""18.8-19.2"", ""32码"": ""19.8-20.2"", ""33码"": ""20.3-20.7"", ""34码"": ""20.8-21.2"", ""35码"": ""21.8-22.2"", ""36码"": ""22.3-22.7"", ""37码"": ""22.8-23.2"", ""38码"": ""23.8-24.2"", ""39码"": ""24.3-24.7"", ""40码"": ""24.8-25.2""}",valid,shoe_taobao_table_not_sent_on_update,True,local assemble; create/full-update gate
+204426140121,运动鞋,商家SKU,derived,"{""title"": ""价格,货号,上市时间,数量,商家编码,条形码,零售价,供货价,唯品会货号,唯品会条形码,京东价,划线价,拼多多单买价,拼多多团购价,天猫特卖折扣价,天猫特卖专柜价,采购价,京东自营市场价,有赞标准价,有赞价格,原价,小红书市场价,抖音结算价格,抖音价,快手价,爱库存供货价,爱库存最低价,好衣库结算价,好衣库供货价,好衣库价,好衣库原价,微信视频小店价格,单品货号,1688件重尺-重(g),小红书商家编码,天猫SKU搜索标题"", ""白绿色调00414"": {""40码"": ""359.9,204426140121,2026-09,0,6914678703856,,359.9,359.9,20442614012100414,6914678703856,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703856,1000,2044261401210041440,巴拉巴拉运动鞋男童轻便户外鞋"", ""39码"": ""359.9,204426140121,2026-09,0,6914678703849,,359.9,359.9,20442614012100414,6914678703849,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703849,1000,2044261401210041439,巴拉巴拉运动鞋男童轻便户外鞋"", ""38码"": ""359.9,204426140121,2026-09,0,6914678703832,,359.9,359.9,20442614012100414,6914678703832,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703832,1000,2044261401210041438,巴拉巴拉运动鞋男童轻便户外鞋"", ""37码"": ""359.9,204426140121,2026-09,0,6914678703825,,359.9,359.9,20442614012100414,6914678703825,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703825,1000,2044261401210041437,巴拉巴拉运动鞋男童轻便户外鞋"", ""36码"": ""359.9,204426140121,2026-09,0,6914678703818,,359.9,359.9,20442614012100414,6914678703818,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703818,1000,2044261401210041436,巴拉巴拉运动鞋男童轻便户外鞋"", ""35码"": ""359.9,204426140121,2026-09,0,6914678703801,,359.9,359.9,20442614012100414,6914678703801,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703801,1000,2044261401210041435,巴拉巴拉运动鞋男童轻便户外鞋"", ""34码"": ""359.9,204426140121,2026-09,0,6914678703795,,359.9,359.9,20442614012100414,6914678703795,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703795,1000,2044261401210041434,巴拉巴拉运动鞋男童轻便户外鞋"", ""33码"": ""359.9,204426140121,2026-09,0,6914678703788,,359.9,359.9,20442614012100414,6914678703788,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703788,1000,2044261401210041433,巴拉巴拉运动鞋男童轻便户外鞋"", ""32码"": ""359.9,204426140121,2026-09,0,6914678703771,,359.9,359.9,20442614012100414,6914678703771,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703771,1000,2044261401210041432,巴拉巴拉运动鞋男童轻便户外鞋"", ""31码"": ""359.9,204426140121,2026-09,0,6914678703764,,359.9,359.9,20442614012100414,6914678703764,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703764,1000,2044261401210041431,巴拉巴拉运动鞋男童轻便户外鞋"", ""30码"": ""359.9,204426140121,2026-09,0,6914678703757,,359.9,359.9,20442614012100414,6914678703757,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703757,1000,2044261401210041430,巴拉巴拉运动鞋男童轻便户外鞋"", ""29码"": ""359.9,204426140121,2026-09,0,6914678703740,,359.9,359.9,20442614012100414,6914678703740,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703740,1000,2044261401210041429,巴拉巴拉运动鞋男童轻便户外鞋"", ""28码"": ""359.9,204426140121,2026-09,0,6914678703733,,359.9,359.9,20442614012100414,6914678703733,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703733,1000,2044261401210041428,巴拉巴拉运动鞋男童轻便户外鞋"", ""27码"": ""359.9,204426140121,2026-09,0,6914678703726,,359.9,359.9,20442614012100414,6914678703726,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703726,1000,2044261401210041427,巴拉巴拉运动鞋男童轻便户外鞋"", ""26码"": ""359.9,204426140121,2026-09,0,6914678703719,,359.9,359.9,20442614012100414,6914678703719,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,6914678703719,1000,2044261401210041426,巴拉巴拉运动鞋男童轻便户外鞋""}, ""蓝色调00388"": {""40码"": ""359.9,204426140121,2026-09,0,2044261401210038840,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038840,巴拉巴拉运动鞋男童轻便户外鞋"", ""39码"": ""359.9,204426140121,2026-09,0,2044261401210038839,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038839,巴拉巴拉运动鞋男童轻便户外鞋"", ""38码"": ""359.9,204426140121,2026-09,0,2044261401210038838,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038838,巴拉巴拉运动鞋男童轻便户外鞋"", ""37码"": ""359.9,204426140121,2026-09,0,2044261401210038837,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038837,巴拉巴拉运动鞋男童轻便户外鞋"", ""36码"": ""359.9,204426140121,2026-09,0,2044261401210038836,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038836,巴拉巴拉运动鞋男童轻便户外鞋"", ""35码"": ""359.9,204426140121,2026-09,0,2044261401210038835,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038835,巴拉巴拉运动鞋男童轻便户外鞋"", ""34码"": ""359.9,204426140121,2026-09,0,2044261401210038834,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038834,巴拉巴拉运动鞋男童轻便户外鞋"", ""33码"": ""359.9,204426140121,2026-09,0,2044261401210038833,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038833,巴拉巴拉运动鞋男童轻便户外鞋"", ""32码"": ""359.9,204426140121,2026-09,0,2044261401210038832,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038832,巴拉巴拉运动鞋男童轻便户外鞋"", ""31码"": ""359.9,204426140121,2026-09,0,2044261401210038831,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038831,巴拉巴拉运动鞋男童轻便户外鞋"", ""30码"": ""359.9,204426140121,2026-09,0,2044261401210038830,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038830,巴拉巴拉运动鞋男童轻便户外鞋"", ""29码"": ""359.9,204426140121,2026-09,0,2044261401210038829,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038829,巴拉巴拉运动鞋男童轻便户外鞋"", ""28码"": ""359.9,204426140121,2026-09,0,2044261401210038828,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038828,巴拉巴拉运动鞋男童轻便户外鞋"", ""27码"": ""359.9,204426140121,2026-09,0,2044261401210038827,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038827,巴拉巴拉运动鞋男童轻便户外鞋"", ""26码"": ""359.9,204426140121,2026-09,0,2044261401210038826,,359.9,359.9,20442614012100388,,359.9,359.9,358.9,357.9,359.9,359.9,359.9,359.9,359.9,,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,359.9,,,1000,2044261401210038826,巴拉巴拉运动鞋男童轻便户外鞋""}}",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,商品简称,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,商品特色,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,净重（g）,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,毛重（g）,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,保质期(天),skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,小红书商品描述,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,商品详情,copywriting,轻质防滑户外鞋，趣味科技旋钮扣,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,快手标题,copywriting,【商场同款】巴拉巴拉童鞋儿童运动鞋男童2026新款冬季趣味旋钮扣,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,小红书计量单位,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,件数,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,小红书发货时间,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,相对发货时间,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,固定发货时间,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,唯品会款号,mdm,204426140121,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,好衣库标题,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,好衣库重量,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,爱库存标题,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,唯品会标题,copywriting,巴拉巴拉童鞋儿童运动鞋男童2026新款冬季趣味旋钮扣户外鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,商品展示标题,derived,巴拉巴拉男中童运动鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,唯品会副标题,copywriting,轻质防滑户外鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,京东标题,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,京东市场价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,唯品会核心描述,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,唯品会市场价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,拼多多标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,商品短标题,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,宝贝卖点,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,天猫商品卖点,copywriting,轻质防滑户外鞋，趣味科技旋钮扣,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,奥莱店折扣价,mdm,359.9,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,专柜价,derived,10000,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,商品描述,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,商品市场价,mdm,359.9,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,微信视频小店标题,copywriting,【商场同款】巴拉巴拉童鞋儿童运动鞋男童2026新款冬季趣味旋钮扣,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,微信视频小店副标题,copywriting,巴拉巴拉运动鞋男童轻便户外鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,微信视频小店商品编码,mdm,204426140121,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,发货方式,derived,快递发货,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,淘宝标题,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,抖音标题,copywriting,【商场同款】巴拉巴拉童鞋儿童运动鞋男童2026新款冬季趣味旋钮扣,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,导购短标题,copywriting,巴拉巴拉男童户外鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,抖音小时达标题,copywriting,巴拉巴拉运动鞋男童轻便户外鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,爱库存全网最低价链接,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,单位,derived,双,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,抖音商品重量,derived,1,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,抖音商家推荐语,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,抖音参考价,mdm,359.9,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,抖音参考价格类型,derived,吊牌价,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,单用户累计限购(件),derived,5,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,每次限购(件),derived,5,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,售后服务承诺,derived,延保90天,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,商家编码,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,商家条形码,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,淘宝导购标题,manual,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,天猫导购标题,manual,"[{""200001,品牌"":"""",""203512,功能"":"""",""206083,风格"":"""",""322324,适用人群"":"""",""1000240545,亮点"":"""",""2165044216,品类词"":"""",""interest7,利益点"":""巴拉巴拉运动鞋男童轻便户外鞋""}]",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,拼多多货源地,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,有赞商品卖点,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,划线价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,鞋面,copywriting,网面+合成革,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,试穿报告表,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,帮面材质,copywriting,合成材料+织物,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,京东规格子属性,manual,"33
+34
+35
+36
+26
+37
+27
+38
+28
+39
+29
+40
+30
+31
+32",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,京东自营子属性,manual,"33
+34
+35
+36
+26
+37
+27
+38
+28
+39
+29
+40
+30
+31
+32",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配皮材质(多选),copywriting,人造革,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,内里,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,鞋垫材质,derived,其他,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,里绒情况,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,报价方式,derived,按产品数量报价,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,鞋底材质,derived,橡胶,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,价格区间,derived,"1,359.9",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,件重尺,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,1688供货方式,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,类型(多选),derived,运动休闲鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,是否商场同款,derived,是,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,鞋底材质(多选),derived,橡胶,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,鞋面材质(多选),copywriting,超细纤维合成革,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用性别,launch_plan,男,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,唯品会材质,derived,"帮面材料：合成材料+织物
+里料材质：织物
+鞋底材质：橡胶",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,详情页面料,derived,"帮面材料：合成材料+织物
+里料材质：织物
+鞋底材质：橡胶",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,详情页里料,copywriting,织物,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用年龄,launch_plan,7岁-14岁,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,风格(多选),copywriting,运动,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,产地,derived,浙江杭州,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,风格,copywriting,运动,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,款式(单选),derived,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+204426140121,运动鞋,图案,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用季节,launch_plan,冬季,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用人群(多选),derived,青少年;小童;小学生;儿童;中学生;中大童,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用场合(多选),derived,日常;校园,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用人群,derived,通用,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,流行元素(多选),copywriting,搭扣,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配皮材质,copywriting,合成革,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,上市时间,launch_plan,2026年冬季,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,重量,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,是否申请新品,derived,是,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,唯品重量,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,京东商品重量,derived,1,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用场景(多选),derived,,invalid,value_not_in_current_template_options,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用场景,derived,,skipped,optional_source_value_not_in_current_template_options,True,local assemble; create/full-update gate
+204426140121,运动鞋,[包装]长,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,[包装]宽,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,[包装]高,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,功能(多选),copywriting,防滑;耐磨;旋转扣,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,功能,copywriting,防滑,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,产品类别,derived,运动鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,唯品【包装】长,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,唯品【包装】宽,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,唯品【包装】高,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,保暖指数,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,耐磨指数,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,上市时间(文本),launch_plan,2026年冬季,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,防滑指数,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,舒适指数,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,厚薄,skip,,missing,,True,local assemble; create/full-update gate
+204426140121,运动鞋,类型,derived,户外鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,包装种类,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,鞋帮高度,copywriting,,missing,,True,local assemble; create/full-update gate
+204426140121,运动鞋,闭合方式,copywriting,旋钮扣,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,运动鞋科技,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用性别(多选),launch_plan,男,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适用年龄(多选),launch_plan,大童装(13-16岁);中童装(7-12岁);9岁;9-12岁;8岁（含）—14岁（不含）;8岁;7岁;6岁（含）—8岁（不含）;6周岁（含）-12周岁（不含）;6-9岁;6-12岁;14岁;14周岁（含）-18周岁（不含）;13岁;12岁;12周岁（含）-14周岁（不含）;12-14岁;11岁;10岁,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,是否外贸,derived,否,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,外贸类型,skip,,skipped,inactive_child_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,适用季节(多选),launch_plan,冬季,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,质检报告,derived,否,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,适合场合,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,材质(AKC),derived,合成材料+织物,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,原产国(AKC),derived,中国,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,品牌(文本),mdm,巴拉巴拉,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,品牌(单选),mdm,balabala/巴拉巴拉,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,吊牌价,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,生产/经销厂家,derived,浙江森马服饰股份有限公司,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,厂家地址,derived,温州市瓯海区娄桥工业园南汇路98号,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,执行标准,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,货源类别,derived,现货,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,是否库存,derived,否,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,最快出货时间,derived,48小时,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,最晚发货时间,derived,2天,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,尺码类型,derived,欧码(童鞋),valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,京东自营商品重量,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,介绍,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,退款规则,derived,支持7天无理由退货,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,库存计数,derived,买家拍下减库存,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,会员打折,derived,不参与会员打折,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,原产国,derived,中国,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,设计师说,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版品名,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版年龄,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版材质,copywriting,合成材料+织物,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版重量,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版产品功能,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版产品规格,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版面料,copywriting,合成材料+织物,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版容量,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版口径,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版耐温度,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版产品材质,copywriting,合成材料+织物,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版款式,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版适用年龄,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配件版尺寸,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版默认文案,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版模块,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版卖点1,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版卖点2,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版卖点3,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版卖点4,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版卖点5,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版卖点6,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,文胸无尺码,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,婴童内着详情页,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,是否婴童,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,幼童90-130牛仔选,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,文胸图标,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,25服装母婴标准,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,25服装尺码推荐,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,25鞋子模板类型,derived,运动,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,25鞋子尺码表,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,25实拍文案,copywriting,轻质防滑橡胶鞋底-耐磨抓地力佳，轻松驾驭干湿路面*天鹅绒内里-亲肤舒适，穿着温暖不冻脚*革料搭配织物鞋面-时尚拼接，轻便好搭配*随芯旋钮设计-方便穿脱，包裹性更好,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,楦型,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,主图1,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,主图2,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,主图4文案1,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,主图4文案2,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,主图4样式,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,25产品名称,copywriting,儿童户外鞋,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,25面料成分,derived,"帮面材料：合成材料+织物
+里料材质：织物
+鞋底材质：橡胶",valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,25服装面料文案,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,25柔软指数,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,25厚薄指数,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,25弹力指数,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,25版型指数,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,25服装质检标题,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,25服饰细节文案,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,25服饰吊牌样式,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,balaone仅专供新品勾选,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,羽绒服洗涤说明,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,详情页AI标注,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,单色平台AI标,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,多色平台AI,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate
+204426140121,运动鞋,奥特曼IP,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,婴童A标,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,配饰版棒球帽,skip,,valid,,True,local assemble; create/full-update gate
+204426140121,运动鞋,水杯说明,skip,{},skipped,business_blank_field,False,local assemble; create/full-update gate

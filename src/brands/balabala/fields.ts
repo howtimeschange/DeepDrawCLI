@@ -1,3 +1,5 @@
+import { databaseRule } from "./database-rules.js";
+import { shortGuideTitle, buildGuideTitle, truncateCompleteWords } from "./text-rules.js";
 import { balabalaListPrice, money } from "./prices.js";
 import type { WorkflowField } from "../../workflow/types.js";
 import { balabalaApparelAgeTextForSizeRange } from "./size-chart-rules.js";
@@ -47,10 +49,20 @@ function launchMonth(value: unknown): string {
 
 function optionMatch(name: string, value: string, permitted: string[], multi = false): string {
   if (!value) return "";
-  if (permitted.length === 0) return value;
   const key = compact(name);
-  const pick = (...predicates: Array<(option: string) => boolean>): string => permitted.find((option) => predicates.some((predicate) => predicate(option))) ?? "";
+  const pick = (...predicates: Array<(option: string) => boolean>): string => predicates.map((predicate) => permitted.find(predicate)).find(Boolean) ?? "";
   const exact = (input: string): string => permitted.find((option) => compact(option) === compact(input)) ?? "";
+  if (["材质成分", "京东材质成分", "抖音面料材质"].includes(key) && value.includes(",")) {
+    const pairs = value.split(";").map((item) => item.split(","));
+    const total = pairs.reduce((sum, pair) => sum + Number(pair[1]), 0);
+    if (pairs.some((pair) => pair.length !== 2 || !Number.isFinite(Number(pair[1])) || Number(pair[1]) <= 0 || Number(pair[1]) > 100) || Math.abs(total - 100) > 0.2) return "";
+    const mapped = pairs.map(([fiber, percent]) => {
+      const option = permitted.length === 0 ? fiber : permitted.find((item) => item === fiber) ?? permitted.find((item) => materialName(item) === materialName(fiber)) ?? (key === "京东材质成分" && materialName(fiber) === "氨纶" ? permitted.find((item) => item === "其他") : undefined);
+      return option ? `${option},${percent}` : "";
+    });
+    return mapped.every(Boolean) ? mapped.join(";") : "";
+  }
+  if (permitted.length === 0) return value;
   const seasonal = (input: string): string => {
     const exactValue = exact(input);
     if (exactValue) return exactValue;
@@ -130,6 +142,7 @@ function optionMatch(name: string, value: string, permitted: string[], multi = f
             : ["中大童", "中童", "儿童", "少年", "青少年", "学生", "通用"];
       return pick(...candidates.map((candidate) => (option: string) => option === candidate));
     }
+    if (!permitted.some((option) => ["儿童", "小学生", "中学生"].includes(option))) return range.end > 8 ? pick((option) => option.includes("中大童")) : range.end <= 3 ? pick((option) => option.includes("婴幼童")) : pick((option) => option.includes("中小童"));
     const ranges = new Map<string, { start: number; end: number }>([
       ["婴童", { start: 0, end: 3 }], ["幼童", { start: 1, end: 6 }], ["小童", { start: 3, end: 8 }], ["儿童", { start: 3, end: 14 }],
       ["小学生", { start: 6, end: 12 }], ["中童", { start: 6, end: 12 }], ["中大童", { start: 8, end: 14 }], ["中学生", { start: 12, end: 18 }], ["青少年", { start: 12, end: 18 }],
@@ -188,6 +201,8 @@ function optionMatch(name: string, value: string, permitted: string[], multi = f
     if (!/(款式|类型|分类)/.test(key)) return "";
     return pick(
       (option) => compact(option) === compact(input),
+      (option) => key === "款式" && /套装|两件套|三件套|一衣两穿/.test(input) && /^(其他|其它)$/.test(option),
+      (option) => /羽绒马甲/.test(input) && option === "羽绒马甲",
       (option) => /直筒裤/.test(input) && option === "直筒裤",
       (option) => /牛仔(?:裤|长裤|短裤|中裤)/.test(input) && option === "牛仔裤",
       (option) => /弯刀/.test(input) && /弯刀裤/.test(option),
@@ -235,7 +250,7 @@ function optionMatch(name: string, value: string, permitted: string[], multi = f
       if (/高弹/.test(input)) return pick((option) => option === "高弹", (option) => option.includes("高弹"));
       if (/弹力|弹性/.test(input)) return pick((option) => option === "常规", (option) => option === "微弹", (option) => option.includes("弹"));
     }
-    if (key === "腰型" && /不适用|无|其他/.test(input)) return pick((option) => option === "自然腰", (option) => option === "松紧腰", (option) => option.includes("腰"));
+    if (key === "腰型" && /不适用|无|其他/.test(input)) return pick((option) => option === "自然腰", (option) => option === "常规腰", (option) => option === "松紧腰", (option) => option.includes("腰"));
     if (key === "裤门襟" && /不适用|无|其他/.test(input)) return pick((option) => option === "松紧", (option) => option === "松紧带", (option) => option === "其他");
     if (key === "是否可开档" || key === "是否开裆" || key === "是否可开裆") {
       if (/^(?:否|不|无)|不开|闭档/.test(input)) return pick((option) => option === "不开裆", (option) => option === "闭档", (option) => option.includes("不开"), (option) => option.includes("闭档"));
@@ -254,9 +269,13 @@ function optionMatch(name: string, value: string, permitted: string[], multi = f
       if (percent) return percent;
     }
     if (/材质|面料|里料/.test(key)) {
-      if (/棉/.test(input)) return pick((option) => option === "纯棉(棉含量100%)", (option) => option === "棉100%", (option) => option === "纯棉", (option) => option === "棉", (option) => option.includes("纯棉"), (option) => option.includes("棉"));
-      if (/聚酯纤维|涤纶/.test(input)) return pick((option) => option === "聚酯纤维（涤纶）", (option) => option === "聚酯纤维", (option) => option.includes("聚酯纤维"), (option) => option.includes("涤纶"));
+      if (/混纺/.test(input)) return pick((option) => option === input, (option) => input === "棉混纺" && option === "棉混纺布", (option) => option === "混纺", (option) => /^(其他|其它)$/.test(option));
+      if (/^(?:纯棉\(棉含量100%\)|棉100%|纯棉|全棉)$/.test(input)) return pick((option) => option === "纯棉(棉含量100%)", (option) => option === "棉100%", (option) => option === "纯棉", (option) => option === "棉");
+      const canonical = permitted.find((option) => materialName(option) === materialName(input));
+      if (canonical) return canonical;
+      if (/[%;,]/.test(input)) return "";
     }
+    if (key === "主图4样式" && input === "225") return pick((option) => option === "主图4样式225");
     if (/发货方式/.test(key) && /快递/.test(input)) return pick((option) => option === "快递发货", (option) => option.includes("快递"));
     if (/闭合方式/.test(key)) {
       if (/粘扣|魔术贴|搭带/.test(input)) return pick((option) => /魔术贴|粘扣/.test(option));
@@ -269,7 +288,10 @@ function optionMatch(name: string, value: string, permitted: string[], multi = f
       if (/中帮/.test(input)) return pick((option) => /中帮|中筒/.test(option));
       if (/低帮|浅口/.test(input)) return pick((option) => /低帮|低筒|浅口/.test(option));
     }
+    if ((key === "流行元素" || key === "流行元素多选") && /旋钮|旋扣/.test(input)) return pick((option) => /旋钮|旋扣/.test(option), (option) => option === "搭扣");
     if (/功能/.test(key)) {
+      const contained = pick((option) => input.includes(option));
+      if (contained) return contained;
       if (/防风/.test(input)) return pick((option) => option === "防风", (option) => option.includes("防风"));
       if (/防滑/.test(input)) return pick((option) => option === "防滑", (option) => option.includes("防滑"));
       if (/耐磨/.test(input)) return pick((option) => option === "耐磨", (option) => option.includes("耐磨"));
@@ -552,7 +574,7 @@ function brandValue(context: JsonRecord): ScalarValue {
 }
 
 function firstClause(value: unknown, maxLength: number): string {
-  return Array.from(text(value).split(/[，,。；;\n]/).map((part) => part.trim()).find(Boolean) ?? "").slice(0, maxLength).join("").trim();
+  return truncateCompleteWords(text(value).split(/[，,。；;\n]/).map((part) => part.trim()).find(Boolean) ?? "", maxLength);
 }
 
 function displayTitleValue(context: JsonRecord, kind: "shoe" | "apparel" | "generic", fallbackTitle: string): ScalarValue {
@@ -567,7 +589,7 @@ function displayTitleValue(context: JsonRecord, kind: "shoe" | "apparel" | "gene
   return { value: values.length ? [...new Set(values)].join("") : fallbackTitle, source: values.length ? "derived" : "copywriting", refs: [...brand.refs, ...gender.refs, ...sizeRange.refs, ...category.refs] };
 }
 
-const MATERIAL_SECTION_LABELS = ["主面料复合面布", "主面料", "大身面料", "复合面布", "复合底布", "梭织面料", "针织面料", "帽里料", "填充物", "填充料", "里料", "衬里", "花边", "配料", "辅料", "罗纹", "帽里", "胆料", "内胆", "装饰物", "鞋面", "鞋底", "面料"];
+const MATERIAL_SECTION_LABELS = ["主面料复合面布", "脚口面料", "袖口面料", "领口面料", "主面料", "大身面料", "复合面布", "复合底布", "梭织面料", "针织面料", "帽里料", "填充物", "填充料", "里料", "衬里", "花边", "配料", "辅料", "罗纹", "帽里", "胆料", "内胆", "装饰物", "鞋面", "鞋底", "面料"];
 
 function materialSourceSections(value: unknown): string {
   const labels = MATERIAL_SECTION_LABELS.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
@@ -596,15 +618,26 @@ type MaterialComponent = { name: string; percent: string };
 
 function materialName(value: unknown): string {
   const source = text(value).replace(/^[,，;；:：\s]+|[,，;；:：\s]+$/g, "").trim();
+  const fiberGroups = [
+    ["聚酯纤维", "涤纶", "聚对苯二甲酸乙二酯"], ["莱赛尔", "莱赛尔纤维", "天丝"],
+    ["莫代尔", "莫代尔纤维"], ["氨纶", "聚氨酯弹性纤维"], ["聚酰胺纤维", "锦纶", "尼龙"],
+  ];
+  const names = source.split(/[（()）]/).filter(Boolean);
+  const group = fiberGroups.find((aliases) => names.length > 0 && names.every((name) => aliases.includes(name)));
+  if (group) return group[0]!;
   if (/^(?:纯棉|全棉)$/.test(source)) return "棉";
   if (/^(?:涤纶|涤纶[（(]聚酯纤维[）)]|聚酯纤维[（(]涤纶[）)])$/.test(source)) return "聚酯纤维";
   if (/^(?:锦纶|尼龙|聚酰胺纤维|锦纶[（(]聚酰胺纤维[）)]|聚酰胺纤维[（(]锦纶[）)])$/.test(source)) return "聚酰胺纤维";
+  if (/^(?:涤纶\(聚酯纤维\))$/.test(source)) return "聚酯纤维";
+  if (/^(?:莱赛尔|莱赛尔纤维|天丝)$/.test(source)) return "莱赛尔";
+  if (/^(?:莫代尔|莫代尔纤维)$/.test(source)) return "莫代尔";
+  if (/^(?:氨纶|聚氨酯弹性纤维)$/.test(source)) return "氨纶";
   if (/^(?:粘纤|黏纤|粘胶|黏胶|粘胶纤维|黏胶纤维|粘胶纤维[（(]粘纤[）)]|黏胶纤维[（(]黏纤[）)])$/.test(source)) return "粘胶纤维";
   return source;
 }
 
 function materialComponents(value: unknown): MaterialComponent[] {
-  const source = text(value);
+  const source = text(value).replace(/[（(]配料除外[）)]/g, "");
   const components: MaterialComponent[] = [];
   const add = (name: unknown, percent: unknown): void => {
     const normalizedName = materialName(name);
@@ -612,7 +645,7 @@ function materialComponents(value: unknown): MaterialComponent[] {
     if (!normalizedName || !Number.isFinite(numeric)) return;
     const normalizedPercent = String(Number(numeric.toFixed(4)));
     const existing = components.find((item) => item.name === normalizedName);
-    if (existing) existing.percent = String(Number((Number(existing.percent) + Number(normalizedPercent)).toFixed(4)));
+    if (existing) existing.percent = "invalid_duplicate_fiber";
     else components.push({ name: normalizedName, percent: normalizedPercent });
   };
   for (const match of source.matchAll(/(\d+(?:\.\d+)?)\s*%\s*([^\d%]+?)(?=(?:\s*[,，;；]?\s*\d+(?:\.\d+)?\s*%)|$)/g)) add(match[2], match[1]);
@@ -623,7 +656,7 @@ function materialComponents(value: unknown): MaterialComponent[] {
 
 function primaryMaterialComponents(value: unknown): MaterialComponent[] {
   const primary = materialSection(value, ["主面料复合面布", "主面料", "大身面料", "复合面布", "面料"]);
-  return materialComponents(primary || materialSourceSections(value));
+  return materialComponents(primary || materialSourceSections(value).split("\n")[0]);
 }
 
 function allMaterialNames(value: unknown): string[] {
@@ -646,7 +679,10 @@ function materialPercentOption(value: string, permitted: string[]): string {
     const exact = Array.from(normalized.matchAll(/(\d+(?:\.\d+)?)%/g)).map((match) => Number(match[1]));
     return !/(?:以上|及以上|起|以下|及以下)/.test(normalized) && exact.length === 1 && exact[0] === percent;
   }) ?? permitted.find((option) => {
-    const threshold = compactOption(option).match(/(\d+(?:\.\d+)?)%(?:以上|及以上|起)/)?.[1];
+    const range = compactOption(option).match(/(\d+(?:\.\d+)?)%?([（(]含[）)])?[-~～至](\d+(?:\.\d+)?)%?([（(]含[）)])?/);
+    return Boolean(range && (range[2] ? percent >= Number(range[1]) : percent > Number(range[1])) && (range[4] ? percent <= Number(range[3]) : percent < Number(range[3])));
+  }) ?? permitted.find((option) => {
+    const threshold = compactOption(option).match(/(\d+(?:\.\d+)?)%?(?:以上|及以上|起)/)?.[1];
     return threshold !== undefined && percent >= Number(threshold);
   }) ?? permitted.find((option) => {
     const threshold = compactOption(option).match(/(\d+(?:\.\d+)?)%(?:以下|及以下)/)?.[1];
@@ -684,6 +720,39 @@ function mappedScalar(name: string, context: JsonRecord): { value: string; sourc
   return undefined;
 }
 
+/** Apply the tenant's source rules after manual/audited input and before enum validation. */
+function databaseScalar(name: string, context: JsonRecord, template: JsonRecord): ScalarValue {
+  const derived = scalarFor(name, context, template);
+  if (mappedScalar(name, context)) return derived;
+  const rule = databaseRule(name, context, productKind(context));
+  if (!rule) return derived;
+  const key = compact(name);
+  // Structural tables have their own source-validated pipeline, not prose defaults.
+  if (/尺码表|多平台尺码/.test(name)) return derived;
+  const forceDerived = (productKind(context) === "shoe" && key === "尺码类型") || /洗涤|洗护|吊牌价|市场价|零售价|划线价/.test(key)
+    || ["抖音商品重量", "价格区间", "导购短标题", "抖音导购短标题", "唯品会温馨提示", "销售渠道类型", "是否商场同款", "商品展示标题", "所在地"].includes(key)
+    || /产地|原产国/.test(key)
+    || (["里料", "里料成分", "里料材质", "内里材质"].includes(key) && Boolean(derived.value));
+  if (forceDerived) return derived;
+  if (rule.source_type === "fixed") {
+    const value = rule.default_value ?? "";
+    // Formula/instruction cells describe a transformation, not a product fact.
+    if (/人工填写|只需要|吊牌|产品单价|巴拉巴拉\+/.test(value)) return derived;
+    if (["生产/经销厂家", "厂家地址"].includes(name) && derived.value) return derived;
+    return value ? { value, source: "derived", refs: [] } : derived;
+  }
+  if (rule.source_type === "skip") return { value: "", source: "skip", refs: [] };
+  if (derived.value) return derived;
+  if (rule.source_type === "manual") return derived;
+  const column = rule.source_field;
+  if (!column) return derived;
+  // Offline MDM prices/identity are already derived above, never use plan prices.
+  if (/吊牌价|吊牌价格/.test(column)) return { value: balabalaListPrice(context), source: "mdm", refs: sourceRefs(...(Array.isArray(context.skus) ? context.skus : [])) };
+  const sourceType = rule.source_type === "mdm" ? "mdm" : rule.source_type === "launch_plan" ? "launch_plan" : "copywriting";
+  const candidate = sourceRows(context).find(item => item.source === sourceType && rawValue(item.row, column));
+  return candidate ? { value: rawValue(candidate.row, column), source: sourceType, refs: sourceRefs(candidate.row) } : derived;
+}
+
 function scalarFor(name: string, context: JsonRecord, template: JsonRecord): ScalarValue {
   const mapped = mappedScalar(name, context);
   if (mapped) return mapped;
@@ -718,11 +787,11 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   const liningMaterialText = materialSection(materialComposition.value, ["帽里料", "帽里", "里料", "衬里"]);
   const fillerMaterialText = materialSection(materialComposition.value, ["填充物", "填充料"]);
   const downContentText = materialComposition.value.match(/(?:绒子含量|含绒量)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*%?/)?.[1] ?? "";
-  const detail = sourceValue(context, ["细节文案", "细节文案（不限定8个字，细节数量3-4个）"], [copy.detail]);
+  const detail = sourceValue(context, ["细节文案", "细节文案（不限定8个字，细节数量3-4个）", "细节文案（不限定8个字，细节数量3-4个，字数尽量不超过12字）"], [copy.detail]);
   const guideTitle = sourceValue(context, ["导购标题", "导购标题（品牌+品类+性别+款式+风格+季节）"], [copy.guideTitle, titles.guideTitle]);
   const platformTitle = sourceValue(context, ["内容标题", "内容平台标题", "搜索标题"], [titles.title]);
   const detailLines = detail.value.split(/\s*(?:\d+[.、]|[;；*]|\r?\n)\s*/g).map((part) => part.trim().replace(/[：:]/g, "-")).filter(Boolean).join("*");
-  const mainPictureLines = sourceValue(context, ["设计师说——主图4"]);
+  const mainPictureLines = sourceValue(context, ["设计师说——主图4", "主图4"]);
   const mainPictureParts = mainPictureLines.value.split(/\r?\n/).map((part) => part.trim()).filter(Boolean);
   const compatiblePlatforms = "1688;天猫;京东;唯品会;有赞;拼多多;小红书;抖音;快手;微信视频小店";
   if (["充绒量", "充绒量文本"].includes(key)) return sourceValue(context, ["充绒量文本", "充绒量"]);
@@ -730,6 +799,10 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   if ((shoe || apparel) && (key.includes("洗涤说明") || key.includes("洗护说明") || key.includes("洗涤方法") || key.includes("洗护方法"))) return source("请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签", "derived", copy);
   if (apparel && key === "唯品会温馨提示" && ([...templatePlatforms(template)].some((item) => /^(?:VIP|VIPSHOP|唯品会)$/i.test(item)) || templatePlatforms(template).size === 0)) return source("手工测量难免存在误差，常规款袖长肩点到袖口，插肩袖(无明确肩点)款后领中量至袖口", "derived", copy);
   if (apparel && isVipUsageSceneField(name, template)) return source("日常", "derived", plan);
+  if (shoe && ["是否新品", "是否外贸"].includes(key)) return source(key === "是否新品" ? "是" : "否", "derived", plan);
+  if (shoe && key === "抖音参考价格类型") return source("吊牌价", "derived", plan);
+  if (["奥莱店折扣价", "抖音参考价"].includes(key)) return source(price, "mdm", record(context.mdm));
+  if (["唯品会产地", "京东产地", "童装产地", "童装产地多选"].includes(key)) return source("中国大陆", "derived", plan);
   if (key === "发货方式" && shoe) return source("快递发货", "derived", plan);
   if (key === "单位" || key === "计量单位") return source(shoe ? "双" : "件", "derived", plan);
   if (key === "库存计数") return source("买家拍下减库存", "derived", plan);
@@ -779,8 +852,15 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   if (shoe && ["适用场合", "适用场合多选"].includes(key)) return source("日常;校园;公路", "derived", plan);
   if (shoe && ["适用场景", "适用场景多选"].includes(key)) return source("休闲", "derived", plan);
   if (shoe && ["功能", "功能多选"].includes(key)) return source([/防滑/.test(evidence) ? "防滑" : "", /耐磨/.test(evidence) ? "耐磨" : "", /透气/.test(evidence) ? "透气" : "", /防泼水|防水|防渗水/.test(evidence) ? "防泼水" : "", /保温|保暖|抗寒/.test(evidence) ? "保暖" : "", /旋钮|随芯|旋扣/.test(evidence) ? "旋转扣" : ""].filter(Boolean).join(";"), "copywriting", copy);
-  if (shoe && ["产品类别", "商品类别", "款式", "款式多选", "款式单选", "类型", "类型多选", "分类"].includes(key)) return category;
+  if (shoe && ["产品类别", "商品类别", "款式", "款式多选", "款式单选", "类型", "类型多选", "分类"].includes(key)) {
+    const candidates = [sourceValue(context, ["主款式 （唯品四级品类）", "主款式（唯品四级品类）", "主款式", "品类"]).value, text(plan.category), category.value].filter(Boolean);
+    return source(candidates.find((candidate) => optionMatch(name, candidate, options(template))) || candidates[0], "derived", plan);
+  }
   if (key === "适用季节" || key === "适用季节多选" || key === "上市时间" || key === "上市时间文本") return season;
+  if (shoe && ["适用人群", "适用人群多选"].includes(key)) {
+    const stage = sourceValue(context, ["年龄段"], [applicableAge]);
+    return optionMatch(name, stage.value, options(template), key.endsWith("多选")) ? stage : source(applicableAge, "derived", plan);
+  }
   if (key === "适用人群" || key === "适用人群多选" || key === "适用年龄" || key === "适用年龄多选" || key === "适用年龄段" || key === "适用年龄段多选" || key === "淘宝天猫适用年龄" || key === "适合年龄段" || key === "适合年龄段多选" || key === "适用年龄文本") return source(applicableAge || age.value || sourceValue(context, ["年龄段"]).value, "launch_plan", plan);
   if (shoe && key === "详情页ai标注") return source(evidence ? "展示" : "", "derived", copy);
   if (key === "婴童内着详情页") return { value: "", source: "skip", refs: [] };
@@ -807,11 +887,14 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   }
   if (apparel && key === "25面料成分") return materialComposition;
   if (apparel && ["里料", "里料成分", "里料材质", "内里材质", "里料材质多选", "内里材质多选", "里料成分含量", "里料成分含量多选", "里料材质成分含量", "里料材质成分含量多选"].includes(key)) return source(liningMaterialText || lining.value, materialComposition.value ? materialComposition.source : lining.source, materialComposition.value ? record(context.copywriting) : plan);
+  if (["成分含量", "成分含量文本"].includes(key)) return source(primaryMaterial[0] ? `${primaryMaterial[0].percent}%` : "", materialComposition.source, record(context.copywriting));
+  if (["主面料成分含量", "材质成分文本"].includes(key)) return source(materialSourceSections(materialComposition.value), materialComposition.source, record(context.copywriting));
   if (key === "材质成分") return source(primaryMaterialText || materialComposition.value, materialComposition.source, record(context.copywriting));
   if (key === "京东材质成分") return source(jdPrimaryMaterialText || materialComposition.value, materialComposition.source, record(context.copywriting));
   if (key === "面料多选" || key === "材质多选" || key === "材质成分多选") return source(allMaterialNames(materialComposition.value).join(";") || materialComposition.value, materialComposition.source, record(context.copywriting));
   if (key === "抖音面料材质") return source(primaryMaterialText || materialComposition.value, materialComposition.source, record(context.copywriting));
-  if (key === "面料" || key === "材质" || key === "面料俗称") return materialComposition.value ? source(primaryMaterial[0]?.name === "棉" && Number(primaryMaterial[0]?.percent) === 100 ? "纯棉(棉含量100%)" : primaryMaterial.length > 1 ? `${[...primaryMaterial].sort((left, right) => Number(right.percent) - Number(left.percent))[0]?.name ?? ""}混纺` : primaryMaterial[0]?.name ?? materialComposition.value, materialComposition.source, record(context.copywriting)) : surface;
+  if (key === "面料俗称") return source(primaryMaterial[0]?.name ?? "", materialComposition.source, record(context.copywriting));
+  if (key === "面料" || key === "材质") return materialComposition.value ? source(primaryMaterial[0]?.name === "棉" && Number(primaryMaterial[0]?.percent) === 100 ? "纯棉(棉含量100%)" : primaryMaterial.length > 1 ? `${[...primaryMaterial].sort((left, right) => Number(right.percent) - Number(left.percent))[0]?.name ?? ""}混纺` : primaryMaterial[0]?.name ?? materialComposition.value, materialComposition.source, record(context.copywriting)) : surface;
   if (key === "详情页面料") return shoe ? source([surface.value && `帮面材料：${surface.value}`, lining.value && `里料材质：${lining.value}`, sole.value && `鞋底材质：${sole.value}`].filter(Boolean).join("\n"), "derived", plan) : source(apparelDetailMaterial(materialComposition.value) || materialComposition.value, materialComposition.source, record(context.copywriting));
   if (apparel && ["填充物", "填充物多选", "填充物种类", "填充物文本"].includes(key)) return source(fillerMaterialText || sourceValue(context, ["填充物", "填充物备注"]).value, materialComposition.source, record(context.copywriting));
   if (apparel && ["充绒量多选", "填充物含量", "填充物含量多选", "含绒量", "含绒量多选", "含绒量文本", "绒子含量", "绒子含量多选", "绒子含量文本"].includes(key)) return source(downContentText ? `${downContentText}%` : "", materialComposition.source, record(context.copywriting));
@@ -826,7 +909,12 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   if (key === "是否可定制") return source("不可定制", "derived", plan);
   if (key === "balaone仅专供新品") return source(/专供新品/.test(attributes.value) ? "是" : "", "launch_plan", plan);
   if (!shoe && key === "货源类别") return source(/现货/.test(attributes.value) ? "现货" : /专供新品|订货|新品/.test(attributes.value) ? "订货" : "", "launch_plan", plan);
-  if (apparel && ["款式", "款式多选", "款式单选"].includes(key)) return sourceValue(context, ["主款式 （唯品四级品类）", "主款式（唯品四级品类）", "主款式", "款式", "裤型", "廓形"], [plan.subcategory, plan.category]);
+  if (apparel && ["款式", "款式多选", "款式单选"].includes(key)) {
+    const candidates = [sourceValue(context, ["主款式 （唯品四级品类）", "主款式（唯品四级品类）", "主款式"]).value,
+      ...["导购标题", "名称", "搜索标题", "内容标题", "内容平台标题", "品类"].map((column) => rawValue(copy, column)),
+      sourceValue(context, ["款式", "裤型", "廓形"]).value, text(plan.subcategory), text(plan.category)].filter(Boolean);
+    return source(candidates.find((candidate) => optionMatch(name, candidate, options(template))) || candidates[0], "derived", plan);
+  }
   if (!shoe && (key === "分类" || key === "类型")) return category;
   if (apparel && key === "袖长多选") return source("长袖", "derived", plan);
   if (apparel && key === "袖长") return source("长袖", "derived", plan);
@@ -842,11 +930,16 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   if (!shoe && key === "面料工艺") return source("涂层", "derived", plan);
   if (!shoe && key === "领型") return source("连帽", "derived", plan);
   if (!shoe && (key === "风格" || key === "风格多选")) return source("休闲", "derived", plan);
+  if (["京东规格子属性", "京东自营子属性"].includes(key)) return source([...new Set((Array.isArray(context.skus) ? context.skus : []).map((sku) => text(record(sku).size).replace(/cm$/i, "")))].filter(Boolean).join(";"), "mdm", record(context.mdm));
+  if (key === "天猫导购标题") return source(buildGuideTitle(`${text(plan.category)} ${text(plan.subcategory)}`, shoe, guideTitle.value || platformTitle.value || text(titles.title)), "derived", copy);
   if (key === "商品展示标题") return displayTitleValue(context, kind, text(titles.title));
+  if (["导购短标题", "抖音导购短标题"].includes(key)) return { ...guideTitle, value: shortGuideTitle(guideTitle.value) };
+  if (shoe && ["25产品名称", "商品名称", "产品名称"].includes(key)) return sourceValue(context, ["名称", "商品名称", "品类"], [copy.name, plan.category]);
   if (key === "商品短标题") return guideTitle.value ? guideTitle : platformTitle;
   if (shoe && key === "微信视频小店副标题") return guideTitle.value ? guideTitle : platformTitle;
   if (key === "微信视频小店副标题" || key === "快手商品卖点") return source(titles.sellingPoint || detail.value, "copywriting", copy);
   if (key === "微信视频小店标题" || key === "抖音标题") return platformTitle;
+  if (apparel && ["小红书标题", "快手标题"].includes(key)) return platformTitle;
   if (key === "快手标题") {
     const title = platformTitle.value;
     const productCode = text(context.spu);
@@ -862,6 +955,7 @@ function scalarFor(name: string, context: JsonRecord, template: JsonRecord): Sca
   }
   if (key === "商品描述") return { value: "", source: "skip", refs: [] };
   if (/商品展示标题|搜索标题|商品标题|^标题$/.test(key)) return source(titles.title, "copywriting", copy);
+  if (key === "唯品会副标题") return source(firstClause(sourceValue(context, ["推荐理由"]).value || titles.vipTitle || titles.title, 10), "copywriting", copy);
   if (/唯品.*标题/.test(key)) return source(titles.vipTitle || titles.title, "copywriting", copy);
   if (/抖音|小红书|视频号|快手/.test(key) && /标题/.test(key)) return source(titles.guideTitle || titles.title, "copywriting", copy);
   if (/推荐理由|商品卖点|产品卖点|销售卖点|^商品详情$|^详情$/.test(key)) return source(titles.sellingPoint || titles.detail, "copywriting", copy);
@@ -979,7 +1073,7 @@ export function buildBalabalaFields(contextInput: Record<string, unknown>, templ
     }
     // These formats cannot be synthesized safely, but a reviewed local input
     // is authoritative and must be allowed through the normal payload path.
-    if (SPECIAL_MANUAL_FIELDS.has(key)) {
+    if (SPECIAL_MANUAL_FIELDS.has(key) && !["天猫导购标题", "京东规格子属性", "京东自营子属性"].includes(key)) {
       output.push({ ...base, validationStatus: required(template) ? "missing" : "skipped", staleReason: "manual_required_special_format" });
       continue;
     }
@@ -1005,16 +1099,18 @@ export function buildBalabalaFields(contextInput: Record<string, unknown>, templ
       output.push(buildMerchantSku(context, template, colorMap));
       continue;
     }
-    const scalar = scalarFor(name, context, template);
+    const scalar = databaseScalar(name, context, template);
     const value = optionMatch(name, scalar.value, options(template), /MULTI_CHOICE|MULTI_SELECT/.test(typeOf(template)));
+    const components = ["材质成分", "京东材质成分", "抖音面料材质"].includes(key) && scalar.value.includes(",") ? scalar.value.split(";").map((part) => Number(part.split(",")[1])) : [];
+    const badComposition = components.length > 0 && (components.some((amount) => !Number.isFinite(amount) || amount <= 0 || amount > 100) || Math.abs(components.reduce((sum, amount) => sum + amount, 0) - 100) > 0.2);
     const unsupportedOptional = Boolean(scalar.value && !value && !required(template));
     output.push({
       ...base,
       valueText: value,
       sourceType: scalar.source,
       sourceRefs: scalar.refs,
-      validationStatus: unsupportedOptional ? "skipped" : scalar.value && !value ? "invalid" : required(template) && !value ? "missing" : "valid",
-      ...(scalar.value && !value ? { staleReason: unsupportedOptional ? "optional_source_value_not_in_current_template_options" : "value_not_in_current_template_options" } : {}),
+      validationStatus: badComposition ? "invalid" : unsupportedOptional ? "skipped" : scalar.value && !value ? "invalid" : required(template) && !value ? "missing" : "valid",
+      ...(badComposition ? { staleReason: "invalid_source_material_percentages" } : scalar.value && !value ? { staleReason: unsupportedOptional ? "optional_source_value_not_in_current_template_options" : "value_not_in_current_template_options" } : {}),
     });
   }
 

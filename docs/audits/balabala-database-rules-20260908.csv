@@ -1,0 +1,211 @@
+id,tenant_name,merchant_id,field_domain_type,deepdraw_field,source_type,source_table,source_field,default_value,blocking,enabled,notes,updated_at
+1,电商巴拉巴拉,1162,通用字段,产品分类,launch_plan,上市计划表,官方发布类目,,False,True,MDM导入的有错，不准确，后续需要人工检查--影响不大,2026-06-29T04:26:42.941Z
+2,电商巴拉巴拉,1162,通用字段,兼容平台,fixed,固定,,1688、天猫、京东、唯品会、有赞、拼多多、小红书、抖音、快手、微信视频小店,False,True,1688、天猫、京东、唯品会、有赞、拼多多、小红书、抖音、快手、微信视频小店,2026-06-29T04:26:42.941Z
+3,电商巴拉巴拉,1162,通用字段,选择期数,mdm,对应日期,对应日期,,False,True,已经从MDM导入,2026-06-29T04:26:42.941Z
+4,电商巴拉巴拉,1162,通用字段,货号,launch_plan,上市计划表,款号,,False,True,,2026-06-29T04:26:42.941Z
+5,电商巴拉巴拉,1162,通用字段,产品标题,copywriting,文案表,搜索标题,,False,True,上市计划表也在云盘--不同sheet--需要人工复制黏贴，按款。用于上新，货号、类目、标题,2026-06-29T04:26:42.941Z
+6,电商巴拉巴拉,1162,通用字段,价格,launch_plan,上市计划表,吊牌价格,,False,True,,2026-06-29T04:26:42.941Z
+7,电商巴拉巴拉,1162,通用字段,颜色,launch_plan,上市计划表,颜色,,False,True,,2026-06-29T04:26:42.941Z
+8,电商巴拉巴拉,1162,通用字段,尺码,launch_plan,上市计划表,尺码,,False,True,,2026-06-29T04:26:42.941Z
+9,电商巴拉巴拉,1162,通用字段,尺码表,manual,制单,,,False,True,身高体重是固定的、鞋品用的通用鞋品尺码表---MDM开发中没有开发好,2026-06-29T04:26:42.941Z
+10,电商巴拉巴拉,1162,通用字段,多平台尺码,manual,根据平台需求,,,False,True,需要做一张表目前没有可直接提取的,2026-06-29T04:26:42.941Z
+11,电商巴拉巴拉,1162,通用字段,唯品会尺码表,manual,制单,,,False,True,适合年龄固定,2026-06-29T04:26:42.941Z
+12,电商巴拉巴拉,1162,通用字段,抖音尺码表,fixed,固定,,只需要填身高体重,False,True,,2026-06-29T04:26:42.941Z
+13,电商巴拉巴拉,1162,通用字段,天猫尺码表,skip,不填,,,False,True,可不填、,2026-06-29T04:26:42.941Z
+14,电商巴拉巴拉,1162,通用字段,商家SKU,launch_plan,上市计划表,SKU,,False,True,,2026-06-29T04:26:42.941Z
+15,电商巴拉巴拉,1162,通用字段,详情页标题,skip,不填,,,False,True,不填,2026-06-29T04:26:42.941Z
+16,电商巴拉巴拉,1162,通用字段,抖音参考价,launch_plan,上市计划表,吊牌价格,,False,True,,2026-06-29T04:26:42.941Z
+17,电商巴拉巴拉,1162,通用字段,抖音参考价格类型,fixed,固定,,吊牌价,False,True,,2026-06-29T04:26:42.941Z
+18,电商巴拉巴拉,1162,通用字段,商家编码,launch_plan,上市计划表,款号,,False,True,,2026-06-29T04:26:42.941Z
+19,电商巴拉巴拉,1162,通用字段,商家条形码,skip,不填,,,False,True,不填,2026-06-29T04:26:42.941Z
+20,电商巴拉巴拉,1162,通用字段,尺寸推荐表,fixed,固定,,禁用,False,True,禁用,2026-06-29T04:26:42.941Z
+21,电商巴拉巴拉,1162,通用字段,试穿报告表,fixed,固定,,禁用,False,True,禁用,2026-06-29T04:26:42.941Z
+22,电商巴拉巴拉,1162,通用字段,详情页面料,copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+23,电商巴拉巴拉,1162,通用字段,面料(多选),copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+24,电商巴拉巴拉,1162,通用字段,模特实拍,manual,,,,False,True,"机器人做不了的
+[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.",2026-08-20T06:47:00.262Z
+25,电商巴拉巴拉,1162,通用字段,是否商场同款,launch_plan,上市计划表,线上款为非商场同款，全域款为商场同款,,False,True,根据货品属性判断,2026-06-29T04:26:42.941Z
+26,电商巴拉巴拉,1162,通用字段,材质成分,copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+27,电商巴拉巴拉,1162,通用字段,面料,copywriting,文案表,面料成分,,False,True,要填，吊牌洗唛,2026-06-29T04:26:42.941Z
+28,电商巴拉巴拉,1162,通用字段,成分及含量,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+29,电商巴拉巴拉,1162,通用字段,材质,copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+30,电商巴拉巴拉,1162,通用字段,里料,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+31,电商巴拉巴拉,1162,通用字段,填充物种类,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+32,电商巴拉巴拉,1162,通用字段,安全等级,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+33,电商巴拉巴拉,1162,通用字段,上市时间,launch_plan,上市计划表,,,False,True,,2026-06-29T04:26:42.941Z
+34,电商巴拉巴拉,1162,通用字段,适用性别,launch_plan,上市计划表,性别,,False,True,,2026-06-29T04:26:42.941Z
+35,电商巴拉巴拉,1162,通用字段,适用性别(多选),launch_plan,上市计划表,性别,,False,True,,2026-06-29T04:26:42.941Z
+36,电商巴拉巴拉,1162,通用字段,成分含量,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+37,电商巴拉巴拉,1162,通用字段,是否开裆,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+38,电商巴拉巴拉,1162,通用字段,腰型,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+39,电商巴拉巴拉,1162,通用字段,裤门襟,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+40,电商巴拉巴拉,1162,通用字段,款式,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+41,电商巴拉巴拉,1162,通用字段,风格,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+42,电商巴拉巴拉,1162,通用字段,图案,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+43,电商巴拉巴拉,1162,通用字段,适用年龄,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+44,电商巴拉巴拉,1162,通用字段,服装版型,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+45,电商巴拉巴拉,1162,通用字段,风格(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+46,电商巴拉巴拉,1162,通用字段,流行元素(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+47,电商巴拉巴拉,1162,通用字段,是否有腰带,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+48,电商巴拉巴拉,1162,通用字段,厚薄,copywriting,文案表,,,False,True,,2026-06-29T04:26:42.941Z
+49,电商巴拉巴拉,1162,通用字段,里料材质(多选),copywriting,文案表,,,False,True,,2026-06-29T04:26:42.941Z
+50,电商巴拉巴拉,1162,通用字段,是否加绒,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+51,电商巴拉巴拉,1162,通用字段,包装种类,fixed,固定,,人工填写，每个商品这个项都是填写一样的值,False,True,人工填写，每个商品这个项都是填写一样的值,2026-06-29T04:26:42.941Z
+52,电商巴拉巴拉,1162,通用字段,图案(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+53,电商巴拉巴拉,1162,通用字段,裤长,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+54,电商巴拉巴拉,1162,通用字段,成分含量(文本),copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+55,电商巴拉巴拉,1162,通用字段,类型,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+56,电商巴拉巴拉,1162,通用字段,模板厚度,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+57,电商巴拉巴拉,1162,通用字段,模板柔软度,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+58,电商巴拉巴拉,1162,通用字段,模板弹力,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+59,电商巴拉巴拉,1162,通用字段,模板透气度,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+60,电商巴拉巴拉,1162,通用字段,模板长度,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+61,电商巴拉巴拉,1162,通用字段,模板版型,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+62,电商巴拉巴拉,1162,通用字段,洗涤,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+63,电商巴拉巴拉,1162,通用字段,介绍,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+64,电商巴拉巴拉,1162,通用字段,适用季节(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+65,电商巴拉巴拉,1162,通用字段,适用年龄(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+66,电商巴拉巴拉,1162,通用字段,适用季节,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+67,电商巴拉巴拉,1162,通用字段,是否可开档,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+68,电商巴拉巴拉,1162,通用字段,洗涤说明,skip,不填,,,False,True,固定,2026-06-29T04:26:42.941Z
+69,电商巴拉巴拉,1162,通用字段,吊牌价,mdm,,,,False,True,,2026-06-29T04:26:42.941Z
+70,电商巴拉巴拉,1162,通用字段,童装产地,fixed,固定,,中国大陆,False,True,,2026-06-29T04:26:42.941Z
+71,电商巴拉巴拉,1162,通用字段,库存计数,fixed,固定,,买家拍下减库存,False,True,,2026-06-29T04:26:42.941Z
+72,电商巴拉巴拉,1162,通用字段,会员打折,fixed,固定,,不参与会员打折,False,True,,2026-06-29T04:26:42.941Z
+73,电商巴拉巴拉,1162,通用字段,所在地,fixed,固定,,浙江杭州,False,True,,2026-06-29T04:26:42.941Z
+74,电商巴拉巴拉,1162,通用字段,原产国,fixed,固定,,中国,False,True,,2026-06-29T04:26:42.941Z
+75,电商巴拉巴拉,1162,1688,报价方式,fixed,固定,,按产品数量报价,False,True,,2026-06-29T04:26:42.941Z
+76,电商巴拉巴拉,1162,1688,价格区间,fixed,固定,,购买数量>2  产品单价(元)=吊牌价,False,True,,2026-06-29T04:26:42.941Z
+77,电商巴拉巴拉,1162,1688,主面料成分含量,copywriting,文案表,,,False,True,,2026-06-29T04:26:42.941Z
+78,电商巴拉巴拉,1162,1688,销售单位,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+79,电商巴拉巴拉,1162,1688,销售单位换算比率,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+80,电商巴拉巴拉,1162,1688,供货方式,fixed,固定,,仅现货,False,True,,2026-06-29T04:26:42.941Z
+81,电商巴拉巴拉,1162,1688,平车针距12~14针/3cm,fixed,固定,,否,False,True,,2026-06-29T04:26:42.941Z
+82,电商巴拉巴拉,1162,1688,AQL抽检标准,fixed,固定,,无,False,True,,2026-06-29T04:26:42.941Z
+83,电商巴拉巴拉,1162,1688,面料工艺,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+84,电商巴拉巴拉,1162,1688,计量单位,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+85,电商巴拉巴拉,1162,1688,货源类别,fixed,固定,,现货,False,True,,2026-06-29T04:26:42.941Z
+86,电商巴拉巴拉,1162,1688,是否库存,fixed,固定,,,False,True,,2026-06-29T04:26:42.941Z
+87,电商巴拉巴拉,1162,1688,是否跨境出口专供货源,fixed,固定,,,False,True,,2026-06-29T04:26:42.941Z
+88,电商巴拉巴拉,1162,1688,建议零售价,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+89,电商巴拉巴拉,1162,天猫,商品展示标题,fixed,固定,,巴拉巴拉+性别+品类,False,True,,2026-06-29T04:26:42.941Z
+90,电商巴拉巴拉,1162,天猫,无线短标题,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+91,电商巴拉巴拉,1162,天猫,天猫商品卖点,copywriting,文案表,推荐理由,,False,True,,2026-06-29T04:26:42.941Z
+92,电商巴拉巴拉,1162,天猫,天猫推荐理由,copywriting,文案表,推荐理由,,False,True,,2026-06-29T04:26:42.941Z
+93,电商巴拉巴拉,1162,天猫,奥莱店折扣价,launch_plan,上市计划表,吊牌价格,,False,True,,2026-06-29T04:26:42.941Z
+94,电商巴拉巴拉,1162,天猫,天猫货号,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+95,电商巴拉巴拉,1162,天猫,天猫导购标题,copywriting,文案表,导购标题,,False,True,填在最后一个格子内,2026-06-29T04:26:42.941Z
+96,电商巴拉巴拉,1162,天猫,是否新品,fixed,固定,,是,False,True,,2026-06-29T04:26:42.941Z
+97,电商巴拉巴拉,1162,天猫,销售渠道类型(单选),launch_plan,上市计划表,,,False,True,根据货品属性判断,2026-06-29T04:26:42.941Z
+98,电商巴拉巴拉,1162,天猫,专柜价,fixed,固定,,10000,False,True,,2026-06-29T04:26:42.941Z
+99,电商巴拉巴拉,1162,天猫,尺码类型,fixed,固定,,身型,False,True,,2026-06-29T04:26:42.941Z
+100,电商巴拉巴拉,1162,京东,京东-京东商品标语,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+101,电商巴拉巴拉,1162,京东,标语加链接的文字,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+102,电商巴拉巴拉,1162,京东,标语链接地址,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+103,电商巴拉巴拉,1162,京东,京东标题,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+105,电商巴拉巴拉,1162,京东,京东市场价,fixed,固定,,吊牌价格,False,True,,2026-06-29T04:26:42.941Z
+106,电商巴拉巴拉,1162,京东,京东规格子属性,manual,深绘自动提取前面的颜色,,,False,True,,2026-06-29T04:26:42.941Z
+107,电商巴拉巴拉,1162,京东,京东自营子属性,manual,深绘自动提取前面的尺码,,,False,True,,2026-06-29T04:26:42.941Z
+108,电商巴拉巴拉,1162,京东,分类,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+109,电商巴拉巴拉,1162,京东,京东材质成分,copywriting,文案表,吊牌成分,,False,True,,2026-06-29T04:26:42.941Z
+110,电商巴拉巴拉,1162,京东,是否申请新品,fixed,固定,,是,False,True,,2026-06-29T04:26:42.941Z
+111,电商巴拉巴拉,1162,京东,京东商品重量,fixed,固定,,1,False,True,,2026-06-29T04:26:42.941Z
+112,电商巴拉巴拉,1162,京东,[包装]长,fixed,固定,,100,False,True,,2026-06-29T04:26:42.941Z
+113,电商巴拉巴拉,1162,京东,[包装]宽,fixed,固定,,100,False,True,,2026-06-29T04:26:42.941Z
+114,电商巴拉巴拉,1162,京东,[包装]高,fixed,固定,,100,False,True,,2026-06-29T04:26:42.941Z
+115,电商巴拉巴拉,1162,京东,是否可定制,fixed,固定,,不可定制,False,True,,2026-06-29T04:26:42.941Z
+116,电商巴拉巴拉,1162,京东,京东产地,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+117,电商巴拉巴拉,1162,京东,规格参数,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+118,电商巴拉巴拉,1162,京东,包装清单,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+119,电商巴拉巴拉,1162,京东,售后服务,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+120,电商巴拉巴拉,1162,京东,京东发货地,fixed,固定,,浙江杭州,False,True,,2026-06-29T04:26:42.941Z
+121,电商巴拉巴拉,1162,京东,京东自营商品重量,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+122,电商巴拉巴拉,1162,唯品会,唯品会款号,launch_plan,上市计划表,款号,,False,True,,2026-06-29T04:26:42.941Z
+123,电商巴拉巴拉,1162,唯品会,唯品会标题,copywriting,文案表,唯品标题,,False,True,,2026-06-29T04:26:42.941Z
+124,电商巴拉巴拉,1162,唯品会,唯品会副标题,copywriting,文案表,,,False,True,,2026-06-29T04:26:42.941Z
+125,电商巴拉巴拉,1162,唯品会,唯品会核心描述,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+126,电商巴拉巴拉,1162,唯品会,唯品会市场价,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+127,电商巴拉巴拉,1162,唯品会,唯品会温馨提示,fixed,固定,,以上数据仅供参考，尺码手工测量难免1-2cm误差；插肩袖款式袖长为含领中尺寸数据,False,True,,2026-06-29T04:26:42.941Z
+128,电商巴拉巴拉,1162,唯品会,弹力,copywriting,文案表,,,False,True,,2026-06-29T04:26:42.941Z
+129,电商巴拉巴拉,1162,唯品会,选购热点,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+130,电商巴拉巴拉,1162,唯品会,款式(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+131,电商巴拉巴拉,1162,唯品会,唯品【包装】长,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+132,电商巴拉巴拉,1162,唯品会,唯品【包装】宽,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+133,电商巴拉巴拉,1162,唯品会,唯品【包装】高,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+134,电商巴拉巴拉,1162,唯品会,唯品重量,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+135,电商巴拉巴拉,1162,唯品会,适用人群(多选),manual,判断,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+136,电商巴拉巴拉,1162,唯品会,款式(单选),manual,判断,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+137,电商巴拉巴拉,1162,唯品会,唯品会产地,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+138,电商巴拉巴拉,1162,唯品会,生产/经销厂家,fixed,固定,,浙江森马服饰股份有限公司,False,True,,2026-06-29T04:26:42.941Z
+139,电商巴拉巴拉,1162,唯品会,厂家地址,fixed,固定,,温州市瓯海区娄桥工业园南汇路98号,False,True,,2026-06-29T04:26:42.941Z
+140,电商巴拉巴拉,1162,唯品会,执行标准,copywriting,,吊牌截取,,False,True,云盘图包-吊牌--人工识别之后，粘贴,2026-06-29T04:26:42.941Z
+141,电商巴拉巴拉,1162,唯品会,详细材质信息(VIP),copywriting,文案表,材质成分,,False,True,,2026-06-29T04:26:42.941Z
+142,电商巴拉巴拉,1162,唯品会,唯品会洗涤说明,fixed,固定,,请根据产品面料特性进行清洗养护，具体方法可参考产品水洗唛/标签,False,True,,2026-06-29T04:26:42.941Z
+143,电商巴拉巴拉,1162,唯品会,唯品会配件信息,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+144,电商巴拉巴拉,1162,唯品会,唯品会售后信息,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+145,电商巴拉巴拉,1162,有赞,有赞商品卖点,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+146,电商巴拉巴拉,1162,有赞,划线价,launch_plan,上市计划表,吊牌价,,False,True,,2026-06-29T04:26:42.941Z
+147,电商巴拉巴拉,1162,有赞,材质成分(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+148,电商巴拉巴拉,1162,有赞,袖长(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+149,电商巴拉巴拉,1162,有赞,上市时间(文本),launch_plan,上市计划表,,,False,True,,2026-06-29T04:26:42.941Z
+150,电商巴拉巴拉,1162,有赞,童装产地(多选),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+151,电商巴拉巴拉,1162,拼多多,拼多多标题,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+152,电商巴拉巴拉,1162,拼多多,商品短标题,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+153,电商巴拉巴拉,1162,拼多多,商品描述,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+154,电商巴拉巴拉,1162,拼多多,商品市场价,launch_plan,上市计划表,吊牌价,,False,True,,2026-06-29T04:26:42.941Z
+155,电商巴拉巴拉,1162,拼多多,拼多多货源地,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+156,电商巴拉巴拉,1162,拼多多,面料俗称,copywriting,文案表,根据面料成分填主材质,,False,True,,2026-06-29T04:26:42.941Z
+157,电商巴拉巴拉,1162,小红书,小红书标题,copywriting,文案表,去掉巴拉巴拉,,False,True,,2026-06-29T04:26:42.941Z
+158,电商巴拉巴拉,1162,小红书,商品简称,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+159,电商巴拉巴拉,1162,小红书,商品特色,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+160,电商巴拉巴拉,1162,小红书,净重（g）,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+161,电商巴拉巴拉,1162,小红书,毛重（g）,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+162,电商巴拉巴拉,1162,小红书,保质期（天）,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+163,电商巴拉巴拉,1162,小红书,小红书商品描述,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+164,电商巴拉巴拉,1162,小红书,小红书计量单位,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+165,电商巴拉巴拉,1162,小红书,件数,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+166,电商巴拉巴拉,1162,小红书,小红书发货时间,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+167,电商巴拉巴拉,1162,抖音,抖音标题,copywriting,文案表,内容平台标题,,False,True,,2026-06-29T04:26:42.941Z
+168,电商巴拉巴拉,1162,抖音,导购短标题,copywriting,文案表,导购标题,,False,True,,2026-06-29T04:26:42.941Z
+169,电商巴拉巴拉,1162,抖音,抖音商品重量,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+170,电商巴拉巴拉,1162,抖音,抖音商家推荐语,skip,不填,,,False,True,,2026-06-29T04:26:42.941Z
+171,电商巴拉巴拉,1162,抖音,单用户累计限购(件),fixed,固定,,5,False,True,,2026-06-29T04:26:42.941Z
+172,电商巴拉巴拉,1162,抖音,每次限购(件),fixed,固定,,5,False,True,,2026-06-29T04:26:42.941Z
+173,电商巴拉巴拉,1162,抖音,售后服务承诺,manual,不设置,,,False,True,,2026-06-29T04:26:42.941Z
+174,电商巴拉巴拉,1162,抖音,抖音面料材质,copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+175,电商巴拉巴拉,1162,抖音,里料材质(多选),copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+176,电商巴拉巴拉,1162,抖音,里料材质成分含量(多选),copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+177,电商巴拉巴拉,1162,快手,商品详情,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+178,电商巴拉巴拉,1162,快手,快手标题,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+179,电商巴拉巴拉,1162,快手,快手商品卖点,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+180,电商巴拉巴拉,1162,快手,退款规则,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+181,电商巴拉巴拉,1162,微信视频小店,微信视频小店标题,copywriting,,内容平台标题,,False,True,,2026-06-29T04:26:42.941Z
+182,电商巴拉巴拉,1162,微信视频小店,微信视频小店副标题,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+183,电商巴拉巴拉,1162,微信视频小店,微信视频小店商品编码,launch_plan,上市计划表,款号,,False,True,,2026-06-29T04:26:42.941Z
+184,电商巴拉巴拉,1162,微信视频小店,发货方式,fixed,固定,,快递,False,True,,2026-06-29T04:26:42.941Z
+185,电商巴拉巴拉,1162,微信视频小店,适用场合,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+186,电商巴拉巴拉,1162,微信视频小店,成分含量(文本),copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+187,电商巴拉巴拉,1162,微信视频小店,适用年龄(文本),manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+188,电商巴拉巴拉,1162,微信视频小店,颜色(文本),launch_plan,上市计划表,颜色,,False,True,,2026-06-29T04:26:42.941Z
+189,电商巴拉巴拉,1162,产品线：鞋品,25鞋子模板类型,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+190,电商巴拉巴拉,1162,产品线：鞋品,25鞋子尺码表,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+191,电商巴拉巴拉,1162,产品线：鞋品,是否婴童,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+192,电商巴拉巴拉,1162,产品线：鞋品,25实拍文案,copywriting,文案表,细节文案,,False,True,,2026-06-29T04:26:42.941Z
+193,电商巴拉巴拉,1162,产品线：鞋品,25产品名称,copywriting,文案表,名称,,False,True,,2026-06-29T04:26:42.941Z
+194,电商巴拉巴拉,1162,产品线：鞋品,25面料成分,copywriting,文案表,面料成分+里料材质+鞋底材质,,False,True,,2026-06-29T04:26:42.941Z
+195,电商巴拉巴拉,1162,产品线：中童,主图1,copywriting,文案表,主图ICON,,False,True,,2026-06-29T04:26:42.941Z
+196,电商巴拉巴拉,1162,产品线：中童,主图2,copywriting,文案表,主图ICON,,False,True,,2026-06-29T04:26:42.941Z
+197,电商巴拉巴拉,1162,产品线：中童,主图4文案1,copywriting,文案表,主图4第1句,,False,True,,2026-06-29T04:26:42.941Z
+198,电商巴拉巴拉,1162,产品线：中童,主图4文案2,copywriting,文案表,主图4第2-3句,,False,True,,2026-06-29T04:26:42.941Z
+199,电商巴拉巴拉,1162,产品线：中童,主图4样式,fixed,固定,,主图4样式225,False,True,,2026-06-29T04:26:42.941Z
+200,电商巴拉巴拉,1162,产品线：中童,25产品名称,copywriting,文案表,名称,,False,True,,2026-06-29T04:26:42.941Z
+201,电商巴拉巴拉,1162,产品线：中童,25面料成分,copywriting,文案表,面料成分,,False,True,,2026-06-29T04:26:42.941Z
+202,电商巴拉巴拉,1162,产品线：中童,25服装面料文案,copywriting,文案表,面料名称-面料文案*面料三个关键词,,False,True,,2026-06-29T04:26:42.941Z
+203,电商巴拉巴拉,1162,产品线：中童,25柔软指数,copywriting,文案表,柔软度,,False,True,,2026-06-29T04:26:42.941Z
+204,电商巴拉巴拉,1162,产品线：中童,25厚薄指数,copywriting,文案表,厚薄,,False,True,,2026-06-29T04:26:42.941Z
+205,电商巴拉巴拉,1162,产品线：中童,25弹力指数,copywriting,文案表,弹性,,False,True,,2026-06-29T04:26:42.941Z
+206,电商巴拉巴拉,1162,产品线：中童,25服饰细节文案,copywriting,文案表,细节文案,,False,True,,2026-06-29T04:26:42.941Z
+207,电商巴拉巴拉,1162,产品线：中童,balaone仅专供新品,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+208,电商巴拉巴拉,1162,产品线：中童,详情页AI标注,manual,,,,False,True,[2026-08-20] blocking=false: required/blocking follows deepdraw_trade_field_cache template; mapping rule only controls source/default/AI suggestion.,2026-08-20T06:47:00.262Z
+209,电商巴拉巴拉,1162,产品线：中童,单色平台AI标,manual,,,,False,True,2026-08-20: 平台AI字段按深绘类目模板 required 判定，不再按中童字段规则阻断,2026-08-20T05:55:58.962Z
+210,电商巴拉巴拉,1162,产品线：中童,多色平台AI,manual,,,,False,True,2026-08-20: 平台AI字段按深绘类目模板 required 判定，不再按中童字段规则阻断,2026-08-20T05:55:58.962Z
