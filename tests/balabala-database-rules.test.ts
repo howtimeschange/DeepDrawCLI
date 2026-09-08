@@ -40,3 +40,9 @@ test('business blank and source-derived exceptions precede database skip and ins
  const lining=buildBalabalaFields({...context,copywriting:{rows:[{raw:{面料成分:'面料:100%棉\n里料:100%聚酯纤维'}}]}},{fields:[{fieldName:'里料'}]});
  assert.equal(lining[0]?.valueText,'100%聚酯纤维');
 });
+
+test('same tenant cannot select another brand snapshot; explicit empty identities do not fall back',()=>{
+ for(const other of [{brandId:'semir'},{brand:'semir'},{brandId:''},{tenantName:''},{merchantId:''}]) {
+  assert.equal(databaseRule('AQL抽检标准',{...context,...other},'apparel'),undefined);
+ }
+});

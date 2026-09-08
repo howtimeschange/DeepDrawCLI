@@ -1,7 +1,9 @@
+import type { RuleSnapshotMetadata } from "./rule-snapshot.js";
 import type { WorkflowField } from "../workflow/types.js";
 
 export interface BrandPlugin {
   id: string;
+  ruleSnapshot?(context: Record<string, unknown>): RuleSnapshotMetadata | undefined;
   importSources(input: Record<string, unknown>): Promise<Record<string, unknown>>;
   selectTrade(context: Record<string, unknown>, trades: unknown[]): Record<string, unknown>;
   buildFields(context: Record<string, unknown>, template: Record<string, unknown>): WorkflowField[];

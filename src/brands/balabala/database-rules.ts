@@ -1,3 +1,4 @@
+import { matchesRuleScope, type RuleSnapshotMetadata, type RuleScope } from "../rule-snapshot.js";
 // Read-only Listingify snapshot: 电商巴拉巴拉 / 1162, 2026-09-08T08:59:45.522Z.
 // No credentials; source/default rules do not override current template requirements.
 export const DATABASE_RULE_VERSION = "2026-09-08T08:59:45.522Z";
@@ -1884,8 +1885,29 @@ export const DATABASE_RULES = [
     "enabled": true
   }
 ] as const;
+export const DATABASE_RULE_SNAPSHOT: RuleSnapshotMetadata = {
+  schemaVersion: 1,
+  id: "balabala/ecommerce-balabala/1162",
+  scope: { brandId: "balabala", tenantName: "电商巴拉巴拉", merchantId: "1162" },
+  version: DATABASE_RULE_VERSION,
+  source: "listingify.deepdraw_field_mapping_rule",
+};
+
+/** Legacy defaults belong only to the Balabala entry point, never the shared matcher. */
+export function balabalaRuleScope(context: Record<string, unknown>): RuleScope {
+  return {
+    brandId: String(context.brandId ?? context.brand ?? "balabala"),
+    tenantName: String(context.tenantName ?? context.tenant ?? "电商巴拉巴拉"),
+    merchantId: String(context.merchantId ?? "1162"),
+  };
+}
+
+export function databaseRuleSnapshot(context: Record<string, unknown>): RuleSnapshotMetadata | undefined {
+  return matchesRuleScope(DATABASE_RULE_SNAPSHOT, balabalaRuleScope(context)) ? DATABASE_RULE_SNAPSHOT : undefined;
+}
+
 export function databaseRule(name: string, context: Record<string, unknown>, kind: string) {
-  if ((context.tenantName ?? context.tenant ?? "电商巴拉巴拉") !== "电商巴拉巴拉" || String(context.merchantId ?? "1162") !== "1162") return undefined;
+  if (!databaseRuleSnapshot(context)) return undefined;
   const plan = (context.launchPlan ?? {}) as Record<string, unknown>;
   const category = JSON.stringify([plan.productLine, plan.category, plan.subcategory, (plan.raw as Record<string, unknown> | undefined)?.["年龄段"]]);
   return [...DATABASE_RULES].reverse().find(rule => rule.enabled && rule.deepdraw_field === name &&

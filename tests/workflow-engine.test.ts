@@ -90,3 +90,15 @@ test("OCR review attaches the supplied PDF evidence to a current-template fact a
   assert.deepEqual(field, { fieldName: "执行标准", sourceType: "ocr", sourceRefs: [{ path: "/tmp/202426107033合格证.pdf", sha256: "certificate", role: "hangtag" }], fieldId: "standard", fieldType: "TEXT", active: true, manualOverride: false, validationStatus: "valid", valueText: "Q/BALABALA 103-2021" });
   assert.equal((result.audit.ocr as { rejected: Array<{ reason: string }> }).rejected[0]?.reason, "field_not_in_current_template");
 });
+
+test('workflow rejects brand mismatch and records no snapshot for unmatched tenant', async(t)=>{
+ const directory=await mkdtemp(join(tmpdir(),'deepdraw-scope-'));
+ t.after(()=>rm(directory,{recursive:true,force:true}));
+ const engine=new BalabalaWorkflowEngine(WorkflowStore.open('balabala','scope-test',directory));
+ await engine.importNormalized({spu:'scope-test',brandId:'semir',skus:[]},[]);
+ await assert.rejects(()=>engine.assemble(),/brand does not match/);
+ const seed=await engine.snapshot();
+ const r=await engine.assemble({...seed,normalized:{spu:'scope-test',brandId:'balabala',tenantName:'other',merchantId:'1162',skus:[]},template:{fields:[{name:'AQL抽检标准',required:true}]}});
+ assert.equal(r.audit.databaseRuleSnapshot,null);
+ assert.equal(r.state,'review_required');
+});

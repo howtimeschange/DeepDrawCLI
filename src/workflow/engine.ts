@@ -1,4 +1,3 @@
-import { DATABASE_RULE_VERSION } from "../brands/balabala/database-rules.js";
 import { balabalaListPrice, balabalaPriceEvidence } from "../brands/balabala/prices.js";
 import { applyBalabalaDownFill } from "../brands/balabala/down-fill.js";
 import { auditAiResponses, auditOcrFacts, buildLocalVisionReviewPlan } from "../brands/balabala/ai-audit.js";
@@ -89,7 +88,9 @@ export class BalabalaWorkflowEngine {
     const decision = record(template.tradeDecision);
     const selected = record(decision.selected);
     // Source identities select local facts; only the output envelope targets -test.
-    const buildContext = { ...current.normalized, spu: text(current.normalized.sourceSpu) || current.normalized.spu };
+    const normalizedBrand = text(current.normalized.brandId ?? current.normalized.brand);
+    if (current.brand !== this.plugin.id || this.store.brand !== this.plugin.id || (normalizedBrand && normalizedBrand !== this.plugin.id)) throw new Error("workflow brand does not match selected brand plugin");
+    const buildContext = { ...current.normalized, brandId: current.brand, spu: text(current.normalized.sourceSpu) || current.normalized.spu };
     const fields = [
       ...this.plugin.buildFields(buildContext, template),
       ...this.plugin.buildSizeTables(buildContext, template),
@@ -129,7 +130,7 @@ export class BalabalaWorkflowEngine {
         ...buildLocalVisionReviewPlan(current.normalized.images, deduped),
         fields: deduped.map((field) => ({ fieldId: field.fieldId, fieldName: field.fieldName, active: field.active !== false, manualOverride: field.manualOverride === true, options: (template.fields as JsonRecord[]).map(record).find((templateField) => compact(templateField.fieldName) === compact(field.fieldName))?.options ?? [] })),
       },
-      databaseRuleSnapshot: { version: DATABASE_RULE_VERSION, tenantName: "电商巴拉巴拉", merchantId: "1162", mode: "bundled_offline_snapshot" },
+      databaseRuleSnapshot: this.plugin.ruleSnapshot?.(buildContext) ?? null,
       priceEvidence: balabalaPriceEvidence(current.normalized),
       assembledAt: new Date().toISOString(),
     };

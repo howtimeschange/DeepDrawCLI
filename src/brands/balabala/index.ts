@@ -1,3 +1,4 @@
+import { databaseRuleSnapshot } from "./database-rules.js";
 import { auditAiResponses } from "./ai-audit.js";
 import { buildBalabalaFields } from "./fields.js";
 import { importBalabalaSources } from "./importers.js";
@@ -13,6 +14,7 @@ import type { BrandPlugin } from "../types.js";
  */
 export const balabalaPlugin: BrandPlugin = {
   id: "balabala",
+  ruleSnapshot: databaseRuleSnapshot,
   importSources: async (input) => importBalabalaSources(input as unknown as Parameters<typeof importBalabalaSources>[0]),
   selectTrade: (context, trades) => selectBalabalaTrade(context, trades) as unknown as Record<string, unknown>,
   buildFields: (context, template) => buildBalabalaFields(context, template),

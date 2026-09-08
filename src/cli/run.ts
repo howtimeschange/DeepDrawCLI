@@ -1043,7 +1043,7 @@ async function runStatefulBalabala(argv: string[], options: CliRunOptions, cwd: 
   if (args.action === "import") {
     try {
       const imported = await importBalabalaSources({ spu: target.targetSpu, sourceSpu: target.sourceSpu, mdmPath: args.mdmPath!, launchPlanPath: args.launchPlanPath!, copywritingPath: args.copywritingPath!, ...(args.shoeSizeChartPath ? { shoeSizeChartPath: args.shoeSizeChartPath } : {}), ...(args.plmSizeChartPath ? { plmSizeChartPath: args.plmSizeChartPath } : {}), ...(args.apparelSizeReferencePath ? { apparelSizeReferencePath: args.apparelSizeReferencePath } : {}), ...(args.fieldMappingsPath ? { fieldMappingsPath: args.fieldMappingsPath } : {}), ...(args.imagesPath ? { imagesPath: args.imagesPath } : {}) });
-      const snapshot = await engine.importNormalized(imported, imported.sources);
+      const snapshot = await engine.importNormalized({ ...imported, brandId: "balabala", tenantName: args.tenantName ?? options.tenantName ?? options.env?.DEEPDRAW_TENANT_NAME ?? "电商巴拉巴拉", merchantId: args.merchantId }, imported.sources);
       return resultMetadata("import", target.targetSpu, snapshot, remoteOperationContext(target));
     } catch (error) { return { exitCode: 1, stdout: "", stderr: `${errorMessage(error)}\n` }; }
   }
