@@ -11,7 +11,7 @@
 - 只想调用某个 OpenAPI：从[快速上手](#快速上手)和[常用命令](#常用命令)开始；所有 `dp.*` 接口都受 registry、dry-run 和风险授权约束。
 - 要走巴拉巴拉上新：直接阅读[巴拉上新流程](#巴拉上新流程)。这里解释本地资料导入、测试/正式款号授权、类目模板、AI/OCR 审计、全量/增量更新和回读。
 - 要排查频控：阅读[调用频率与退避](#调用频率与退避)。只读请求会有限重试；任何可能写入的请求都不会自动重放。
-- 要接入新的品牌：阅读[项目架构](#项目架构)；品牌规则位于独立插件，工作流和 transport 不依赖巴拉规则。
+- 要接入新的品牌：阅读[项目架构](#项目架构)；品牌规则位于专属插件，已有品牌/租户快照隔离接口；当前工作流和 payload 仍包含巴拉专用逻辑，其他品牌需单独实现并验证。
 
 ## 项目背景
 
@@ -411,7 +411,11 @@ deepdraw balabala review --mode production --spu 202426107128
 # 3. 同步既有档案，才能取得正确的 productId、resourceId 和远端可保留字段。
 deepdraw balabala sync --mode production --spu 202426107128 --execute
 
-# 4. 计划会回读并合并远端完整资料；不写入。
+# 4. sync 会将远端内容载入草稿；按本地资料重建时必须再次 assemble/review。
+deepdraw balabala assemble --mode production --spu 202426107128
+deepdraw balabala review --mode production --spu 202426107128
+
+# 5. 计划会回读并合并远端完整资料；不写入。
 deepdraw balabala plan full-update --mode production --spu 202426107128 --execute --plan
 # 审阅 plan.planHash、字段和覆盖风险后：
 deepdraw balabala publish full-update --mode production --spu 202426107128 \
@@ -570,7 +574,116 @@ transport 策略：
 - `paid`: 付费接口，执行前要计划和授权。
 - `paid_write`: 付费且写入接口，执行前要计划和授权。
 
+## 用户链路与执行链路
+
+### 首次配置与会话续接
+
+完成上面的安装、`config doctor --dry-run` 和 `auth login --stdin-json` 后，凭据会持久保存在用户目录。macOS/Linux 为 `~/.config/deepdraw/config.json` 与同目录 `credentials.json`；Windows 为 `%APPDATA%\DeepDrawCli`。凭据文件在 macOS/Linux 以仅当前用户可读写的权限创建，不属于项目仓库，不需要每个会话重新提供密钥。
+
+完整进程环境变量优先，其次读取用户凭据配置；没有该配置时再尝试项目 `.env.local`。本地凭据支持多个租户，调用时明确选择对应租户和商家。不要把凭据混入品牌规则快照。
+
+单款工作流保存在当前工作流根目录的 `.deepdraw-workflows/balabala/<款号>/`，记录来源、草稿、模板、审核、计划与回读。更换会话后使用同一工作流根目录和款号即可续接；它与跨会话复用的用户级凭据是两套存储。
+
+### 共同准备过程
+
+```mermaid
+flowchart LR
+  I[本地Excel与图包] --> Import[import 导入正式资料]
+  Import --> Template[template 读取当前类目模板]
+  Template --> Build[assemble 构建字段和尺码]
+  Build --> Review[review 审查及证据校验]
+  Review --> Plan[plan 审阅执行内容]
+  Plan --> Publish[publish 授权写入]
+  Publish --> Readback[readback 核验实际保存结果]
+```
+
+| 步骤 | 用户需要做什么 | CLI实际处理 | 联网情况 |
+| --- | --- | --- | --- |
+| import | 提供SKU表、计划、文案、尺码资料和图包 | 按正式sourceSpu筛选，建立SKU集合与来源证据 | 纯本地 |
+| template | 确认目标深绘类目 | 获取类目及最新字段ID、枚举、必填和子字段条件 | 只读联网 |
+| assemble / review | 核对字段；补充可追溯事实 | 应用品牌规则和租户快照、构建尺码、充绒联动并报告阻断 | 纯本地 |
+| plan | 审阅目标、价格、字段、颜色、尺码、SKU及风险 | 校验并生成计划哈希；全量更新会预读远端 | 可有只读请求，不写入 |
+| publish | 明确授权当前计划 | 通过注册接口执行写入 | 写入联网 |
+| readback | 查看差异或需要人工核验的内容 | 对比预期与资源实际保存值 | 只读联网 |
+
+图包导入不等于自动完成OCR/AI。调用方需把带图片证据的OCR事实或符合当前枚举的AI建议传给 `review`。价格、SKU、条码、真实量点和充绒克重不能靠AI猜测。来源缺失或冲突应先解决，再生成发布计划。
+
+### 创建：新档案的两阶段写入
+
+用户链路：`import → template → review → plan create → 授权 publish create → 最终回读`。创建仅允许production模式下明确指定的正式款；测试模式不能创建档案。
+
+执行链路：
+
+```text
+本地校验
+→ dp.product.create
+→ resource=form 读取新档案并确认productId
+→ 合并新档案快照、校验颜色/尺码/SKU交集
+→ dp.product.update 完整补齐
+→ 最终resource=form核验
+```
+
+创建计划覆盖上述完整过程。第二次写入只能从刚创建档案的回读构建，中途校验失败即停止；不能预猜productId或使用其他档案快照。
+
+### 覆盖更新：用本地资料重建已有档案
+
+用户链路：`import → sync → template / assemble / review → plan full-update → 授权 publish full-update → 回读`。
+
+`sync`把远端内容载入当前草稿。若目标是按本地资料更新，同步后必须再构建本地内容，并明确需要保留的特殊字段；不能把远端旧草稿当作本地重建结果。
+
+执行链路：本地阻断校验 → 重新读取目标form → 核对身份并合并 → 校验SKU交集 → 生成完整body → `dp.product.update` → 回读核验。覆盖更新必须审查普通字段、颜色、销售尺码、商家SKU、主表及平台尺码表，不能把小patch当完整body。
+
+### 增量更新：修改已有档案的普通字段
+
+用户链路：准备模板 → `sync` → `override`普通字段 → 通过`--fields`明确范围 → `plan incremental` → 授权`publish incremental` → 回读。
+
+执行链路：校验工作流与字段范围 → 提取指定字段并自动携带完整颜色/销售尺码 → 核对目标productId → `dp.product.incremental.update` → 回读。
+
+- 尺码表、多平台尺码、商家SKU、颜色或尺码变更不能走普通增量。
+- 充绒量会影响尺码表，必须全量更新。
+- 鞋销售尺码含`*`备注时，当前普通增量会阻断，避免破坏尺码与SKU身份。
+- 指定少量字段不会绕过已有工作流阻断。
+
+### 完成标准与失败恢复
+
+| 状态 | 含义与下一步 |
+| --- | --- |
+| readback_verified | 资源回读与预期核验通过 |
+| readback_mismatch | 保存结果存在差异，查明原因后再生成新计划 |
+| needs_ui_verification | API资源不足以确认，需要界面核验 |
+| transport_unknown | 写入结果不确定，先查询资源，不能直接重发 |
+
+HTTP 200或业务码10200不代表验收完成。写入、付费、慎用接口不自动重放；读取采用串行和有限退避。production发布必须携带已审阅且与当前内容一致的`--plan-hash`，测试目标也必须精确配置，不能仅凭`-test`后缀放行。
+
 ## 项目架构
+
+当前架构由通用接口执行底座、品牌构建插件、本地工作流和资源核验组成。`call`直接进入通用底座；`balabala`先完成资料与业务校验，再通过同一注册表执行。`product payload`是独立的纯本地构建审查入口，不会发布商品。
+
+```mermaid
+flowchart TD
+  User[用户或AI Agent] --> CLI[CLI命令入口]
+  CLI --> Workflow[品牌上新工作流]
+  CLI --> Registry[API注册表与执行授权]
+  Workflow --> Brand[品牌插件：当前为巴拉]
+  Brand --> Sources[本地表格与可追溯OCR/AI事实]
+  Brand --> Rules[品牌 × 租户 × 商家规则快照]
+  Brand --> Template[深绘当前类目字段模板]
+  Sources --> Draft[草稿构建与校验]
+  Rules --> Draft
+  Template --> Draft
+  Draft --> Plan[计划与目标校验]
+  Plan --> Registry
+  Registry --> Transport[HTTP或Java SDK]
+  Transport --> DeepDraw[深绘开放平台]
+  DeepDraw --> Readback[资源回读与差异核验]
+  Readback --> Workflow
+```
+
+品牌租户规则快照提供来源映射和默认值，深绘当前模板提供字段ID、枚举、必填及子字段激活条件，两者不能互相替代。
+
+当前巴拉内置209条线上规则快照，归属明确为`brandId=balabala / tenantName=电商巴拉巴拉 / merchantId=1162`，三项精确匹配才选中。版本、来源和实际选中快照进入审计。快照随CLI编译，不实时连接Listingify数据库，不包含凭据；线上变化需更新快照。共享定义位于`src/brands/rule-snapshot.ts`，巴拉数据位于`src/brands/balabala/database-rules.ts`，通过`BrandPlugin.ruleSnapshot`提供元数据。
+
+同品牌多租户、同租户多品牌需配置独立快照。当前不是动态安装的DLC，也未自动支持其他品牌；工作流中仍有巴拉专用价格、尺码及充绒逻辑，扩展新品牌需实现并验证对应构建链路。
 
 ```text
 .
@@ -780,3 +893,5 @@ javac -encoding UTF-8 \
 充绒量须使用逐尺码实证，经 review 联动销售备注和尺码表后 full-update；普通 incremental/override 禁止孤立修改充绒字段。混合图包按来源款号隔离。
 
 逐字段对照、已修复范围与未确认项见 [巴拉字段对照说明](docs/audits/balabala-field-parity.md) 和 [23 品类逐字段 CSV](docs/audits/balabala-field-matrix.csv)。历史字段目录不替代本次 `dp.trade.fields` 模板。
+
+最新审计：[线上规则核对](docs/audits/balabala-database-rules-20260908.md)、[规则接入后剩余问题](docs/audits/balabala-after-db-rules-20260908.md)、[逐字段对照](docs/audits/balabala-after-db-rules-fields.csv)、[品牌租户隔离](docs/audits/brand-tenant-rule-scope.md)。流程已实现不等于所有款资料均可发布，仍须逐款消除阻断并验收。
