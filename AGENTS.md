@@ -75,11 +75,11 @@ deepdraw config doctor --dry-run
 `doctor` 不会联网，也不会调用深绘接口。它会检查：
 
 - `java` 和 `javac` 是否可用
-- `vendor/deepdraw-sdk/dop-sdk-1.6.24.jar`
+- `vendor/deepdraw-sdk/dop-sdk-1.6.25.jar`
 - `vendor/deepdraw-sdk/sdk-core-java-1.1.0.jar`
 - `vendor/deepdraw-sdk/lib/*.jar`
 
-当前 vendor SDK 固定为 `dop-sdk-1.6.24.jar`，SHA-256 为 `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8`；`sdk-core-java-1.1.0.jar` 和 `lib/*.jar` 是配套运行依赖。来源、校验值和目录布局见 `vendor/deepdraw-sdk/README.md`。
+当前 vendor SDK 固定为 `dop-sdk-1.6.25.jar`，SHA-256 为 `3f57e6229b2b76ea633cf60f268d3db9691bc4b112c5d91d7aaf6c61229010f6`；`sdk-core-java-1.1.0.jar` 和 `lib/*.jar` 是配套运行依赖。来源、校验值和目录布局见 `vendor/deepdraw-sdk/README.md`。
 
 默认配置路径：
 

@@ -63,7 +63,7 @@ type DoctorCheck = {
 };
 
 const requiredDeepdrawSdkJars = [
-  "dop-sdk-1.6.24.jar",
+  "dop-sdk-1.6.25.jar",
   "sdk-core-java-1.1.0.jar",
 ];
 

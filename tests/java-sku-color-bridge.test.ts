@@ -92,7 +92,7 @@ test("SKU color bridge emits no empty optional fields and rejects invalid requir
   }
   try {
     await access(bridgeSource);
-    await access(join(sdkDir, "dop-sdk-1.6.24.jar"));
+    await access(join(sdkDir, "dop-sdk-1.6.25.jar"));
   } catch {
     t.skip("bundled DeepDraw SDK is unavailable");
     return;

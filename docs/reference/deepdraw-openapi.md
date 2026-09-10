@@ -5,11 +5,11 @@
 > PDF 页数: 96
 > PDF 创建时间: 2026-08-27 16:15:38 CST
 > PDF 作者: DEEPDRAW-DANNY
-> 对应 SDK: `dop-sdk-1.6.24.jar`
-> SDK SHA-256: `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8`
+> 当前仓库 SDK: `dop-sdk-1.6.25.jar`
+> SDK SHA-256: `3f57e6229b2b76ea633cf60f268d3db9691bc4b112c5d91d7aaf6c61229010f6`
 > 提取与核验: 使用 pdfplumber 提取 96 页文本，并使用 Poppler `pdftoppm` 渲染 96 页检查版面；PDF 内容只用于接口事实核对，不构成真实接口执行授权。
 
-> 版本提示：PDF 封面仍显示“当前版本号 1.2 / 最后更新时间 2023.08.10”；本参考以 PDF 的修改历史为准，已纳入 1.6.23、1.6.24 及 2026.08.03 文档补充。仓库 vendor 使用的 SDK 版本为 1.6.24。
+> 版本提示：PDF 封面仍显示“当前版本号 1.2 / 最后更新时间 2023.08.10”；本参考以 PDF 的修改历史为准，已纳入 1.6.23、1.6.24 及 2026.08.03 文档补充。仓库 vendor 已于 2026-09-10 升级至 SDK 1.6.25；该升级不改变上述历史 PDF 的版本事实。120 个类的公开接口签名与 1.6.24 一致，仅 Product 的尺码字符串校验解析去掉 `*备注` 后缀。CLI 带备注尺码的增量保护继续保留，线上行为尚需独立回读验收。
 
 ## Agent 读取提示
 
@@ -108,7 +108,7 @@
 fastjson-1.1.41，commons-lang3-3.8.1，httpclient-4.5.3，commons-io-2.5，httpcore-4.4.6，commons-collections-3.2.2。
 另外 SDK 需要依赖 sdk-core-java-1.1.0.jar，请联系深绘在提供 SDK 的时候同时提供这个包。
 
-本仓库固定使用 `vendor/deepdraw-sdk/dop-sdk-1.6.24.jar`，其 SHA-256 为 `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8`；同时保留 `sdk-core-java-1.1.0.jar` 与 `vendor/deepdraw-sdk/lib/*.jar` 运行依赖。不要把真实凭据写入 SDK 或参考文档。
+本仓库固定使用 `vendor/deepdraw-sdk/dop-sdk-1.6.25.jar`，其 SHA-256 为 `3f57e6229b2b76ea633cf60f268d3db9691bc4b112c5d91d7aaf6c61229010f6`；同时保留 `sdk-core-java-1.1.0.jar` 与 `vendor/deepdraw-sdk/lib/*.jar` 运行依赖。不要把真实凭据写入 SDK 或参考文档。
 
 ### 1.2 公共参数
 
@@ -1495,7 +1495,7 @@ System.out.println("请求失败");
 
 **版本:** v2
 
-**传输:** 仅 HTTP；仓库 CLI 通过 1.6.24 SDK bridge 的对应 request class 调用。
+**传输:** 仅 HTTP；仓库 CLI 通过 1.6.25 SDK bridge 的对应 request class 调用。
 
 #### 4.9.2 请求参数
 
@@ -1504,7 +1504,7 @@ System.out.println("请求失败");
 | productId | String（PDF）/ Long（SDK setter） | 是 | 519b97a3bb5e451595c9ff5cdd13e40d | 产品在深绘系统内的 id，作为 query 参数发送；CLI bridge 接受可解析为十进制 Long 的产品 id |
 | product | Product | 是 | `cn.deepdraw.api.rest.entity.Product` | 作为 POST entity 发送的产品增量 payload |
 
-> 版本边界：PDF 将 `productId` 示例写作 String/十六进制样式，而 1.6.24 SDK request setter 为 `Long`。CLI 不会把 PDF 示例当作真实授权或在线探测；使用 CLI 时应提供 SDK 可解析的十进制产品 id。
+> 版本边界：PDF 将 `productId` 示例写作 String/十六进制样式，而 1.6.25 SDK request setter 为 `Long`。CLI 不会把 PDF 示例当作真实授权或在线探测；使用 CLI 时应提供 SDK 可解析的十进制产品 id。
 
 #### 4.9.3 注意事项-重要
 

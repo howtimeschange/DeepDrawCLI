@@ -53,7 +53,7 @@ test("generic incremental bridge keeps empty places out of the v2 Product reques
   }
   try {
     await access(bridgeSource);
-    await access(join(sdkDir, "dop-sdk-1.6.24.jar"));
+    await access(join(sdkDir, "dop-sdk-1.6.25.jar"));
   } catch {
     t.skip("bundled DeepDraw SDK is unavailable");
     return;

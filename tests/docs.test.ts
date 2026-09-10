@@ -13,11 +13,11 @@ test("AGENTS.md requires approval before write and paid calls", () => {
   assert.doesNotMatch(text, /appSecret=.*[a-z0-9]{8}/i);
 });
 
-test("reference tracks the 2026-08-27 PDF and SDK 1.6.24 contract", () => {
+test("reference tracks the 2026-08-27 PDF and bundled SDK 1.6.25 contract", () => {
   const text = readFileSync("docs/reference/deepdraw-openapi.md", "utf8");
   assert.match(text, /深绘开放平台API接口文档20260827\.pdf/);
   assert.match(text, /PDF 页数: 96/);
-  assert.match(text, /dop-sdk-1\.6\.24\.jar/);
+  assert.match(text, /dop-sdk-1\.6\.25\.jar/);
   assert.match(text, /1\.6\.23/);
   assert.match(text, /1\.6\.24/);
   for (const field of [
@@ -136,15 +136,15 @@ test("README and AGENTS.md document the Balabala listing workflow and its safe i
 test("README documents bundled DeepDraw SDK jars and runtime dependency jars", () => {
   const text = readFileSync("README.md", "utf8");
   assert.match(text, /vendor\/deepdraw-sdk/);
-  assert.match(text, /dop-sdk-1\.6\.24\.jar/);
+  assert.match(text, /dop-sdk-1\.6\.25\.jar/);
   assert.match(text, /sdk-core-java-1\.1\.0\.jar/);
   assert.match(text, /vendor\/deepdraw-sdk\/lib/);
   assert.match(text, /Java SDK 运行依赖 jar/);
   assert.match(text, /无需 Maven 下载/);
   assert.match(text, /Windows/);
   assert.match(text, /dp\.product\.sku\.color\.incremental\.update/);
-  assert.match(text, /dop-sdk-1\.6\.24\.jar/);
-  assert.match(text, /1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8/);
+  assert.match(text, /dop-sdk-1\.6\.25\.jar/);
+  assert.match(text, /3f57e6229b2b76ea633cf60f268d3db9691bc4b112c5d91d7aaf6c61229010f6/);
   assert.match(text, /tags/);
   assert.match(text, /detailPageSite/);
   assert.match(text, /templateWidth/);

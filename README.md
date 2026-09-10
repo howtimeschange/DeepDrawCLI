@@ -84,11 +84,11 @@ deepdraw config doctor --dry-run
 
 - `java` 是否可用
 - `javac` 是否可用
-- `vendor/deepdraw-sdk/dop-sdk-1.6.24.jar`
+- `vendor/deepdraw-sdk/dop-sdk-1.6.25.jar`
 - `vendor/deepdraw-sdk/sdk-core-java-1.1.0.jar`
 - `vendor/deepdraw-sdk/lib/*.jar`
 
-当前 `dop-sdk-1.6.24.jar` 的 SHA-256 为 `1cd9f7f37a76a16e8a2e102b0e78b19470319d743d66a5af93ab58bb87fb2ed8`；来源与完整校验表见 [`vendor/deepdraw-sdk/README.md`](vendor/deepdraw-sdk/README.md)。
+当前 `dop-sdk-1.6.25.jar` 的 SHA-256 为 `3f57e6229b2b76ea633cf60f268d3db9691bc4b112c5d91d7aaf6c61229010f6`；来源与完整校验表见 [`vendor/deepdraw-sdk/README.md`](vendor/deepdraw-sdk/README.md)。
 
 ### 4. 配置凭据
 
@@ -153,7 +153,7 @@ npm run build
 
 这些接口需要本机可用的 `java` 和 `javac`。仓库已经内置 DeepDraw SDK jar 和 Java SDK 运行依赖 jar：
 
-- `vendor/deepdraw-sdk/dop-sdk-1.6.24.jar`
+- `vendor/deepdraw-sdk/dop-sdk-1.6.25.jar`
 - `vendor/deepdraw-sdk/sdk-core-java-1.1.0.jar`
 - `vendor/deepdraw-sdk/lib/*.jar`
 

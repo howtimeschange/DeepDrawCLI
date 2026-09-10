@@ -131,7 +131,7 @@ test("product create metadata includes documented merchant, trade, and product p
   });
 });
 
-test("SKU color incremental update metadata uses the 1.6.24 Java SDK bridge", () => {
+test("SKU color incremental update metadata uses the 1.6.25 Java SDK bridge", () => {
   const api = expectApi("dp.product.sku.color.incremental.update");
 
   assert.equal(api.version, "v2");
