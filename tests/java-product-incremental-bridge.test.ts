@@ -29,7 +29,7 @@ async function commandAvailable(command: string): Promise<boolean> {
 
 async function runBridge(classDir: string, input: unknown): Promise<BridgeResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn("java", ["-cp", [classDir, join(sdkDir, "*"), join(sdkDir, "lib", "*")].join(delimiter), bridgeClass], {
+    const child = spawn("java", ["-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8", "-cp", [classDir, join(sdkDir, "*"), join(sdkDir, "lib", "*")].join(delimiter), bridgeClass], {
       cwd: process.cwd(),
       env: { PATH: process.env.PATH ?? "", DEEPDRAW_SDK_DUMP_REQUEST: "1" },
       stdio: ["pipe", "pipe", "pipe"],
