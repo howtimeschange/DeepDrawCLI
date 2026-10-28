@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import XLSX from "xlsx";
+import XLSX from "../src/core/spreadsheet.js";
 import { runCli } from "../src/cli/run.js";
 import { FakeCredentialStore } from "../src/core/credentials.js";
 import { WorkflowStore, createWorkflowSnapshot } from "../src/workflow/store.js";

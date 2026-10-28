@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import XLSX from "xlsx";
+import XLSX from "../src/core/spreadsheet.js";
 import { importBalabalaSources, physicalSheetRows, selectBalabalaRows } from "../src/brands/balabala/importers.js";
 
 test("reads physical cells beyond a false A1 worksheet dimension", () => {

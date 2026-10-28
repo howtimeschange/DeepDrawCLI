@@ -2,7 +2,7 @@ import { BUILTIN_APPAREL_ROWS, BUILTIN_SHOE_ROWS, SIZE_REFERENCE_SOURCE } from "
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
-import XLSX from "xlsx";
+import XLSX from "../../core/spreadsheet.js";
 import type { SourceReference } from "../../workflow/types.js";
 import { normalizePlmSizeChartRows } from "./size-chart-rules.js";
 
